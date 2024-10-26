@@ -1,0 +1,25 @@
+[31826:31826:1026/152252.630663:WARNING:chrome_main_delegate.cc(744)] This is Chrome version 130.0.6723.69 (not a warning)
+[31826:31826:1026/152252.736717:INFO:chrome_browser_cloud_management_controller.cc(196)] No machine level policy manager exists.
+[31862:31862:1026/152252.867555:WARNING:sandbox_linux.cc(430)] InitializeSandbox() called with multiple threads in process gpu-process.
+[31862:31862:1026/152252.868391:WARNING:viz_main_impl.cc(85)] VizNullHypothesis is disabled (not a warning)
+[31826:31826:1026/152252.975344:ERROR:object_proxy.cc(576)] Failed to call method: org.freedesktop.ScreenSaver.GetActive: object_path= /org/freedesktop/ScreenSaver: org.freedesktop.DBus.Error.NotSupported: This method is not part of the idle inhibition specification: https://specifications.freedesktop.org/idle-inhibit-spec/latest/
+[31826:31826:1026/152253.426592:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'bluetooth'.", source:  (0)
+[31826:31826:1026/152253.458837:INFO:CONSOLE(123)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v3/yX/r/jwfI3s6ARZ3.js (123)
+[31826:31826:1026/152255.314126:INFO:CONSOLE(344)] "WAWebLoggerWorker initialized", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152255.314193:INFO:CONSOLE(344)] "[storage] start setSchemaVersions from fts worker interface", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152255.314217:INFO:CONSOLE(344)] "[storage] set schema versions: [model-storage,160,fts-storage,8,jobs-storage,1,lru-media-storage-idb,2,offd-storage,4,qpl-storage,0,signal-storage,6,worker-storage,1,sw,2,wawc,14,wawc_db_enc,2]. is worker? true", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152312.585594:INFO:CONSOLE(344)] "FTS:Delegate: start indexer", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152312.585656:INFO:CONSOLE(344)] "FTS:Delegate: start perform init", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152312.585682:INFO:CONSOLE(344)] "FTS:Delegate: schema versions ready", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152312.585706:INFO:CONSOLE(344)] "FTS:Delegate: before db initialization", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152312.585733:INFO:CONSOLE(344)] "[storage] applying schema versions from [0 to 8] for the database: 'fts-storage'", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152312.589113:INFO:CONSOLE(344)] "[storage] applying schema versions from [0 to 160] for the database: 'model-storage'", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152313.894766:INFO:CONSOLE(344)] "FTS:Delegate: after db initialization", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152314.015433:INFO:CONSOLE(344)] "FTS:Manifest Writer: No changes made, current:['3.1', '1'], latest:['3.1', '1']", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152314.015520:INFO:CONSOLE(344)] "FTS:Delegate: Inited", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152314.015552:INFO:CONSOLE(344)] "FTS:Delegate: Init indexing ops", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152314.041112:INFO:CONSOLE(344)] "FTS:Indexer:indexQueuedBatch: Starting new batch size : 1000", source: https://static.whatsapp.net/rsrc.php/v3/yA/r/rvYuhWdd88W.js (344)
+[31826:31826:1026/152328.048252:INFO:CONSOLE(123)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v3/yN/r/7KkY-Br6kLw.js (123)
+[31826:31826:1026/152330.299457:WARNING:controller_impl.cc(1192)] Background download complete, client: 6, completion type: 1, file size:0
+[31864:31874:1026/152330.313534:WARNING:sqlite_persistent_store_backend_base.cc(198)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:248 to client_task_runner_.
+[31864:31874:1026/152330.313678:WARNING:sqlite_persistent_store_backend_base.cc(198)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:248 to client_task_runner_.
