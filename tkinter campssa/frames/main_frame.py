@@ -2,6 +2,8 @@
 from tkinter import *
 from funcoes_botoes import FuncoesBotoes
 from planilhas import Planilhas
+from tkcalendar import DateEntry
+from banco import DataBaseMarcacao
 
 class MainFrame(Frame):
     """Classe que representa o frame principal da aplicação, responsável por gerenciar as interações do usuário."""
@@ -17,6 +19,7 @@ class MainFrame(Frame):
         """
         super().__init__(master, bg=master.cget('bg'))  # Chama o construtor da classe Frame
         self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app)  # Inicializa FuncoesBotoes
+        self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
         self.master = master
         self.file_path = file_path
         self.app = app
@@ -68,6 +71,14 @@ class MainFrame(Frame):
             self, text='Emitir NTFS-e', command=self.emitir_notas)
         self.bt_emitir_ntfs.grid(row=3, column=0, padx=10, pady=10, sticky='ew')
 
+        self.bt_marcar_paciente = Button(
+            self, text='Marcação', command=self.marcar_paciente)
+        self.bt_marcar_paciente.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+
+        self.bt_view_patients = Button(
+            self, text='Visualizar Marcações', command=self.visu_marcacoes)
+        self.bt_view_patients.grid(row=3, column=2, padx=10, pady=10, sticky='ew')
+
         # Configuração das colunas da grid para que elas se expandam igualmente
         for i in range(3):  # 3 colunas
             self.grid_columnconfigure(i, weight=1)
@@ -104,3 +115,17 @@ class MainFrame(Frame):
     def relatorio_email(self):
         """Chama a função para enviar relatório via e-mail."""
         self.funcoes_botoes.enviar_email()
+
+    def marcar_paciente(self):
+        """Chama a função para marcar paciente"""
+        self.banco.add_user()
+
+    def visu_marcacoes(self):
+        self.banco.view_marcacoes()
+
+
+
+
+
+
+        
