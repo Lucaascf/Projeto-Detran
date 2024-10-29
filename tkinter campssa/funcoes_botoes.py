@@ -390,8 +390,8 @@ class FuncoesBotoes:
         self.entry_valor_e.delete(0, tk.END)  # Limpa a entrada de valor
         self.entry_valor_p.delete(0, tk.END)  # Limpa a entrada de valor
 
-    def excluir(self):
-        """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
+def excluir(self):
+        """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário e reorganiza as linhas."""
         ws = self.wb.active
         pacientes_medicos = {}
         pacientes_psicologos = {}
@@ -403,103 +403,65 @@ class FuncoesBotoes:
                     renach_medico = int(row[2].value)
                     pacientes_medicos.setdefault(renach_medico, []).append(row[0].row)
                 except ValueError:
-                    print(
-                        f"RENACH inválido na linha {
-                          row[0].row}: {row[2].value}"
-                    )
+                    print(f"RENACH inválido na linha {row[0].row}: {row[2].value}")
 
         # Armazenar pacientes psicólogos
         for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
             if row[7].value and row[8].value:
                 try:
                     renach_psicologo = int(row[8].value)
-                    pacientes_psicologos.setdefault(renach_psicologo, []).append(
-                        row[0].row
-                    )
+                    pacientes_psicologos.setdefault(renach_psicologo, []).append(row[0].row)
                 except ValueError:
-                    print(
-                        f"RENACH inválido na linha {
-                          row[0].row}: {row[8].value}"
-                    )
+                    print(f"RENACH inválido na linha {row[0].row}: {row[8].value}")
 
         # Janela de exclusão
-        self.excluir_window = tk.Toplevel(self.master)  # Corrigido aqui
-        self.excluir_window.title("Excluir Paciente")
-        self.excluir_window.geometry("400x150")
-        self.excluir_window.minsize(width=400, height=150)
-        self.excluir_window.maxsize(width=400, height=150)
-        cor_fundo = self.master.cget("bg")
-
-        self.excluir_window.configure(bg=cor_fundo)
-
-        self.center(self.excluir_window)
+        excluir_window = tk.Toplevel(self.master)
+        excluir_window.title("Excluir Paciente")
+        excluir_window.geometry("400x150")
+        excluir_window.configure(bg=self.master.cget("bg"))
 
         tk.Label(
-            self.excluir_window,
+            excluir_window,
             text="Informe o RENACH:",
-            bg=cor_fundo,
+            bg=self.master.cget("bg"),
             fg="#ECF0F1",
             font=("Arial", 14, "bold"),
         ).pack(pady=10)
-        self.renach_entry = tk.Entry(self.excluir_window)
-        self.renach_entry.pack(pady=5)
+        renach_entry = tk.Entry(excluir_window)
+        renach_entry.pack(pady=5)
 
-        def confirmar_exclusao():
-            renach_input = self.renach_entry.get().strip()
-
+        def excluir_paciente():
+            """Função para excluir o paciente com o RENACH fornecido"""
             try:
-                renach = int(renach_input)
+                renach = int(renach_entry.get())
+
+                def reorganizar_linhas(linha_excluida):
+                    """Função auxiliar para mover os dados de cada linha uma posição para cima"""
+                    for row in range(linha_excluida, ws.max_row):
+                        for col in range(1, ws.max_column + 1):
+                            ws.cell(row=row, column=col).value = ws.cell(row=row + 1, column=col).value
+                    # Limpar a última linha
+                    for col in range(1, ws.max_column + 1):
+                        ws.cell(row=ws.max_row, column=col).value = None
+
+                # Excluir paciente de médico
+                if renach in pacientes_medicos:
+                    for linha in pacientes_medicos[renach]:
+                        reorganizar_linhas(linha)
+
+                # Excluir paciente de psicólogo
+                if renach in pacientes_psicologos:
+                    for linha in pacientes_psicologos[renach]:
+                        reorganizar_linhas(linha)
+
+                self.wb.save("CAMPSSA.xlsx")
+                print("Paciente excluído com sucesso!")
             except ValueError:
-                messagebox.showerror("RENACH deve ser um número inteiro.")
-                return  # Adicionado return para evitar continuar a execução
+                print("RENACH inválido. Por favor, insira um número válido.")
 
-            paciente_removido = False  # Para rastrear se algum paciente foi removido
+        tk.Button(excluir_window, text="Excluir", command=excluir_paciente).pack(pady=10)
 
-            # Limpar informações de pacientes médicos se o RENACH existir
-            if renach in pacientes_medicos:
-                for linha_a_limpar in pacientes_medicos[renach]:
-                    ws[f"B{linha_a_limpar}"] = None
-                    ws[f"C{linha_a_limpar}"] = None
-                    ws[f"F{linha_a_limpar}"] = None
-                    paciente_removido = True
-
-            # Limpar informações de pacientes psicólogos se o RENACH existir
-            if renach in pacientes_psicologos:
-                for linha_a_limpar in pacientes_psicologos[renach]:
-                    ws[f"H{linha_a_limpar}"] = None
-                    ws[f"I{linha_a_limpar}"] = None
-                    ws[f"L{linha_a_limpar}"] = None
-                    paciente_removido = True
-
-            # Salva as alterações se houve limpezas
-            if paciente_removido:
-                self.wb.save(self.planilhas.file_path)
-                messagebox.showinfo(
-                    "Sucesso", "Informações de pacientes removidas com sucesso!"
-                )
-            else:
-                messagebox.showerror("RENACH inválido ou paciente não encontrado.")
-
-        # Frame botoes
-        frame_botao = tk.Frame(self.excluir_window, bg=cor_fundo)
-        frame_botao.pack(pady=10)
-
-        tk.Button(
-            frame_botao,
-            text="Excluir",
-            command=confirmar_exclusao,
-            highlightthickness=0,
-            activebackground="#2C3E50",
-            activeforeground="#ECF0F1",
-        ).pack(side=tk.LEFT, padx=10)
-        tk.Button(
-            frame_botao,
-            text="Voltar",
-            command=self.excluir_window.destroy,
-            highlightthickness=0,
-            activebackground="#2C3E50",
-            activeforeground="#ECF0F1",
-        ).pack(side=tk.LEFT, padx=10)
+        self.center(excluir_window)
 
     def exibir_informacao(self):
         """Exibe informações dos pacientes em uma nova janela com barra de rolagem."""
