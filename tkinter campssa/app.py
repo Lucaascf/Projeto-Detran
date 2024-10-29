@@ -5,7 +5,7 @@ from frames.main_frame import MainFrame
 from tkinter import filedialog, messagebox
 from funcoes_botoes import FuncoesBotoes
 from planilhas import Planilhas
-from banco import DataBase
+from banco import DataBaseLogin
 
 class App(Frame):
     """Classe principal do aplicativo, responsável por gerenciar a interface gráfica e a lógica do aplicativo."""
@@ -20,7 +20,7 @@ class App(Frame):
         self.master = master
         self.planilhas = None  # Inicializa a variável para armazenar planilhas
         self.file_path = None  # Inicializa a variável para armazenar o caminho do arquivo
-        self.db = DataBase()  # Inicializa a conexão com o banco de dados
+        self.db = DataBaseLogin()  # Inicializa a conexão com o banco de dados
         self.funcoes_botoes = FuncoesBotoes(master, self.planilhas, self.file_path, self)
         
         self.setup_ui()  # Configura a interface gráfica

@@ -244,7 +244,6 @@ class FuncoesBotoes:
         # Armazena a entrada na instância da classe
         setattr(self, var_name, entry)
 
-
     def salvar_informacao(self):
         nome = self.nome_entry.get().strip().upper()
         renach = self.renach_entry.get()
@@ -1180,3 +1179,5 @@ class FuncoesBotoes:
     def voltar_para_login(self):
         self.criar_conta_frame.grid_forget()
         self.login_frame.grid()
+
+

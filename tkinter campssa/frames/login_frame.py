@@ -1,6 +1,6 @@
 # frames/login_frame.py
 from tkinter import *
-from banco import DataBase
+from banco import DataBaseLogin
 
 class LoginFrame(Frame):
     """Classe que representa o frame de login da aplicação."""
