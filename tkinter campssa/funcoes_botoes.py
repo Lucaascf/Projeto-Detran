@@ -245,138 +245,82 @@ class FuncoesBotoes:
         setattr(self, var_name, entry)
 
     def salvar_informacao(self):
+        # Obter dados dos campos de entrada
         nome = self.nome_entry.get().strip().upper()
-        renach = self.renach_entry.get()
+        renach = self.renach_entry.get().strip()
 
+        # Validar preenchimento do nome e RENACH
+        if not nome or not renach:
+            messagebox.showerror("Erro", "Por favor, preencha os campos de nome e RENACH.")
+            return
+
+        # Validar se RENACH é um número inteiro
+        if not renach.isdigit():
+            messagebox.showerror("Erro", "O RENACH deve ser um número inteiro.")
+            return
+
+        # Verificar se o RENACH já existe na planilha
+        ws = self.wb.active
+        for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
+            if str(row[2].value) == renach or str(row[8].value) == renach:
+                messagebox.showerror("Erro", "Este RENACH já está registrado.")
+                return
+
+        # Obter dados dos checkbuttons de pagamento
         pagamentos_selecionados = [
-            (
-                "D",
-                self.d_var.get(),
-                self.entry_d.get().strip(),
-                self.entry_valor_d.get().strip(),
-            ),
-            (
-                "C",
-                self.c_var.get(),
-                self.entry_c.get().strip(),
-                self.entry_valor_c.get().strip(),
-            ),
-            (
-                "E",
-                self.e_var.get(),
-                self.entry_e.get().strip(),
-                self.entry_valor_e.get().strip(),
-            ),
-            (
-                "P",
-                self.p_var.get(),
-                self.entry_p.get().strip(),
-                self.entry_valor_p.get().strip(),
-            ),
+            ("D", self.d_var.get(), self.entry_d.get().strip(), self.entry_valor_d.get().strip()),
+            ("C", self.c_var.get(), self.entry_c.get().strip(), self.entry_valor_c.get().strip()),
+            ("E", self.e_var.get(), self.entry_e.get().strip(), self.entry_valor_e.get().strip()),
+            ("P", self.p_var.get(), self.entry_p.get().strip(), self.entry_valor_p.get().strip()),
         ]
-
-        # Filtra os checkbuttons que foram selecionados
+        
+        # Filtrar formas de pagamento selecionadas
         selecionados = [p for p in pagamentos_selecionados if p[1] == 1]
 
-        print(selecionados)
-
-        # Verifica se nome e renach estão preenchidos
-        if not nome or not renach:
-            messagebox.showerror("Erro", "Preencha todos os campos.")
-            return
-
-        # Verifica se o renach é um número inteiro
-        if not renach.isdigit():
-            messagebox.showerror("Erro", "Renach deve ser um número inteiro.")
-            return
-
-        # Verifica se ao menos um checkbutton foi selecionado
+        # Verificar se ao menos uma forma de pagamento foi selecionada
         if not selecionados:
             messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
             return
 
-        # Validação para quando apenas um checkbutton for selecionado
-        if len(selecionados) == 1:
-            forma, _, campo_pagamento, campo_valor = selecionados[0]
-            # Se apenas um checkbutton estiver selecionado, nenhum campo deve ser preenchido
-            if (campo_pagamento and campo_valor) or campo_valor:
-                messagebox.showerror(
-                    "Erro",
-                    f"Não preencha os campos de pagamento para a opção {forma} quando apenas uma forma de pagamento estiver selecionada.",
-                )
-                return
-
-        # Validação para quando dois checkbuttons forem selecionados
-        if len(selecionados) == 2:
-            for forma, _, campo_pagamento, campo_valor in selecionados:
-                # Se dois checkbuttons estiverem selecionados, os campos de pagamento e valor devem estar preenchidos
-                if not campo_pagamento and not campo_valor:
-                    messagebox.showerror(
-                        "Erro",
-                        f"Preencha ambos os campos de pagamento e valor para a opção {forma}.",
-                    )
-                    return
-
-        # Sucesso: As validações foram aprovadas, prossiga com o salvamento
+        # Verificar escolha entre médico, psicólogo ou ambos
         escolha = self.radio_var.get()
-        ws = self.wb.active
+        if escolha not in ["medico", "psicologo", "ambos"]:
+            messagebox.showerror("Erro", "Selecione Médico, Psicólogo ou Ambos.")
+            return
 
-        # Encontra a próxima linha vazia
-        nova_linha_medico = next(
-            (row for row in range(3, ws.max_row + 2) if not ws[f"B{row}"].value), None
-        )
-        nova_linha_psicologo = next(
-            (row for row in range(3, ws.max_row + 2) if not ws[f"H{row}"].value), None
-        )
+        # Encontrar a próxima linha vazia para médicos e psicólogos
+        nova_linha_medico = next((row for row in range(3, ws.max_row + 2) if not ws[f"B{row}"].value), None)
+        nova_linha_psicologo = next((row for row in range(3, ws.max_row + 2) if not ws[f"H{row}"].value), None)
 
-        # Adiciona as informações do paciente com base na escolha
+        # Inserir informações na planilha com base na escolha
         if escolha == "medico":
             ws[f"B{nova_linha_medico}"] = nome
             ws[f"C{nova_linha_medico}"] = renach
-            ws[f"F{nova_linha_medico}"] = ", ".join(
-                [f"{p[0]}: {p[2]}" for p in selecionados]
-            )  # Forma de pagamento e valor
-            messagebox.showinfo(
-                "Sucesso", "Informações de médico adicionadas com sucesso!"
-            )
+            ws[f"F{nova_linha_medico}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
+            messagebox.showinfo("Paciente adicionado para se consultar com médico!")
 
         elif escolha == "psicologo":
             ws[f"H{nova_linha_psicologo}"] = nome
             ws[f"I{nova_linha_psicologo}"] = renach
-            ws[f"L{nova_linha_psicologo}"] = ", ".join(
-                [f"{p[0]}: {p[2]}" for p in selecionados]
-            )  # Forma de pagamento e valor
-            messagebox.showinfo(
-                "Sucesso", "Informações de psicólogo adicionadas com sucesso!"
-            )
+            ws[f"L{nova_linha_psicologo}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
+            messagebox.showinfo("Paciente adicionado para se consultar com psicólogo!")
 
         elif escolha == "ambos":
-            # Salva as informações para médico
             ws[f"B{nova_linha_medico}"] = nome
             ws[f"C{nova_linha_medico}"] = renach
-            ws[f"F{nova_linha_medico}"] = ", ".join(
-                [f"{p[0]}: {p[2]}" for p in selecionados]
-            )  # Forma de pagamento e valor
-
-            # Salva as informações para psicólogo
+            ws[f"F{nova_linha_medico}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
             ws[f"H{nova_linha_psicologo}"] = nome
             ws[f"I{nova_linha_psicologo}"] = renach
-            ws[f"L{nova_linha_psicologo}"] = ", ".join(
-                [f"{p[0]}: {p[2]}" for p in selecionados]
-            )  # Forma de pagamento e valor
+            ws[f"L{nova_linha_psicologo}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
+            messagebox.showinfo("Paciente adicionado para se consultar com médico e psicólogo!")
 
-            messagebox.showinfo(
-                "Sucesso", "Informações de ambos adicionadas com sucesso!"
-            )
-
-        # Salva as alterações
+        # Salvar na planilha
         self.wb.save(self.planilhas.file_path)
 
-        # Limpa os campos
+        # Limpar os campos de entrada
         self.nome_entry.delete(0, tk.END)
         self.renach_entry.delete(0, tk.END)
-        self.radio_var.set("")  # Limpa a seleção dos radio buttons
-        # Limpa os checkbuttons e os campos associados
+        self.radio_var.set("")
         self.d_var.set(0)
         self.c_var.set(0)
         self.e_var.set(0)
@@ -385,10 +329,11 @@ class FuncoesBotoes:
         self.entry_c.delete(0, tk.END)
         self.entry_e.delete(0, tk.END)
         self.entry_p.delete(0, tk.END)
-        self.entry_valor_d.delete(0, tk.END)  # Limpa a entrada de valor
-        self.entry_valor_c.delete(0, tk.END)  # Limpa a entrada de valor
-        self.entry_valor_e.delete(0, tk.END)  # Limpa a entrada de valor
-        self.entry_valor_p.delete(0, tk.END)  # Limpa a entrada de valor
+        self.entry_valor_d.delete(0, tk.END)
+        self.entry_valor_c.delete(0, tk.END)
+        self.entry_valor_e.delete(0, tk.END)
+        self.entry_valor_p.delete(0, tk.END)
+
 
     def excluir(self):
             """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário e reorganiza as linhas."""
