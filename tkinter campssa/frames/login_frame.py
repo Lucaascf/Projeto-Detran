@@ -96,7 +96,8 @@ class CriarContaFrame(Frame):
         self.entry_password.grid(row=2, column=1, pady=10, padx=5)
 
         # Botão para criar a conta
-        Button(self, text="Criar Conta", command=self.create_account).grid(row=3, columnspan=2, pady=10)
+        Button(self, text="Criar Conta", command=self.create_account).grid(row=3, column=0, pady=10)
+        Button(self, text='Voltar', command=self.voltar_login).grid(row=3, column=1, pady=10)
 
     def create_account(self):
         """Cria uma nova conta de usuário no banco de dados."""
@@ -109,3 +110,6 @@ class CriarContaFrame(Frame):
             print("Conta criada com sucesso")  # Mensagem de sucesso
             if self.funcoes_botoes:
                 self.funcoes_botoes.voltar_para_login()  # Volta para a tela de login
+
+    def voltar_login(self):
+        self.funcoes_botoes.voltar_para_login()
