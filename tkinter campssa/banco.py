@@ -216,9 +216,10 @@ class DataBaseMarcacao:
 
         self.date_entry = DateEntry(self.marcacoes_window, width=12, background="darkblue", foreground="white", borderwidth=2)
         self.date_entry.pack(pady=10)
-        
+
         self.date_entry.bind("<<DateEntrySelected>>", self.update_patient_list)
 
+        # Frame para resultados formatados como uma tabela
         self.results_frame = Frame(self.marcacoes_window, bg=self.master.cget('bg'))
         self.results_frame.pack(fill="both", expand=True, pady=10)
 
@@ -233,15 +234,24 @@ class DataBaseMarcacao:
     def update_patient_list(self, event):
         selected_date = self.date_entry.get_date().strftime("%Y-%m-%d")
         patients = self.get_patients_by_date(selected_date)
-
+        
+        # Limpa a tabela anterior (caso exista)
         for widget in self.results_frame.winfo_children():
             widget.destroy()
-
-        if not patients:
-            Label(self.results_frame, text="Nenhum paciente encontrado para esta data.", fg="red", bg=self.master.cget('bg')).pack()
-        else:
-            for patient in patients:
-                Label(self.results_frame, text=f"Nome: {patient[0]}, Telefone: {patient[1]}, RENACH: {patient[2]}", bg=self.master.cget('bg'), fg='#ECF0F1').pack()
+        
+        # Adiciona cabeçalho
+        headers = ["Nome", "Telefone", "RENACH"]
+        for j, header in enumerate(headers):
+            header_cell = Label(self.results_frame, text=header, font=("Arial", 12, "bold"),
+                                bg=self.master.cget('bg'), fg='#ECF0F1', width=15, anchor="w", borderwidth=1, relief="solid")
+            header_cell.grid(row=0, column=j, padx=5, pady=2)
+        
+        # Cria a tabela com os dados dos pacientes
+        for i, paciente in enumerate(patients, start=1):  # Começa na linha 1 para dar espaço para o cabeçalho
+            for j, info in enumerate(paciente):
+                cell = Label(self.results_frame, text=info, font=("Arial", 12),
+                            bg=self.master.cget('bg'), fg='#ECF0F1', width=15, anchor="w", borderwidth=1, relief="solid")
+                cell.grid(row=i, column=j, padx=5, pady=2)
 
 """def list_tables():
     # Conectar ao banco de dados
