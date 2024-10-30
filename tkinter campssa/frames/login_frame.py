@@ -1,6 +1,7 @@
 # frames/login_frame.py
 from tkinter import *
 from banco import DataBaseLogin
+from tkinter import messagebox
 
 class LoginFrame(Frame):
     """Classe que representa o frame de login da aplicação."""
@@ -101,15 +102,22 @@ class CriarContaFrame(Frame):
 
     def create_account(self):
         """Cria uma nova conta de usuário no banco de dados."""
-        user = self.entry_user.get()  # Obtém o nome de usuário
-        password = self.entry_password.get()  # Obtém a senha
+        user = self.entry_user.get().strip()  # Obtém o nome de usuário
+        password = self.entry_password.get().strip()  # Obtém a senha
 
-        # Verifica se o nome de usuário e a senha foram fornecidos
-        if user and password:
-            self.db.create_user(user, password)  # Cria o usuário no banco de dados
-            print("Conta criada com sucesso")  # Mensagem de sucesso
-            if self.funcoes_botoes:
-                self.funcoes_botoes.voltar_para_login()  # Volta para a tela de login
+    # Verifica se o nome de usuário e a senha foram fornecidos
+        if not user or not password:
+            messagebox.showerror("Erro", "Preencha todos os campos.")
+            self.entry_user.delete(0, 'end')  # Limpa o campo de usuário
+            self.entry_password.delete(0, 'end')  # Limpa o campo de senha
+            return
+
+        if not self.db.create_user(user, password):  # Tenta criar o usuário
+            messagebox.showerror("Erro", "Usuário já existente.")
+            self.entry_user.delete(0, 'end')  # Limpa o campo de usuário
+            self.entry_password.delete(0, 'end')  # Limpa o campo de senha
+        else:
+            messagebox.showinfo("Sucesso", f"Usuário {user} criado com sucesso.")
 
     def voltar_login(self):
         self.funcoes_botoes.voltar_para_login()

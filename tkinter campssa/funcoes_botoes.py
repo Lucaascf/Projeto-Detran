@@ -159,10 +159,14 @@ class FuncoesBotoes:
             ).pack(side=tk.LEFT, padx=2)
 
         # Frame para entrada de nome
-        self.criar_entry(frame_nome="Nome:", var_name="nome_entry", parent=self.adicionar_window)
+        self.criar_entry(
+            frame_nome="Nome:", var_name="nome_entry", parent=self.adicionar_window
+        )
 
         # Frame para entrada de Renach
-        self.criar_entry(frame_nome="Renach:", var_name="renach_entry", parent=self.adicionar_window)
+        self.criar_entry(
+            frame_nome="Renach:", var_name="renach_entry", parent=self.adicionar_window
+        )
 
         tk.Label(
             self.adicionar_window,
@@ -183,7 +187,12 @@ class FuncoesBotoes:
         self.p_var = tk.IntVar()
 
         # Lista de checkbuttons
-        checkbuttons = [("D", self.d_var), ("C", self.c_var), ("E", self.e_var), ("P", self.p_var)]
+        checkbuttons = [
+            ("D", self.d_var),
+            ("C", self.c_var),
+            ("E", self.e_var),
+            ("P", self.p_var),
+        ]
 
         # Campos de entrada ao lado de cada checkbutton
         entry_widgets = [tk.Entry(frame_pagamento, width=10) for _ in range(4)]
@@ -235,9 +244,13 @@ class FuncoesBotoes:
         frame.pack(pady=2)
 
         tk.Label(
-            frame, text=frame_nome, bg=parent.cget("bg"), fg="#ECF0F1", font=("Arial", 12)
+            frame,
+            text=frame_nome,
+            bg=parent.cget("bg"),
+            fg="#ECF0F1",
+            font=("Arial", 12),
         ).pack(side=tk.LEFT, anchor="w", padx=5)
-        
+
         entry = tk.Entry(frame)
         entry.pack(side=tk.LEFT, padx=2)
 
@@ -251,7 +264,9 @@ class FuncoesBotoes:
 
         # Validar preenchimento do nome e RENACH
         if not nome or not renach:
-            messagebox.showerror("Erro", "Por favor, preencha os campos de nome e RENACH.")
+            messagebox.showerror(
+                "Erro", "Por favor, preencha os campos de nome e RENACH."
+            )
             return
 
         # Validar se RENACH é um número inteiro
@@ -268,12 +283,32 @@ class FuncoesBotoes:
 
         # Obter dados dos checkbuttons de pagamento
         pagamentos_selecionados = [
-            ("D", self.d_var.get(), self.entry_d.get().strip(), self.entry_valor_d.get().strip()),
-            ("C", self.c_var.get(), self.entry_c.get().strip(), self.entry_valor_c.get().strip()),
-            ("E", self.e_var.get(), self.entry_e.get().strip(), self.entry_valor_e.get().strip()),
-            ("P", self.p_var.get(), self.entry_p.get().strip(), self.entry_valor_p.get().strip()),
+            (
+                "D",
+                self.d_var.get(),
+                self.entry_d.get().strip(),
+                self.entry_valor_d.get().strip(),
+            ),
+            (
+                "C",
+                self.c_var.get(),
+                self.entry_c.get().strip(),
+                self.entry_valor_c.get().strip(),
+            ),
+            (
+                "E",
+                self.e_var.get(),
+                self.entry_e.get().strip(),
+                self.entry_valor_e.get().strip(),
+            ),
+            (
+                "P",
+                self.p_var.get(),
+                self.entry_p.get().strip(),
+                self.entry_valor_p.get().strip(),
+            ),
         ]
-        
+
         # Filtrar formas de pagamento selecionadas
         selecionados = [p for p in pagamentos_selecionados if p[1] == 1]
 
@@ -289,30 +324,44 @@ class FuncoesBotoes:
             return
 
         # Encontrar a próxima linha vazia para médicos e psicólogos
-        nova_linha_medico = next((row for row in range(3, ws.max_row + 2) if not ws[f"B{row}"].value), None)
-        nova_linha_psicologo = next((row for row in range(3, ws.max_row + 2) if not ws[f"H{row}"].value), None)
+        nova_linha_medico = next(
+            (row for row in range(3, ws.max_row + 2) if not ws[f"B{row}"].value), None
+        )
+        nova_linha_psicologo = next(
+            (row for row in range(3, ws.max_row + 2) if not ws[f"H{row}"].value), None
+        )
 
         # Inserir informações na planilha com base na escolha
         if escolha == "medico":
             ws[f"B{nova_linha_medico}"] = nome
             ws[f"C{nova_linha_medico}"] = renach
-            ws[f"F{nova_linha_medico}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
+            ws[f"F{nova_linha_medico}"] = ", ".join(
+                [f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados]
+            )
             messagebox.showinfo("Paciente adicionado para se consultar com médico!")
 
         elif escolha == "psicologo":
             ws[f"H{nova_linha_psicologo}"] = nome
             ws[f"I{nova_linha_psicologo}"] = renach
-            ws[f"L{nova_linha_psicologo}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
+            ws[f"L{nova_linha_psicologo}"] = ", ".join(
+                [f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados]
+            )
             messagebox.showinfo("Paciente adicionado para se consultar com psicólogo!")
 
         elif escolha == "ambos":
             ws[f"B{nova_linha_medico}"] = nome
             ws[f"C{nova_linha_medico}"] = renach
-            ws[f"F{nova_linha_medico}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
+            ws[f"F{nova_linha_medico}"] = ", ".join(
+                [f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados]
+            )
             ws[f"H{nova_linha_psicologo}"] = nome
             ws[f"I{nova_linha_psicologo}"] = renach
-            ws[f"L{nova_linha_psicologo}"] = ", ".join([f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados])
-            messagebox.showinfo("Paciente adicionado para se consultar com médico e psicólogo!")
+            ws[f"L{nova_linha_psicologo}"] = ", ".join(
+                [f"{p[0]}: {p[2]} - {p[3]}" for p in selecionados]
+            )
+            messagebox.showinfo(
+                "Paciente adicionado para se consultar com médico e psicólogo!"
+            )
 
         # Salvar na planilha
         self.wb.save(self.planilhas.file_path)
@@ -334,79 +383,84 @@ class FuncoesBotoes:
         self.entry_valor_e.delete(0, tk.END)
         self.entry_valor_p.delete(0, tk.END)
 
-
     def excluir(self):
-            """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário e reorganiza as linhas."""
-            ws = self.wb.active
-            pacientes_medicos = {}
-            pacientes_psicologos = {}
-    
-            # Armazenar pacientes de médicos
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-                if row[1].value and row[2].value:
-                    try:
-                        renach_medico = int(row[2].value)
-                        pacientes_medicos.setdefault(renach_medico, []).append(row[0].row)
-                    except ValueError:
-                        print(f"RENACH inválido na linha {row[0].row}: {row[2].value}")
-    
-            # Armazenar pacientes psicólogos
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-                if row[7].value and row[8].value:
-                    try:
-                        renach_psicologo = int(row[8].value)
-                        pacientes_psicologos.setdefault(renach_psicologo, []).append(row[0].row)
-                    except ValueError:
-                        print(f"RENACH inválido na linha {row[0].row}: {row[8].value}")
-    
-            # Janela de exclusão
-            excluir_window = tk.Toplevel(self.master)
-            excluir_window.title("Excluir Paciente")
-            excluir_window.geometry("400x150")
-            excluir_window.configure(bg=self.master.cget("bg"))
-    
-            tk.Label(
-                excluir_window,
-                text="Informe o RENACH:",
-                bg=self.master.cget("bg"),
-                fg="#ECF0F1",
-                font=("Arial", 14, "bold"),
-            ).pack(pady=10)
-            renach_entry = tk.Entry(excluir_window)
-            renach_entry.pack(pady=5)
-    
-            def excluir_paciente():
-                """Função para excluir o paciente com o RENACH fornecido"""
+        """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário e reorganiza as linhas."""
+        ws = self.wb.active
+        pacientes_medicos = {}
+        pacientes_psicologos = {}
+
+        # Armazenar pacientes de médicos
+        for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
+            if row[1].value and row[2].value:
                 try:
-                    renach = int(renach_entry.get())
-    
-                    def reorganizar_linhas(linha_excluida):
-                        """Função auxiliar para mover os dados de cada linha uma posição para cima"""
-                        for row in range(linha_excluida, ws.max_row):
-                            for col in range(1, ws.max_column + 1):
-                                ws.cell(row=row, column=col).value = ws.cell(row=row + 1, column=col).value
-                        # Limpar a última linha
-                        for col in range(1, ws.max_column + 1):
-                            ws.cell(row=ws.max_row, column=col).value = None
-    
-                    # Excluir paciente de médico
-                    if renach in pacientes_medicos:
-                        for linha in pacientes_medicos[renach]:
-                            reorganizar_linhas(linha)
-    
-                    # Excluir paciente de psicólogo
-                    if renach in pacientes_psicologos:
-                        for linha in pacientes_psicologos[renach]:
-                            reorganizar_linhas(linha)
-    
-                    self.wb.save("CAMPSSA.xlsx")
-                    print("Paciente foi excluído com sucesso!")
+                    renach_medico = int(row[2].value)
+                    pacientes_medicos.setdefault(renach_medico, []).append(row[0].row)
                 except ValueError:
-                    print("RENACH inválido. Por favor, insira um número válido.")
-    
-            tk.Button(excluir_window, text="Excluir", command=excluir_paciente).pack(pady=10)
-    
-            self.center(excluir_window)
+                    print(f"RENACH inválido na linha {row[0].row}: {row[2].value}")
+
+        # Armazenar pacientes psicólogos
+        for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
+            if row[7].value and row[8].value:
+                try:
+                    renach_psicologo = int(row[8].value)
+                    pacientes_psicologos.setdefault(renach_psicologo, []).append(
+                        row[0].row
+                    )
+                except ValueError:
+                    print(f"RENACH inválido na linha {row[0].row}: {row[8].value}")
+
+        # Janela de exclusão
+        excluir_window = tk.Toplevel(self.master)
+        excluir_window.title("Excluir Paciente")
+        excluir_window.geometry("400x150")
+        excluir_window.configure(bg=self.master.cget("bg"))
+
+        tk.Label(
+            excluir_window,
+            text="Informe o RENACH:",
+            bg=self.master.cget("bg"),
+            fg="#ECF0F1",
+            font=("Arial", 14, "bold"),
+        ).pack(pady=10)
+        renach_entry = tk.Entry(excluir_window)
+        renach_entry.pack(pady=5)
+
+        def excluir_paciente():
+            """Função para excluir o paciente com o RENACH fornecido"""
+            try:
+                renach = int(renach_entry.get())
+
+                def reorganizar_linhas(linha_excluida):
+                    """Função auxiliar para mover os dados de cada linha uma posição para cima"""
+                    for row in range(linha_excluida, ws.max_row):
+                        for col in range(1, ws.max_column + 1):
+                            ws.cell(row=row, column=col).value = ws.cell(
+                                row=row + 1, column=col
+                            ).value
+                    # Limpar a última linha
+                    for col in range(1, ws.max_column + 1):
+                        ws.cell(row=ws.max_row, column=col).value = None
+
+                # Excluir paciente de médico
+                if renach in pacientes_medicos:
+                    for linha in pacientes_medicos[renach]:
+                        reorganizar_linhas(linha)
+
+                # Excluir paciente de psicólogo
+                if renach in pacientes_psicologos:
+                    for linha in pacientes_psicologos[renach]:
+                        reorganizar_linhas(linha)
+
+                self.wb.save("CAMPSSA.xlsx")
+                print("Paciente foi excluído com sucesso!")
+            except ValueError:
+                print("RENACH inválido. Por favor, insira um número válido.")
+
+        tk.Button(excluir_window, text="Excluir", command=excluir_paciente).pack(
+            pady=10
+        )
+
+        self.center(excluir_window)
 
     def exibir_informacao(self):
         """Exibe informações dos pacientes em uma nova janela com barra de rolagem."""
@@ -1086,5 +1140,3 @@ class FuncoesBotoes:
     def voltar_para_login(self):
         self.criar_conta_frame.grid_forget()
         self.login_frame.grid()
-
-

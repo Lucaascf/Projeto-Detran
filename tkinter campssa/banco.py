@@ -50,12 +50,22 @@ class DataBaseLogin:
     def create_user(self, user, password):
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
+
+        # Verifica se o usuario já existe
+        cursor.execute("SELECT * FROM users WHERE user = ?", (user,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            conn.close()
+            return False 
+
+        # Se nao existir, cria um novo usuário
         cursor.execute(
             "INSERT INTO users (user, password) VALUES (?, ?)", (user, password)
         )
         conn.commit()
         conn.close()
-        print(f"usuario {user} criado com sucesso")
+        return True
 
     # Função para ser um usuário com base no user
     def read_user(self, user):
