@@ -522,7 +522,7 @@ class FuncoesBotoes:
                 font=("Arial", 16, "bold"),
                 bg=cor_fundo,
                 fg="#ECF0F1",
-            ).pack(pady=(10, 0))
+            ).pack(pady=(10, 0), anchor='center')
             for i, paciente in enumerate(medico, start=1):
                 tk.Label(
                     scrollable_frame,
@@ -540,7 +540,7 @@ class FuncoesBotoes:
                 font=("Arial", 16, "bold"),
                 bg=cor_fundo,
                 fg="#ECF0F1",
-            ).pack(pady=(10, 0))
+            ).pack(pady=(10, 0), anchor='center')
             for i, paciente in enumerate(psi, start=1):
                 tk.Label(
                     scrollable_frame,
