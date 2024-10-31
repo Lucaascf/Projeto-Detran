@@ -39,7 +39,11 @@ class MainFrame(Frame):
         # Botão para exibir resultados de consulta
         self.bt_valores_atendimento = Button(
             self, text='Valores Atendimento', command=self.resultados_consulta)
-        self.bt_valores_atendimento.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+        self.bt_valores_atendimento.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+
+        self.bt_format_planilha = Button(
+            self, text='Format Planilha', command=self.format_planilha)
+        self.bt_format_planilha.grid(row=4, column=0, padx=10, pady=10, sticky='ew')
 
         # Botão para excluir informações
         self.bt_excluir_informacao = Button(
@@ -122,6 +126,9 @@ class MainFrame(Frame):
 
     def visu_marcacoes(self):
         self.banco.view_marcacoes()
+
+    def format_planilha(self):
+        self.funcoes_botoes.formatar_planilha()
 
 
 

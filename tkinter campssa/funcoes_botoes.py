@@ -1,5 +1,6 @@
 import logging
 from openpyxl import load_workbook
+from openpyxl.styles import Alignment, Font, Border, Side
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from planilhas import Planilhas
@@ -20,6 +21,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 import ssl
+from openpyxl import load_workbook
+from openpyxl.styles import Font, Color
 
 
 
@@ -1206,3 +1209,73 @@ class FuncoesBotoes:
     def voltar_para_login(self):
         self.criar_conta_frame.grid_forget()
         self.login_frame.grid()
+    
+    def formatar_planilha(self):
+        # Carregar o arquivo de planilha usando o caminho armazenado em self.file_path
+        wb = load_workbook(self.file_path)
+
+        # Obter a planilha ativa
+        ws = wb.active
+
+        # Definindo o estilo da borda
+        borda = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin'))
+
+        # Mescla as celulas, deixa o texto em negrito e centraliza
+        ws['A1'] = '(CAMPSSA) Atendimento Médico Terça- feira 08/10/2024'
+        ws['A1'].font = Font(bold=True)
+        ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+        ws.merge_cells('A1:E1')
+        
+        ws['G1'] = '(CAMPSSA) Atendimento Psicológico Terça-feira 08/10/2024'
+        ws['G1'].font = Font(bold=True)
+        ws['G1'].alignment = Alignment(horizontal='center', vertical='center')
+        ws.merge_cells('G1:K1')
+
+        # Dados fixos da planilha
+        # Medico
+        ws['A2'] = 'Ordem'
+        ws['B2'] = 'Nome'
+        ws['C2'] = 'Renach'
+        ws['E2'] = 'Valor'
+        # Psicologo
+        ws['G2'] = 'Ordem'
+        ws['H2'] = 'Nome'
+        ws['I2'] = 'Renach'
+        ws['K2'] = 'Valor'
+
+        # Centraliza e deixa as linhas em negrito
+        for col in ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'K']:
+            cell = ws[f'{col}2']
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        # Aumentando a largura das celulas
+        ws.column_dimensions['B'].width = 55
+        ws.column_dimensions['H'].width = 55
+
+        # Ordenando pacientes e preenchendo valores da consulta
+        ordem = 1
+        medico = 148.65
+        psicologo = 192.61
+        for row in range(3, ws.max_row + 1):
+            if ws[f'B{row}'].value:
+                ws[f'A{row}'] = ordem
+                ws[f'E{row}'] = medico
+            if ws[f'H{row}'].value:
+                ws[f'G{row}'] = ordem
+                ws[f'K{row}'] = psicologo
+            ordem += 1
+
+        # Aplicando bordar as celulas que contem dados
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for cell in row:
+                if cell.value is not None:
+                    cell.border = borda
+
+        # Salva o arquivo
+        wb.save(self.file_path)
+
