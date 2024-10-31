@@ -1005,7 +1005,7 @@ class FuncoesBotoes:
 
     def enviar_email(self):
         janela_email = tk.Toplevel(self.master)
-        janela_email.geometry("300x300")
+        janela_email.geometry("300x400")
         cor_fundo = self.master.cget("bg")
         janela_email.configure(bg=cor_fundo)
         self.center(janela_email)
@@ -1040,40 +1040,102 @@ class FuncoesBotoes:
         entry_destinatario = tk.Entry(janela_email)
         entry_destinatario.pack(pady=5)
 
+        tk.Label(
+            janela_email,
+            text="Assunto:",
+            bg=cor_fundo,
+            fg="#ECF0F1",
+            font=("Arial", 14, "bold"),
+        ).pack(pady=5)
+        entry_assunto = tk.Entry(janela_email)
+        entry_assunto.pack(pady=5)
+
         tk.Button(
             janela_email,
-            text="Enviar",
-            command=lambda: self.enviar(
-                entry_email.get(), entry_senha.get(), entry_destinatario.get()
+            text="Selecionar XLSX",
+            command=lambda: self.selecionar_xlsx(
+                entry_email.get(), 
+                entry_senha.get(), 
+                entry_destinatario.get(),
+                entry_assunto.get()
             ),
         ).pack(pady=20)
 
-    def enviar(self, email, senha, destinatario):
+    def selecionar_xlsx(self, email, senha, destinatario, assunto):
+        """
+        Abre diálogo para selecionar arquivo XLSX
+        """
+        if not all([email, senha, destinatario, assunto]):
+            messagebox.showerror("Erro", "Preencha todos os campos!")
+            return
+
+        arquivo_xlsx = filedialog.askopenfilename(
+            title="Selecione o arquivo XLSX",
+            filetypes=[("Arquivos Excel", "*.xlsx *.xls")]
+        )
+
+        if arquivo_xlsx:
+            self.enviar(
+                email, 
+                senha, 
+                destinatario, 
+                assunto, 
+                arquivo_xlsx
+            )
+
+    def enviar(self, email, senha, destinatario, assunto, caminho_xlsx):
+        """
+        Envia e-mail com arquivo XLSX anexado
+        """
         smtp_server = "smtp.gmail.com"  # Para Gmail
         smtp_port = 587
 
-        # Criando a mensagem
-        subject = "Assunto do E-mail"
-        body = "Este é o corpo do e-mail."
-
-        msg = MIMEMultipart()
-        msg["From"] = email
-        msg["To"] = destinatario
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-
         try:
-            # Enviando o e-mail
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()  # Inicia a segurança TLS
-            server.login(email, senha)  # Faz login no servidor
-            server.send_message(msg)  # Envia a mensagem
-            print("E-mail enviado com sucesso!")
+            # Criando a mensagem
+            msg = MIMEMultipart()
+            msg["From"] = email
+            msg["To"] = destinatario
+            msg["Subject"] = assunto
 
+            # Corpo do e-mail padrão
+            corpo = "Segue em anexo o arquivo XLSX conforme solicitado."
+            msg.attach(MIMEText(corpo, "plain"))
+
+            # Anexar arquivo XLSX
+            with open(caminho_xlsx, "rb") as arquivo:
+                parte_xlsx = MIMEApplication(arquivo.read(), _subtype="xlsx")
+                parte_xlsx.add_header(
+                    'Content-Disposition', 
+                    'attachment', 
+                    filename=os.path.basename(caminho_xlsx)
+                )
+                msg.attach(parte_xlsx)
+
+            # Contexto SSL para conexão segura
+            context = ssl.create_default_context()
+
+            # Enviando o e-mail
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls(context=context)  # Inicia a segurança TLS
+                server.login(email, senha)  # Faz login no servidor
+                server.send_message(msg)  # Envia a mensagem
+            
+            # Mensagem de sucesso
+            messagebox.showinfo(
+                "Sucesso", 
+                f"E-mail enviado com sucesso para {destinatario}!\nAnexo: {os.path.basename(caminho_xlsx)}"
+            )
+
+        except smtplib.SMTPAuthenticationError:
+            messagebox.showerror(
+                "Erro de Autenticação", 
+                "Verifique seu email e senha. Use uma senha de aplicativo para o Gmail."
+            )
         except Exception as e:
-            print(f"Erro ao enviar o e-mail: {e}")
-        finally:
-            server.quit()  # Encerra a conexão
+            messagebox.showerror(
+                "Erro ao Enviar", 
+                f"Ocorreu um erro: {str(e)}"
+            )  
 
     def configurar_frames(self, login_frame, criar_conta_frame):
         self.login_frame = login_frame
