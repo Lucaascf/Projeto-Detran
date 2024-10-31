@@ -1,7 +1,7 @@
 import logging
 from openpyxl import load_workbook
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from planilhas import Planilhas
 import pandas as pd
 from selenium import webdriver
@@ -18,6 +18,10 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+import ssl
+
+
 
 # Configurando logs
 logging.basicConfig(
@@ -1124,8 +1128,8 @@ class FuncoesBotoes:
             return
 
         arquivo_xlsx = filedialog.askopenfilename(
-            title="Selecione o arquivo XLSX",
-            filetypes=[("Arquivos Excel", "*.xlsx *.xls")]
+        title="Selecione o arquivo XLSX",
+        filetypes=[("Arquivos Excel", "*.xlsx *.xls")]
         )
 
         if arquivo_xlsx:
