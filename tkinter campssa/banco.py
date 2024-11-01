@@ -28,6 +28,7 @@ from planilhas import Planilhas
 class DataBaseLogin:
     def __init__(self, db_name="login.db"):
         self.db_name = db_name
+        self.conn = sqlite3.connect(db_name)
         self.create_db()
 
     # Função para criar o banco de dados e a tabela de usuários
@@ -92,6 +93,12 @@ class DataBaseLogin:
         conn.comit()
         conn.close()
 
+    def validate_user(self, user, password):
+        """Verifica se o nome de usuário e a senha são válidos no banco de dados."""
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE user = ? AND password = ?', (user, password))
+        result = cursor.fetchone()
+        return result is not None
 
 class DataBaseMarcacao:
     def __init__(self, master, planilhas:Planilhas, file_path:str, app, db_name="db_marcacao.db"):

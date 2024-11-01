@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox
 from funcoes_botoes import FuncoesBotoes
 from planilhas import Planilhas
 from banco import DataBaseLogin
+import logging
 
 class App(Frame):
     """Classe principal do aplicativo, responsável por gerenciar a interface gráfica e a lógica do aplicativo."""
@@ -76,15 +77,24 @@ class App(Frame):
                 self.planilhas = Planilhas(self.file_path)  # Carrega as planilhas
                 
                 self.funcoes_botoes.planilhas = self.planilhas  # Passa as planilhas para as funções dos botões
-                print("Arquivo selecionado com sucesso")
+                logging.info("Arquivo selecionado com sucesso")
 
                 # Instancia e mostra o MainFrame
                 self.main_frame = MainFrame(self.master, self.planilhas, self.file_path, self)  
                 self.main_frame.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)  # Adiciona o frame à grid
                 self.login_frame.grid_forget()  # Esconde o frame de login
             else:
-                messagebox.showwarning("Nenhum Arquivo", "Nenhum arquivo foi selecionado.")
+                resposta = messagebox.askyesno("Confirmação", "Você não selecionou nenhum arquivo. Deseja realmente sair?")
+                if resposta:  # Se o usuário escolher "Sim"
+                    self.master.quit()  # Encerra o programa
+                else:
+                    self.login_frame.grid(row=0, column=0, pady=150)  # Reexibe o frame de login
+                    self.open_file()  # Chama a função novamente para permitir nova seleção de arquivo
+
+                    
+                '''messagebox.showwarning("Nenhum Arquivo", "Nenhum arquivo foi selecionado.")
                 self.login_frame.grid(row=0, column=0, pady=150)  # Reexibe o frame de login
+                self.open_file()'''
         except Exception as e:
             print(f"Erro: {e}")
             messagebox.showerror('Erro ao abrir o arquivo', str(e))  # Exibe erro em caso de falha

@@ -17,6 +17,8 @@ class LoginFrame(Frame):
         super().__init__(master)  # Chama o construtor da classe Frame
         self.on_login_success = on_login_success  # Armazena a função de sucesso do login
         self.funcoes_botoes = funcoes_botoes  # Armazena a referência para FuncoesBotoes
+        self.db = DataBaseLogin()
+        self.current_user = None
         self.create_widgets()  # Cria os widgets da interface
 
     def create_widgets(self):
@@ -57,9 +59,13 @@ class LoginFrame(Frame):
 
         # Verifica se o nome de usuário e a senha foram fornecidos
         if user and password:
-            self.on_login_success()  # Chama a função de sucesso do login
-        else:
-            print("Usuário ou senha incorretos.")  # Mensagem de erro para campos vazios
+            if self.db.validate_user(user, password):
+                self.current_user = user
+                self.on_login_success()
+            else:
+                messagebox.showerror("Erro", "Usuário ou senha incorretos")  # Mensagem de erro para campos vazios
+                self.entry_user.delete(0, 'end')
+                self.entry_password.delete(0, 'end')
 
 
 class CriarContaFrame(Frame):
@@ -77,6 +83,7 @@ class CriarContaFrame(Frame):
         self.db = db  # Armazena a referência do banco de dados
         self.funcoes_botoes = funcoes_botoes  # Armazena a referência para FuncoesBotoes
         self.create_widgets()  # Cria os widgets da interface
+        self.current_user = None
 
     def create_widgets(self):
         """Cria e organiza os widgets do frame de criação de conta."""
@@ -117,7 +124,12 @@ class CriarContaFrame(Frame):
             self.entry_user.delete(0, 'end')  # Limpa o campo de usuário
             self.entry_password.delete(0, 'end')  # Limpa o campo de senha
         else:
+            self.current_user = user # Armazena o nome do usuário criado
             messagebox.showinfo("Sucesso", f"Usuário {user} criado com sucesso.")
+    
+    def get_current_user(self):
+        """Retorna o nome do usuário atual."""
+        return self.current_user
 
     def voltar_login(self):
         self.funcoes_botoes.voltar_para_login()
