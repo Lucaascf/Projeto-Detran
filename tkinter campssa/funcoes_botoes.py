@@ -23,7 +23,7 @@ from email.mime.application import MIMEApplication
 import ssl
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Color
-
+import subprocess
 
 
 # Configurando logs
@@ -529,7 +529,7 @@ class FuncoesBotoes:
                 font=("Arial", 16, "bold"),
                 bg=cor_fundo,
                 fg="#ECF0F1",
-            ).pack(pady=(10, 0), anchor='center')
+            ).pack(pady=(10, 0), anchor="center")
             for i, paciente in enumerate(medico, start=1):
                 tk.Label(
                     scrollable_frame,
@@ -547,7 +547,7 @@ class FuncoesBotoes:
                 font=("Arial", 16, "bold"),
                 bg=cor_fundo,
                 fg="#ECF0F1",
-            ).pack(pady=(10, 0), anchor='center')
+            ).pack(pady=(10, 0), anchor="center")
             for i, paciente in enumerate(psi, start=1):
                 tk.Label(
                     scrollable_frame,
@@ -1115,10 +1115,10 @@ class FuncoesBotoes:
             janela_email,
             text="Selecionar XLSX",
             command=lambda: self.selecionar_xlsx(
-                entry_email.get(), 
-                entry_senha.get(), 
+                entry_email.get(),
+                entry_senha.get(),
                 entry_destinatario.get(),
-                entry_assunto.get()
+                entry_assunto.get(),
             ),
         ).pack(pady=20)
 
@@ -1131,18 +1131,12 @@ class FuncoesBotoes:
             return
 
         arquivo_xlsx = filedialog.askopenfilename(
-        title="Selecione o arquivo XLSX",
-        filetypes=[("Arquivos Excel", "*.xlsx *.xls")]
+            title="Selecione o arquivo XLSX",
+            filetypes=[("Arquivos Excel", "*.xlsx *.xls")],
         )
 
         if arquivo_xlsx:
-            self.enviar(
-                email, 
-                senha, 
-                destinatario, 
-                assunto, 
-                arquivo_xlsx
-            )
+            self.enviar(email, senha, destinatario, assunto, arquivo_xlsx)
 
     def enviar(self, email, senha, destinatario, assunto, caminho_xlsx):
         """
@@ -1166,9 +1160,9 @@ class FuncoesBotoes:
             with open(caminho_xlsx, "rb") as arquivo:
                 parte_xlsx = MIMEApplication(arquivo.read(), _subtype="xlsx")
                 parte_xlsx.add_header(
-                    'Content-Disposition', 
-                    'attachment', 
-                    filename=os.path.basename(caminho_xlsx)
+                    "Content-Disposition",
+                    "attachment",
+                    filename=os.path.basename(caminho_xlsx),
                 )
                 msg.attach(parte_xlsx)
 
@@ -1180,23 +1174,20 @@ class FuncoesBotoes:
                 server.starttls(context=context)  # Inicia a segurança TLS
                 server.login(email, senha)  # Faz login no servidor
                 server.send_message(msg)  # Envia a mensagem
-            
+
             # Mensagem de sucesso
             messagebox.showinfo(
-                "Sucesso", 
-                f"E-mail enviado com sucesso para {destinatario}!\nAnexo: {os.path.basename(caminho_xlsx)}"
+                "Sucesso",
+                f"E-mail enviado com sucesso para {destinatario}!\nAnexo: {os.path.basename(caminho_xlsx)}",
             )
 
         except smtplib.SMTPAuthenticationError:
             messagebox.showerror(
-                "Erro de Autenticação", 
-                "Verifique seu email e senha. Use uma senha de aplicativo para o Gmail."
+                "Erro de Autenticação",
+                "Verifique seu email e senha. Use uma senha de aplicativo para o Gmail.",
             )
         except Exception as e:
-            messagebox.showerror(
-                "Erro ao Enviar", 
-                f"Ocorreu um erro: {str(e)}"
-            )  
+            messagebox.showerror("Erro ao Enviar", f"Ocorreu um erro: {str(e)}")
 
     def configurar_frames(self, login_frame, criar_conta_frame):
         self.login_frame = login_frame
@@ -1209,73 +1200,153 @@ class FuncoesBotoes:
     def voltar_para_login(self):
         self.criar_conta_frame.grid_forget()
         self.login_frame.grid()
-    
-    def formatar_planilha(self):
-        # Carregar o arquivo de planilha usando o caminho armazenado em self.file_path
-        wb = load_workbook(self.file_path)
 
-        # Obter a planilha ativa
+    def formatar_planilha(self):
+        wb = load_workbook(self.file_path)
         ws = wb.active
 
-        # Definindo o estilo da borda
         borda = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin'))
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
 
-        # Mescla as celulas, deixa o texto em negrito e centraliza
-        ws['A1'] = '(CAMPSSA) Atendimento Médico Terça- feira 08/10/2024'
-        ws['A1'].font = Font(bold=True)
-        ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
-        ws.merge_cells('A1:E1')
-        
-        ws['G1'] = '(CAMPSSA) Atendimento Psicológico Terça-feira 08/10/2024'
-        ws['G1'].font = Font(bold=True)
-        ws['G1'].alignment = Alignment(horizontal='center', vertical='center')
-        ws.merge_cells('G1:K1')
-
-        # Dados fixos da planilha
-        # Medico
-        ws['A2'] = 'Ordem'
-        ws['B2'] = 'Nome'
-        ws['C2'] = 'Renach'
-        ws['E2'] = 'Valor'
-        # Psicologo
-        ws['G2'] = 'Ordem'
-        ws['H2'] = 'Nome'
-        ws['I2'] = 'Renach'
-        ws['K2'] = 'Valor'
-
-        # Centraliza e deixa as linhas em negrito
-        for col in ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'K']:
-            cell = ws[f'{col}2']
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-
-        # Aumentando a largura das celulas
-        ws.column_dimensions['B'].width = 55
-        ws.column_dimensions['H'].width = 55
-
-        # Ordenando pacientes e preenchendo valores da consulta
-        ordem = 1
-        medico = 148.65
-        psicologo = 192.61
+        # Primeiro, encontra onde termina a seção do médico
+        ultima_linha_nome_medico = None
+        numero_pacientes_medico = 0
         for row in range(3, ws.max_row + 1):
-            if ws[f'B{row}'].value:
-                ws[f'A{row}'] = ordem
-                ws[f'E{row}'] = medico
-            if ws[f'H{row}'].value:
-                ws[f'G{row}'] = ordem
-                ws[f'K{row}'] = psicologo
-            ordem += 1
+            if ws[f"B{row}"].value is not None:
+                ultima_linha_nome_medico = row
+                numero_pacientes_medico += 1
 
-        # Aplicando bordar as celulas que contem dados
-        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        # Depois, encontra onde termina a seção do psicólogo
+        ultima_linha_nome_psicologo = None
+        numero_pacientes_psicologo = 0
+        for row in range(3, ws.max_row + 1):
+            if ws[f"H{row}"].value is not None:
+                ultima_linha_nome_psicologo = row
+                numero_pacientes_psicologo += 1
+
+        # Calcula as somas
+        soma_medico = 0
+        soma_psicologo = 0
+
+        # Soma valores médicos
+        for row in range(3, ultima_linha_nome_medico + 1):
+            valor = ws[f"E{row}"].value
+            if isinstance(valor, (int, float)):
+                soma_medico += valor
+
+        # Soma valores psicólogo
+        for row in range(3, ultima_linha_nome_psicologo + 1):
+            valor = ws[f"K{row}"].value
+            if isinstance(valor, (int, float)):
+                soma_psicologo += valor
+
+        # Adiciona soma e valores adicionais para médico
+        if ultima_linha_nome_medico is not None:
+            # Linha da soma
+            ws[f"D{ultima_linha_nome_medico + 1}"] = "Soma"
+            ws[f"D{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
+            ws[f"D{ultima_linha_nome_medico + 1}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws[f"D{ultima_linha_nome_medico + 1}"].border = borda
+            ws[f"E{ultima_linha_nome_medico + 1}"] = soma_medico
+            ws[f"E{ultima_linha_nome_medico + 1}"].border = borda
+            ws[f"E{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
+            ws[f"E{ultima_linha_nome_medico + 1}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+
+            # Linha do valor por paciente
+            ws[f"D{ultima_linha_nome_medico + 2}"] = "Médico"
+            ws[f"D{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
+            ws[f"D{ultima_linha_nome_medico + 2}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws[f"D{ultima_linha_nome_medico + 2}"].border = borda
+            valor_medico = numero_pacientes_medico * 49
+            ws[f"E{ultima_linha_nome_medico + 2}"] = valor_medico
+            ws[f"E{ultima_linha_nome_medico + 2}"].border = borda
+            ws[f"E{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
+            ws[f"E{ultima_linha_nome_medico + 2}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+
+            # Linha do total (novo)
+            ws[f"D{ultima_linha_nome_medico + 3}"] = "Total"
+            ws[f"D{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
+            ws[f"D{ultima_linha_nome_medico + 3}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws[f"D{ultima_linha_nome_medico + 3}"].border = borda
+            total_medico = numero_pacientes_medico * (148.65 - 49)
+            ws[f"E{ultima_linha_nome_medico + 3}"] = total_medico
+            ws[f"E{ultima_linha_nome_medico + 3}"].border = borda
+            ws[f"E{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
+            ws[f"E{ultima_linha_nome_medico + 3}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+
+        # Adiciona soma e valores adicionais para psicólogo
+        if ultima_linha_nome_psicologo is not None:
+            # Linha da soma
+            ws[f"J{ultima_linha_nome_psicologo + 1}"] = "Soma"
+            ws[f"J{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
+            ws[f"J{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws[f"J{ultima_linha_nome_psicologo + 1}"].border = borda
+            ws[f"K{ultima_linha_nome_psicologo + 1}"] = soma_psicologo
+            ws[f"K{ultima_linha_nome_psicologo + 1}"].border = borda
+            ws[f"K{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
+            ws[f"K{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+
+            # Linha do valor por paciente
+            ws[f"J{ultima_linha_nome_psicologo + 2}"] = "Psicólogo"
+            ws[f"J{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
+            ws[f"J{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws[f"J{ultima_linha_nome_psicologo + 2}"].border = borda
+            valor_psicologo = numero_pacientes_psicologo * 63.50
+            ws[f"K{ultima_linha_nome_psicologo + 2}"] = valor_psicologo
+            ws[f"K{ultima_linha_nome_psicologo + 2}"].border = borda
+            ws[f"K{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
+            ws[f"K{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+
+            # Linha do total (novo)
+            ws[f"J{ultima_linha_nome_psicologo + 3}"] = "Total"
+            ws[f"J{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
+            ws[f"J{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws[f"J{ultima_linha_nome_psicologo + 3}"].border = borda
+            total_psicologo = numero_pacientes_psicologo * (192.61 - 63.50)
+            ws[f"K{ultima_linha_nome_psicologo + 3}"] = total_psicologo
+            ws[f"K{ultima_linha_nome_psicologo + 3}"].border = borda
+            ws[f"K{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
+            ws[f"K{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+
+        # Aplica bordas nas células preenchidas
+        for row in ws.iter_rows(
+            min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+        ):
             for cell in row:
                 if cell.value is not None:
                     cell.border = borda
 
-        # Salva o arquivo
+        # Salva e abre o arquivo no Linux
         wb.save(self.file_path)
-
+        try:
+            subprocess.run(["xdg-open", self.file_path])
+        except Exception as e:
+            print("Erro ao abrir o arquivo:", e)
