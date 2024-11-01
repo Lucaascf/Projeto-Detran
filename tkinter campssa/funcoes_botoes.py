@@ -1202,151 +1202,147 @@ class FuncoesBotoes:
         self.login_frame.grid()
 
     def formatar_planilha(self):
-        wb = load_workbook(self.file_path)
-        ws = wb.active
+            wb = load_workbook(self.file_path)
+            ws = wb.active
 
-        borda = Border(
-            left=Side(style="thin"),
-            right=Side(style="thin"),
-            top=Side(style="thin"),
-            bottom=Side(style="thin"),
-        )
-
-        # Primeiro, encontra onde termina a seção do médico
-        ultima_linha_nome_medico = None
-        numero_pacientes_medico = 0
-        for row in range(3, ws.max_row + 1):
-            if ws[f"B{row}"].value is not None:
-                ultima_linha_nome_medico = row
-                numero_pacientes_medico += 1
-
-        # Depois, encontra onde termina a seção do psicólogo
-        ultima_linha_nome_psicologo = None
-        numero_pacientes_psicologo = 0
-        for row in range(3, ws.max_row + 1):
-            if ws[f"H{row}"].value is not None:
-                ultima_linha_nome_psicologo = row
-                numero_pacientes_psicologo += 1
-
-        # Calcula as somas
-        soma_medico = 0
-        soma_psicologo = 0
-
-        # Soma valores médicos
-        for row in range(3, ultima_linha_nome_medico + 1):
-            valor = ws[f"E{row}"].value
-            if isinstance(valor, (int, float)):
-                soma_medico += valor
-
-        # Soma valores psicólogo
-        for row in range(3, ultima_linha_nome_psicologo + 1):
-            valor = ws[f"K{row}"].value
-            if isinstance(valor, (int, float)):
-                soma_psicologo += valor
-
-        # Adiciona soma e valores adicionais para médico
-        if ultima_linha_nome_medico is not None:
-            # Linha da soma
-            ws[f"D{ultima_linha_nome_medico + 1}"] = "Soma"
-            ws[f"D{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
-            ws[f"D{ultima_linha_nome_medico + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"D{ultima_linha_nome_medico + 1}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 1}"] = soma_medico
-            ws[f"E{ultima_linha_nome_medico + 1}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
-            ws[f"E{ultima_linha_nome_medico + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
+            borda = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
             )
 
-            # Linha do valor por paciente
-            ws[f"D{ultima_linha_nome_medico + 2}"] = "Médico"
-            ws[f"D{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
-            ws[f"D{ultima_linha_nome_medico + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"D{ultima_linha_nome_medico + 2}"].border = borda
-            valor_medico = numero_pacientes_medico * 49
-            ws[f"E{ultima_linha_nome_medico + 2}"] = valor_medico
-            ws[f"E{ultima_linha_nome_medico + 2}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
-            ws[f"E{ultima_linha_nome_medico + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
+            # Primeiro, encontra onde termina a seção do médico e preenche os valores
+            ultima_linha_nome_medico = None
+            numero_pacientes_medico = 0
+            for row in range(3, ws.max_row + 1):
+                if ws[f"B{row}"].value is not None:
+                    ultima_linha_nome_medico = row
+                    numero_pacientes_medico += 1
+                    # Preenche o valor fixo de 148.65 na coluna E
+                    ws[f"E{row}"].value = 148.65
+                    ws[f"E{row}"].alignment = Alignment(horizontal="center", vertical="center")
+                    ws[f"E{row}"].border = borda
 
-            # Linha do total (novo)
-            ws[f"D{ultima_linha_nome_medico + 3}"] = "Total"
-            ws[f"D{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
-            ws[f"D{ultima_linha_nome_medico + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"D{ultima_linha_nome_medico + 3}"].border = borda
-            total_medico = numero_pacientes_medico * (148.65 - 49)
-            ws[f"E{ultima_linha_nome_medico + 3}"] = total_medico
-            ws[f"E{ultima_linha_nome_medico + 3}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
-            ws[f"E{ultima_linha_nome_medico + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
+            # Depois, encontra onde termina a seção do psicólogo e preenche os valores
+            ultima_linha_nome_psicologo = None
+            numero_pacientes_psicologo = 0
+            for row in range(3, ws.max_row + 1):
+                if ws[f"H{row}"].value is not None:
+                    ultima_linha_nome_psicologo = row
+                    numero_pacientes_psicologo += 1
+                    # Preenche o valor fixo de 192.61 na coluna K
+                    ws[f"K{row}"].value = 192.61
+                    ws[f"K{row}"].alignment = Alignment(horizontal="center", vertical="center")
+                    ws[f"K{row}"].border = borda
 
-        # Adiciona soma e valores adicionais para psicólogo
-        if ultima_linha_nome_psicologo is not None:
-            # Linha da soma
-            ws[f"J{ultima_linha_nome_psicologo + 1}"] = "Soma"
-            ws[f"J{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
-            ws[f"J{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"J{ultima_linha_nome_psicologo + 1}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 1}"] = soma_psicologo
-            ws[f"K{ultima_linha_nome_psicologo + 1}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
-            ws[f"K{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
+            # Calcula as somas
+            soma_medico = numero_pacientes_medico * 148.65
+            soma_psicologo = numero_pacientes_psicologo * 192.61
 
-            # Linha do valor por paciente
-            ws[f"J{ultima_linha_nome_psicologo + 2}"] = "Psicólogo"
-            ws[f"J{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
-            ws[f"J{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"J{ultima_linha_nome_psicologo + 2}"].border = borda
-            valor_psicologo = numero_pacientes_psicologo * 63.50
-            ws[f"K{ultima_linha_nome_psicologo + 2}"] = valor_psicologo
-            ws[f"K{ultima_linha_nome_psicologo + 2}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
-            ws[f"K{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
+            # Adiciona soma e valores adicionais para médico
+            if ultima_linha_nome_medico is not None:
+                # Linha da soma
+                ws[f"D{ultima_linha_nome_medico + 1}"] = "Soma"
+                ws[f"D{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
+                ws[f"D{ultima_linha_nome_medico + 1}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+                ws[f"D{ultima_linha_nome_medico + 1}"].border = borda
+                ws[f"E{ultima_linha_nome_medico + 1}"] = soma_medico
+                ws[f"E{ultima_linha_nome_medico + 1}"].border = borda
+                ws[f"E{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
+                ws[f"E{ultima_linha_nome_medico + 1}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
 
-            # Linha do total (novo)
-            ws[f"J{ultima_linha_nome_psicologo + 3}"] = "Total"
-            ws[f"J{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
-            ws[f"J{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"J{ultima_linha_nome_psicologo + 3}"].border = borda
-            total_psicologo = numero_pacientes_psicologo * (192.61 - 63.50)
-            ws[f"K{ultima_linha_nome_psicologo + 3}"] = total_psicologo
-            ws[f"K{ultima_linha_nome_psicologo + 3}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
-            ws[f"K{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
+                # Linha do valor por paciente
+                ws[f"D{ultima_linha_nome_medico + 2}"] = "Médico"
+                ws[f"D{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
+                ws[f"D{ultima_linha_nome_medico + 2}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+                ws[f"D{ultima_linha_nome_medico + 2}"].border = borda
+                valor_medico = numero_pacientes_medico * 49
+                ws[f"E{ultima_linha_nome_medico + 2}"] = valor_medico
+                ws[f"E{ultima_linha_nome_medico + 2}"].border = borda
+                ws[f"E{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
+                ws[f"E{ultima_linha_nome_medico + 2}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
 
-        # Aplica bordas nas células preenchidas
-        for row in ws.iter_rows(
-            min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
-        ):
-            for cell in row:
-                if cell.value is not None:
-                    cell.border = borda
+                # Linha do total
+                ws[f"D{ultima_linha_nome_medico + 3}"] = "Total"
+                ws[f"D{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
+                ws[f"D{ultima_linha_nome_medico + 3}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+                ws[f"D{ultima_linha_nome_medico + 3}"].border = borda
+                total_medico = numero_pacientes_medico * (148.65 - 49)
+                ws[f"E{ultima_linha_nome_medico + 3}"] = total_medico
+                ws[f"E{ultima_linha_nome_medico + 3}"].border = borda
+                ws[f"E{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
+                ws[f"E{ultima_linha_nome_medico + 3}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
 
-        # Salva e abre o arquivo no Linux
-        wb.save(self.file_path)
-        try:
-            subprocess.run(["xdg-open", self.file_path])
-        except Exception as e:
-            print("Erro ao abrir o arquivo:", e)
+            # Adiciona soma e valores adicionais para psicólogo
+            if ultima_linha_nome_psicologo is not None:
+                # Linha da soma
+                ws[f"J{ultima_linha_nome_psicologo + 1}"] = "Soma"
+                ws[f"J{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
+                ws[f"J{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+                ws[f"J{ultima_linha_nome_psicologo + 1}"].border = borda
+                ws[f"K{ultima_linha_nome_psicologo + 1}"] = soma_psicologo
+                ws[f"K{ultima_linha_nome_psicologo + 1}"].border = borda
+                ws[f"K{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
+                ws[f"K{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+
+                # Linha do valor por paciente
+                ws[f"J{ultima_linha_nome_psicologo + 2}"] = "Psicólogo"
+                ws[f"J{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
+                ws[f"J{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+                ws[f"J{ultima_linha_nome_psicologo + 2}"].border = borda
+                valor_psicologo = numero_pacientes_psicologo * 63.50
+                ws[f"K{ultima_linha_nome_psicologo + 2}"] = valor_psicologo
+                ws[f"K{ultima_linha_nome_psicologo + 2}"].border = borda
+                ws[f"K{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
+                ws[f"K{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+
+                # Linha do total
+                ws[f"J{ultima_linha_nome_psicologo + 3}"] = "Total"
+                ws[f"J{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
+                ws[f"J{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+                ws[f"J{ultima_linha_nome_psicologo + 3}"].border = borda
+                total_psicologo = numero_pacientes_psicologo * (192.61 - 63.50)
+                ws[f"K{ultima_linha_nome_psicologo + 3}"] = total_psicologo
+                ws[f"K{ultima_linha_nome_psicologo + 3}"].border = borda
+                ws[f"K{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
+                ws[f"K{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
+
+            # Aplica bordas nas células preenchidas
+            for row in ws.iter_rows(
+                min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+            ):
+                for cell in row:
+                    if cell.value is not None:
+                        cell.border = borda
+
+            # Salva e abre o arquivo no Linux
+            wb.save(self.file_path)
+            try:
+                subprocess.run(["xdg-open", self.file_path])
+            except Exception as e:
+                print("Erro ao abrir o arquivo:", e)
