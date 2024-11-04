@@ -8,7 +8,7 @@ from banco import DataBaseMarcacao
 class MainFrame(Frame):
     """Classe que representa o frame principal da aplicação, responsável por gerenciar as interações do usuário."""
 
-    def __init__(self, master, planilhas: Planilhas, file_path: str, app):
+    def __init__(self, master, planilhas: Planilhas, file_path: str, app, current_user=None):
         """Inicializa a classe MainFrame.
 
         Args:
@@ -18,7 +18,8 @@ class MainFrame(Frame):
             app: Instância da aplicação principal.
         """
         super().__init__(master, bg=master.cget('bg'))  # Chama o construtor da classe Frame
-        self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app)  # Inicializa FuncoesBotoes
+        self.current_user = current_user
+        self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app, current_user=self.current_user)  # Inicializa FuncoesBotoes
         self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
         self.master = master
         self.file_path = file_path
