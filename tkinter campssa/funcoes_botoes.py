@@ -1496,7 +1496,6 @@ class SistemaContas:
         """Cria a planilha e a aba (sheet) se não existirem."""
         if os.path.exists(self.file_path):
             wb = load_workbook(self.file_path)
-            ws.append(["DATA", "CONTAS", "VALOR"])
             if self.sheet_name not in wb.sheetnames:
                 ws = wb.create_sheet(title=self.sheet_name)
                 ws.append(["DATA", "CONTAS", "VALOR"])
