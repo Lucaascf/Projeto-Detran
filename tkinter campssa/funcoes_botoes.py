@@ -1,8 +1,9 @@
 import logging
-from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Alignment, Font, Border, Side
 import tkinter as tk
-from tkinter import messagebox, filedialog
+from tkinter import messagebox, filedialog, Frame, Label, Entry, Button
 from planilhas import Planilhas
 import pandas as pd
 from selenium import webdriver
@@ -21,10 +22,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 import ssl
-from openpyxl import load_workbook
-from openpyxl.styles import Font, Color
+from openpyxl.styles import Font
 import subprocess
 from datetime import datetime
+from tkcalendar import DateEntry
 
 
 # Configurando logs
@@ -1220,20 +1221,24 @@ class FuncoesBotoes:
         )
 
         # Define estilos de fonte
-        font_bold = Font(name='Arial', bold=True, size=11, color='000000')  # Fonte em negrito
-        font_regular = Font(name='Arial', size=11)
+        font_bold = Font(
+            name="Arial", bold=True, size=11, color="000000"
+        )  # Fonte em negrito
+        font_regular = Font(name="Arial", size=11)
 
         # Define um alinhamento
-        alignment_center = Alignment(horizontal='center', vertical='center')
+        alignment_center = Alignment(horizontal="center", vertical="center")
 
         # Definindo largura das colunas
-        ws.column_dimensions['I'].width = 13
-        ws.column_dimensions['C'].width = 13
-        ws.column_dimensions['B'].width = 55
-        ws.column_dimensions['H'].width = 55
+        ws.column_dimensions["I"].width = 13
+        ws.column_dimensions["C"].width = 13
+        ws.column_dimensions["B"].width = 55
+        ws.column_dimensions["H"].width = 55
 
         # Preenchendo o topo da planilha com usuário e data atual
-        usuario = "Nome do Usuário"  # Substitua pelo método que você usa para obter o usuário
+        usuario = (
+            "Nome do Usuário"  # Substitua pelo método que você usa para obter o usuário
+        )
         data_atual = datetime.now().strftime("%d/%m/%Y")
         ws["A1"] = f"({usuario}) Atendimento Médico {data_atual}"
         ws["G1"] = f"({usuario}) Atendimento Psicológico {data_atual}"
@@ -1245,14 +1250,18 @@ class FuncoesBotoes:
         ws["G1"].alignment = alignment_center
 
         # Valores fixos na planilha com formatação, Medico e Psicologo
-        cabeçalhos = ['Ordem', 'Nome', 'Renach', 'Reexames', 'Valor']
-        for col, valor in enumerate(cabeçalhos, start=1):  # start=1 para começar na coluna A
+        cabeçalhos = ["Ordem", "Nome", "Renach", "Reexames", "Valor"]
+        for col, valor in enumerate(
+            cabeçalhos, start=1
+        ):  # start=1 para começar na coluna A
             cell = ws.cell(row=2, column=col)
             cell.value = valor
             cell.font = font_bold  # Aplica a formatação de fonte
             cell.alignment = alignment_center  # Aplica o alinhamento
 
-        for col, valor in enumerate(cabeçalhos, start=7):  # start=7 para começar na coluna G
+        for col, valor in enumerate(
+            cabeçalhos, start=7
+        ):  # start=7 para começar na coluna G
             cell = ws.cell(row=2, column=col)
             cell.value = valor
             cell.font = font_bold  # Aplica a formatação de fonte
@@ -1386,16 +1395,49 @@ class FuncoesBotoes:
         if ultima_linha_nome_psicologo is not None:
             medico = 49
             psicologo = 63.50
-            total_clinica = (soma_medico + soma_psicologo) - ((numero_pacientes_medico * medico) + (numero_pacientes_psicologo * psicologo))
+            total_clinica = (soma_medico + soma_psicologo) - (
+                (numero_pacientes_medico * medico)
+                + (numero_pacientes_psicologo * psicologo)
+            )
 
             # Lista de células e valores a serem preenchidos
             cells_to_fill = [
-                (f"I{ultima_linha_nome_psicologo+8}", "Atendimento Médico", f"K{ultima_linha_nome_psicologo+8}", soma_medico),
-                (f"I{ultima_linha_nome_psicologo+9}", "Atendimento Psicológico", f"K{ultima_linha_nome_psicologo+9}", soma_psicologo),
-                (f"I{ultima_linha_nome_psicologo+10}", "Total", f"K{ultima_linha_nome_psicologo+10}", soma_medico + soma_psicologo),
-                (f"I{ultima_linha_nome_psicologo+12}", "Pagamento Médico", f"K{ultima_linha_nome_psicologo+12}", numero_pacientes_medico * medico),
-                (f"I{ultima_linha_nome_psicologo+13}", "Pagamento Psicológico", f"K{ultima_linha_nome_psicologo+13}", numero_pacientes_psicologo * psicologo),
-                (f"I{ultima_linha_nome_psicologo+14}", "Soma", f"K{ultima_linha_nome_psicologo+14}", total_clinica),
+                (
+                    f"I{ultima_linha_nome_psicologo+8}",
+                    "Atendimento Médico",
+                    f"K{ultima_linha_nome_psicologo+8}",
+                    soma_medico,
+                ),
+                (
+                    f"I{ultima_linha_nome_psicologo+9}",
+                    "Atendimento Psicológico",
+                    f"K{ultima_linha_nome_psicologo+9}",
+                    soma_psicologo,
+                ),
+                (
+                    f"I{ultima_linha_nome_psicologo+10}",
+                    "Total",
+                    f"K{ultima_linha_nome_psicologo+10}",
+                    soma_medico + soma_psicologo,
+                ),
+                (
+                    f"I{ultima_linha_nome_psicologo+12}",
+                    "Pagamento Médico",
+                    f"K{ultima_linha_nome_psicologo+12}",
+                    numero_pacientes_medico * medico,
+                ),
+                (
+                    f"I{ultima_linha_nome_psicologo+13}",
+                    "Pagamento Psicológico",
+                    f"K{ultima_linha_nome_psicologo+13}",
+                    numero_pacientes_psicologo * psicologo,
+                ),
+                (
+                    f"I{ultima_linha_nome_psicologo+14}",
+                    "Soma",
+                    f"K{ultima_linha_nome_psicologo+14}",
+                    total_clinica,
+                ),
             ]
 
             # Loop para aplicar os valores e a formatação
@@ -1414,8 +1456,7 @@ class FuncoesBotoes:
             # Mescla as células das colunas I e J para cada linha
             for left_cell, _, _, _ in cells_to_fill:
                 ws.merge_cells(f"{left_cell}:J{left_cell[1:]}")
-            
-        
+
         # Aplica bordas nas células preenchidas
         for row in ws.iter_rows(
             min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
@@ -1430,3 +1471,248 @@ class FuncoesBotoes:
             subprocess.run(["xdg-open", self.file_path])
         except Exception as e:
             print("Erro ao abrir o arquivo:", e)
+
+
+class SistemaContas:
+    def __init__(self, file_path: str, current_user=None):
+        self.file_path = file_path
+        self.current_user = current_user
+        self.sheet_name = "Contas Fechamento"
+        self.criar_sheet_se_nao_existir()
+
+    def abrir_janela(self):
+        """Cria uma nova janela para o sistema de contas"""
+        self.window = tk.Toplevel()
+        self.window.title("Sistema de Gerenciamento de Contas")
+        self.window.geometry("500x400")
+        self.criar_interface()
+
+        # Configurar a janela como modal
+        self.window.transient(self.window.master)
+        self.window.grab_set()
+        self.window.focus_set()
+
+    def criar_sheet_se_nao_existir(self):
+        """Cria a planilha e a aba (sheet) se não existirem."""
+        if os.path.exists(self.file_path):
+            wb = load_workbook(self.file_path)
+            if self.sheet_name not in wb.sheetnames:
+                ws = wb.create_sheet(title=self.sheet_name)
+                ws.append(["DATA", "CONTAS", "VALOR"])
+                wb.save(self.file_path)
+        else:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = self.sheet_name
+            ws.append(["DATA", "CONTAS", "VALOR"])
+            wb.save(self.file_path)
+
+    def criar_interface(self):
+        """Cria a interface gráfica usando grid layout"""
+        # Configurando o frame principal
+        main_frame = tk.Frame(self.window, padx=20, pady=20)
+        main_frame.grid(row=0, column=0, sticky="nsew")
+
+        # Configurando expansão do grid
+        self.window.grid_rowconfigure(0, weight=1)
+        self.window.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+
+        # Título
+        title_label = tk.Label(
+            main_frame, text="Gerenciamento de Contas", font=("Arial", 16, "bold")
+        )
+        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+
+        # Data
+        tk.Label(main_frame, text="Data:", font=("Arial", 10, "bold")).grid(
+            row=1, column=0, sticky="w", pady=5
+        )
+        self.date_entry = DateEntry(
+            main_frame,
+            width=20,
+            date_pattern="dd/mm/yyyy",
+            background="darkblue",
+            foreground="white",
+            borderwidth=2,
+        )
+        self.date_entry.grid(row=1, column=1, sticky="we", padx=(5, 0), pady=5)
+
+        # Descrição
+        tk.Label(main_frame, text="Descrição:", font=("Arial", 10, "bold")).grid(
+            row=2, column=0, sticky="w", pady=5
+        )
+        self.info_entry = tk.Entry(main_frame)
+        self.info_entry.grid(row=2, column=1, sticky="we", padx=(5, 0), pady=5)
+
+        # Valor
+        tk.Label(main_frame, text="Valor (R$):", font=("Arial", 10, "bold")).grid(
+            row=3, column=0, sticky="w", pady=5
+        )
+        self.valor_entry = tk.Entry(main_frame)
+        self.valor_entry.grid(row=3, column=1, sticky="we", padx=(5, 0), pady=5)
+
+        # Frame para botões
+        button_frame = tk.Frame(main_frame)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=20)
+        button_frame.grid_columnconfigure((0, 1), weight=1)
+
+        # Botões
+        save_button = tk.Button(
+            button_frame,
+            text="Salvar",
+            command=self.capturar_dados,
+            width=20,
+            bg="#4CAF50",
+            fg="white",
+        )
+        save_button.grid(row=0, column=0, padx=5)
+
+        clear_button = tk.Button(
+            button_frame, text="Limpar", command=self.limpar_campos, width=20
+        )
+        clear_button.grid(row=0, column=1, padx=5)
+
+        # Botão Fechar
+        close_button = tk.Button(
+            button_frame, text="Fechar", command=self.window.destroy, width=20
+        )
+        close_button.grid(row=1, column=0, columnspan=2, pady=(10, 0))
+
+        # Frame para mensagens de status
+        self.status_frame = tk.Frame(main_frame)
+        self.status_frame.grid(row=5, column=0, columnspan=2, sticky="we", pady=(10, 0))
+
+        self.status_label = tk.Label(self.status_frame, text="", foreground="green")
+        self.status_label.grid(row=0, column=0, sticky="we")
+
+        # Configurar foco inicial
+        self.info_entry.focus()
+
+    
+    def salvar_informacoes(self, data_escolhida, info, valor):
+        """Salva as informações na planilha, agrupando por data e colocando informações na mesma célula."""
+        try:
+            wb = load_workbook(self.file_path)
+            ws = wb[self.sheet_name]
+
+            try:
+                data_formatada = datetime.strptime(data_escolhida, "%d/%m/%Y").date()
+            except ValueError:
+                messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA")
+                return False
+
+            dados = []
+            for row in ws.iter_rows(min_row=2):
+                if row[0].value:
+                    dados.append({
+                        'data': row[0].value.date(),
+                        'info': row[1].value,
+                        'valor': row[2].value,
+                        'linha': row[0].row
+                    })
+
+            data_existe = False
+            for i, dado in enumerate(dados):
+                if dado['data'] == data_formatada:
+                    data_existe = True
+                    dados[i]['info'] = f"{dado['info']}\n{info}" if dado['info'] else info
+                    dados[i]['valor'] = f"{dado['valor']}\n{valor}" if dado['valor'] else valor
+                    break
+
+            if not data_existe:
+                dados.append({
+                    'data': data_formatada,
+                    'info': info,
+                    'valor': valor,
+                    'linha': None
+                })
+
+            dados_ordenados = sorted(dados, key=lambda x: x['data'])
+
+            # Limpa os dados existentes
+            for row in ws.iter_rows(min_row=2):
+                for cell in row:
+                    cell.value = None
+
+            for i, dado in enumerate(dados_ordenados, start=2):
+                ws.cell(row=i, column=1).value = dado['data']
+                ws.cell(row=i, column=2).value = dado['info']
+
+                # Atribui o valor à célula e formata como moeda
+                cell_valor = ws.cell(row=i, column=3)
+                if dado['valor'] is not None:
+                    cell_valor.value = dado['valor']  # Aqui você armazena o valor
+                    cell_valor.number_format = '"R$"#,##0.00'  # Formato de moeda
+                else:
+                    cell_valor.value = valor  # Caso não tenha dado anterior
+                    cell_valor.number_format = '"R$"#,##0.00'  # Formato de moeda
+
+                # Centraliza a data
+                ws.cell(row=i, column=1).alignment = Alignment(horizontal='center', vertical='center')
+
+            # Ajusta a formatação de texto e alinhamento
+            for row in ws.iter_rows(min_row=2):
+                for cell in row:
+                    cell.alignment = Alignment(wrap_text=True, vertical='center')
+
+            # Ajusta a largura das colunas
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = max_length + 2
+                ws.column_dimensions[column_letter].width = adjusted_width
+
+            wb.save(self.file_path)
+            messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
+            return True
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
+            return False
+
+    def validar_campos(self):
+        """Valida os campos antes de salvar"""
+        info = self.info_entry.get().strip()
+        valor = self.valor_entry.get().strip()
+        data = self.date_entry.get().strip()
+
+        if not all([data, info, valor]):
+            messagebox.showerror("Erro", "Todos os campos são obrigatórios!")
+            return False
+
+        try:
+            float(valor.replace(",", "."))
+            return True
+        except ValueError:
+            messagebox.showerror("Erro", "O valor deve ser um número válido!")
+            return False
+
+    def limpar_campos(self):
+        """Limpa os campos após salvar"""
+        self.info_entry.delete(0, tk.END)
+        self.valor_entry.delete(0, tk.END)
+
+    def capturar_dados(self):
+        """Captura e processa os dados do formulário"""
+        if self.validar_campos():
+            data = self.date_entry.get()
+            info = self.info_entry.get()
+            valor = self.valor_entry.get().replace(",", ".")
+            
+            try:
+                # Converte o valor para float e formata como moeda
+                valor_float = float(valor)
+                valor_formatado = f"R$ {valor_float:,.2f}"  # Formatação para moeda
+
+                # Chama a função de salvar com o valor formatado
+                if self.salvar_informacoes(data, info, valor_formatado):
+                    self.limpar_campos()
+            except ValueError:
+                messagebox.showerror("Erro", "Por favor, insira um valor numérico válido.")

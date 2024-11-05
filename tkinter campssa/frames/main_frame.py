@@ -1,9 +1,10 @@
 # Importando as bibliotecas necessárias do Tkinter
 from tkinter import *
-from funcoes_botoes import FuncoesBotoes
+from funcoes_botoes import FuncoesBotoes, SistemaContas
 from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
+
 
 class MainFrame(Frame):
     """Classe que representa o frame principal da aplicação, responsável por gerenciar as interações do usuário."""
@@ -21,6 +22,7 @@ class MainFrame(Frame):
         self.current_user = current_user
         self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app, current_user=self.current_user)  # Inicializa FuncoesBotoes
         self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
+        self.sistema_contas = SistemaContas(file_path, current_user=self.current_user)
         self.master = master
         self.file_path = file_path
         self.app = app
@@ -45,6 +47,10 @@ class MainFrame(Frame):
         self.bt_format_planilha = Button(
             self, text='Format Planilha', command=self.format_planilha)
         self.bt_format_planilha.grid(row=4, column=0, padx=10, pady=10, sticky='ew')
+
+        self.bt_format_planilha = Button(
+            self, text='Fechamento contas', command=self.fechamento_contas)
+        self.bt_format_planilha.grid(row=4, column=2, padx=10, pady=10, sticky='ew')
 
         # Botão para excluir informações
         self.bt_excluir_informacao = Button(
@@ -131,6 +137,8 @@ class MainFrame(Frame):
     def format_planilha(self):
         self.funcoes_botoes.formatar_planilha()
 
+    def fechamento_contas(self):
+        self.sistema_contas.abrir_janela()
 
 
 
