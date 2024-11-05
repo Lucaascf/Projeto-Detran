@@ -1496,6 +1496,7 @@ class SistemaContas:
         """Cria a planilha e a aba (sheet) se não existirem."""
         if os.path.exists(self.file_path):
             wb = load_workbook(self.file_path)
+            ws.append(["DATA", "CONTAS", "VALOR"])
             if self.sheet_name not in wb.sheetnames:
                 ws = wb.create_sheet(title=self.sheet_name)
                 ws.append(["DATA", "CONTAS", "VALOR"])
@@ -1589,7 +1590,6 @@ class SistemaContas:
         # Configurar foco inicial
         self.info_entry.focus()
 
-    
     def salvar_informacoes(self, data_escolhida, info, valor):
         """Salva as informações na planilha, agrupando por data e colocando informações na mesma célula."""
         try:
@@ -1605,30 +1605,38 @@ class SistemaContas:
             dados = []
             for row in ws.iter_rows(min_row=2):
                 if row[0].value:
-                    dados.append({
-                        'data': row[0].value.date(),
-                        'info': row[1].value,
-                        'valor': row[2].value,
-                        'linha': row[0].row
-                    })
+                    dados.append(
+                        {
+                            "data": row[0].value.date(),
+                            "info": row[1].value,
+                            "valor": row[2].value,
+                            "linha": row[0].row,
+                        }
+                    )
 
             data_existe = False
             for i, dado in enumerate(dados):
-                if dado['data'] == data_formatada:
+                if dado["data"] == data_formatada:
                     data_existe = True
-                    dados[i]['info'] = f"{dado['info']}\n{info}" if dado['info'] else info
-                    dados[i]['valor'] = f"{dado['valor']}\n{valor}" if dado['valor'] else valor
+                    dados[i]["info"] = (
+                        f"{dado['info']}\n{info}" if dado["info"] else info
+                    )
+                    dados[i]["valor"] = (
+                        f"{dado['valor']}\n{valor}" if dado["valor"] else valor
+                    )
                     break
 
             if not data_existe:
-                dados.append({
-                    'data': data_formatada,
-                    'info': info,
-                    'valor': valor,
-                    'linha': None
-                })
+                dados.append(
+                    {
+                        "data": data_formatada,
+                        "info": info,
+                        "valor": valor,
+                        "linha": None,
+                    }
+                )
 
-            dados_ordenados = sorted(dados, key=lambda x: x['data'])
+            dados_ordenados = sorted(dados, key=lambda x: x["data"])
 
             # Limpa os dados existentes
             for row in ws.iter_rows(min_row=2):
@@ -1636,25 +1644,27 @@ class SistemaContas:
                     cell.value = None
 
             for i, dado in enumerate(dados_ordenados, start=2):
-                ws.cell(row=i, column=1).value = dado['data']
-                ws.cell(row=i, column=2).value = dado['info']
+                ws.cell(row=i, column=1).value = dado["data"]
+                ws.cell(row=i, column=2).value = dado["info"]
 
                 # Atribui o valor à célula e formata como moeda
                 cell_valor = ws.cell(row=i, column=3)
-                if dado['valor'] is not None:
-                    cell_valor.value = dado['valor']  # Aqui você armazena o valor
+                if dado["valor"] is not None:
+                    cell_valor.value = dado["valor"]  # Aqui você armazena o valor
                     cell_valor.number_format = '"R$"#,##0.00'  # Formato de moeda
                 else:
                     cell_valor.value = valor  # Caso não tenha dado anterior
                     cell_valor.number_format = '"R$"#,##0.00'  # Formato de moeda
 
                 # Centraliza a data
-                ws.cell(row=i, column=1).alignment = Alignment(horizontal='center', vertical='center')
+                ws.cell(row=i, column=1).alignment = Alignment(
+                    horizontal="center", vertical="center"
+                )
 
             # Ajusta a formatação de texto e alinhamento
             for row in ws.iter_rows(min_row=2):
                 for cell in row:
-                    cell.alignment = Alignment(wrap_text=True, vertical='center')
+                    cell.alignment = Alignment(wrap_text=True, vertical="center")
 
             # Ajusta a largura das colunas
             for column in ws.columns:
@@ -1705,7 +1715,7 @@ class SistemaContas:
             data = self.date_entry.get()
             info = self.info_entry.get()
             valor = self.valor_entry.get().replace(",", ".")
-            
+
             try:
                 # Converte o valor para float e formata como moeda
                 valor_float = float(valor)
@@ -1715,4 +1725,6 @@ class SistemaContas:
                 if self.salvar_informacoes(data, info, valor_formatado):
                     self.limpar_campos()
             except ValueError:
-                messagebox.showerror("Erro", "Por favor, insira um valor numérico válido.")
+                messagebox.showerror(
+                    "Erro", "Por favor, insira um valor numérico válido."
+                )
