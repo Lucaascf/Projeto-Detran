@@ -3,7 +3,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Alignment, Font, Border, Side
 import tkinter as tk
-from tkinter import messagebox, filedialog, Frame, Label, Entry, Button
+from tkinter import *
+from tkinter import messagebox, filedialog, Frame, Label, Entry, Button, simpledialog, ttk
 from planilhas import Planilhas
 import pandas as pd
 from selenium import webdriver
@@ -1473,6 +1474,7 @@ class FuncoesBotoes:
             print("Erro ao abrir o arquivo:", e)
 
 
+
 class SistemaContas:
     def __init__(self, file_path: str, current_user=None):
         self.file_path = file_path
@@ -1727,3 +1729,254 @@ class SistemaContas:
                 messagebox.showerror(
                     "Erro", "Por favor, insira um valor numérico válido."
                 )
+
+
+class GerenciadorPlanilhas:
+    def __init__(self, master, sistema_contas):
+        self.master = master
+        self.sistema_contas = sistema_contas
+        
+    def setup_interface(self):
+        """Configuração inicial da interface do gerenciador"""
+        # Frame principal
+        self.main_frame = ttk.Frame(self.master)
+        self.main_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", padx=10, pady=5)
+        
+        # Frame para os botões de gerenciamento
+        self.manage_frame = ttk.Frame(self.main_frame)
+        self.manage_frame.grid(row=0, column=0, sticky="ew")
+
+        # Label para mostrar planilha atual
+        self.lbl_planilha_atual = ttk.Label(
+            self.manage_frame,
+            text="Planilha atual: Nenhuma selecionada"
+        )
+        self.lbl_planilha_atual.grid(row=0, column=1, padx=10, sticky="w")
+
+        # Status inicial
+        if hasattr(self.sistema_contas, 'sheet_name') and self.sistema_contas.sheet_name:
+            self.lbl_planilha_atual.config(text=f"Planilha atual: {self.sistema_contas.sheet_name}")
+
+    def abrir_gerenciador(self):
+        """Abre a janela de gerenciamento de planilhas"""
+        self.janela_sheets = Toplevel(self.master)
+        self.janela_sheets.title("Gerenciador de Planilhas")
+        self.janela_sheets.geometry('500x600')
+        self.janela_sheets.resizable(False, False)
+        
+        # Centralizar a janela
+        window_width = 500
+        window_height = 600
+        screen_width = self.janela_sheets.winfo_screenwidth()
+        screen_height = self.janela_sheets.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        self.janela_sheets.geometry(f'{window_width}x{window_height}+{x}+{y}')
+
+        # Configurar estilo
+        style = ttk.Style()
+        style.configure('Custom.TFrame', background='#f0f0f0')
+        style.configure('Custom.TButton', padding=5, font=('Arial', 10))
+        style.configure('Title.TLabel', font=('Arial', 12, 'bold'), padding=10)
+
+        # Frame principal
+        main_frame = ttk.Frame(self.janela_sheets, style='Custom.TFrame')
+        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+
+        # Título
+        title_label = ttk.Label(
+            main_frame,
+            text="Gerenciador de Planilhas",
+            style='Title.TLabel'
+        )
+        title_label.grid(row=0, column=0, pady=(0, 20))
+
+        # Frame para seleção de arquivo
+        file_frame = ttk.LabelFrame(main_frame, text="Arquivo atual", padding=10)
+        file_frame.grid(row=1, column=0, sticky="ew", pady=10)
+
+        # Label para mostrar arquivo atual
+        self.lbl_arquivo = ttk.Label(
+            file_frame,
+            text=self.sistema_contas.file_path if hasattr(self.sistema_contas, 'file_path') else "Nenhum arquivo selecionado"
+        )
+        self.lbl_arquivo.grid(row=0, column=0, padx=5, sticky="ew")
+
+        # Frame para lista de sheets
+        list_frame = ttk.LabelFrame(main_frame, text="Planilhas disponíveis", padding=10)
+        list_frame.grid(row=2, column=0, sticky="nsew", pady=10)
+
+        # Configurar grid weights para expansão adequada
+        list_frame.grid_columnconfigure(0, weight=1)
+        list_frame.grid_rowconfigure(0, weight=1)
+
+        # Scrollbar para a lista
+        scrollbar = ttk.Scrollbar(list_frame)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Lista de sheets existentes
+        self.listbox = Listbox(
+            list_frame,
+            yscrollcommand=scrollbar.set,
+            font=('Arial', 10),
+            selectmode=SINGLE,
+            height=10
+        )
+        self.listbox.grid(row=0, column=0, sticky="nsew")
+        scrollbar.config(command=self.listbox.yview)
+
+        # Frame para criar nova sheet
+        create_frame = ttk.LabelFrame(main_frame, text="Criar nova planilha", padding=10)
+        create_frame.grid(row=3, column=0, sticky="ew", pady=10)
+
+        ttk.Label(
+            create_frame,
+            text="Nome:",
+            font=('Arial', 10)
+        ).grid(row=0, column=0, padx=5, sticky="w")
+
+        self.nova_sheet_entry = ttk.Entry(create_frame)
+        self.nova_sheet_entry.grid(row=0, column=1, padx=5, sticky="ew")
+        create_frame.grid_columnconfigure(1, weight=1)
+
+        # Frame para botões
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=4, column=0, sticky="ew", pady=20)
+        
+        # Configurar grid weights para distribuição uniforme dos botões
+        for i in range(4):
+            button_frame.grid_columnconfigure(i, weight=1)
+
+        # Botões
+        ttk.Button(
+            button_frame,
+            text="Nova Planilha Excel",
+            command=self.criar_nova_planilha,
+            style='Custom.TButton'
+        ).grid(row=0, column=0, padx=5, sticky="ew")
+
+        ttk.Button(
+            button_frame,
+            text="Abrir Planilha",
+            command=self.abrir_planilha,
+            style='Custom.TButton'
+        ).grid(row=0, column=1, padx=5, sticky="ew")
+
+        ttk.Button(
+            button_frame,
+            text="Selecionar Sheet",
+            command=self.selecionar_sheet,
+            style='Custom.TButton'
+        ).grid(row=0, column=2, padx=5, sticky="ew")
+
+        ttk.Button(
+            button_frame,
+            text="Criar Nova Sheet",
+            command=self.criar_nova_sheet,
+            style='Custom.TButton'
+        ).grid(row=0, column=3, padx=5, sticky="ew")
+
+        # Atualizar lista de sheets
+        self.atualizar_lista_sheets()
+
+        # Tornar a janela modal
+        self.janela_sheets.transient(self.master)
+        self.janela_sheets.grab_set()
+
+    def criar_nova_planilha(self):
+        """Cria um novo arquivo Excel"""
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
+        )
+        
+        if file_path:
+            try:
+                wb = Workbook()
+                wb.save(file_path)
+                self.sistema_contas.file_path = file_path
+                self.lbl_arquivo.config(text=file_path)
+                self.atualizar_lista_sheets()
+                messagebox.showinfo("Sucesso", "Nova planilha Excel criada com sucesso!")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
+
+    def abrir_planilha(self):
+        """Abre uma planilha Excel existente"""
+        file_path = filedialog.askopenfilename(
+            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
+        )
+        
+        if file_path:
+            try:
+                self.sistema_contas.file_path = file_path
+                self.lbl_arquivo.config(text=file_path)
+                self.atualizar_lista_sheets()
+                messagebox.showinfo("Sucesso", "Planilha aberta com sucesso!")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao abrir planilha: {str(e)}")
+
+    def atualizar_lista_sheets(self):
+        """Atualiza a lista de sheets disponíveis"""
+        self.listbox.delete(0, END)
+        if hasattr(self.sistema_contas, 'file_path') and self.sistema_contas.file_path and os.path.exists(self.sistema_contas.file_path):
+            try:
+                wb = load_workbook(self.sistema_contas.file_path)
+                for sheet in wb.sheetnames:
+                    self.listbox.insert(END, sheet)
+                wb.close()
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao listar planilhas: {str(e)}")
+
+    def selecionar_sheet(self):
+        """Seleciona uma sheet existente"""
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showerror("Erro", "Selecione uma planilha!")
+            return
+            
+        nome_sheet = self.listbox.get(selection[0])
+        try:
+            wb = load_workbook(self.sistema_contas.file_path)
+            if nome_sheet in wb.sheetnames:
+                self.sistema_contas.sheet_name = nome_sheet
+                
+                # Atualizar o label na janela principal
+                if hasattr(self, 'lbl_planilha_atual'):
+                    self.lbl_planilha_atual.config(text=f"Planilha atual: {nome_sheet}")
+                
+                messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' selecionada!")
+                self.janela_sheets.destroy()
+            wb.close()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao selecionar planilha: {str(e)}")
+
+    def criar_nova_sheet(self):
+        """Cria uma nova sheet"""
+        nome_sheet = self.nova_sheet_entry.get().strip()
+        if not nome_sheet:
+            messagebox.showerror("Erro", "Digite um nome para a nova planilha!")
+            return
+
+        try:
+            wb = load_workbook(self.sistema_contas.file_path)
+            if nome_sheet in wb.sheetnames:
+                messagebox.showerror("Erro", "Já existe uma planilha com este nome!")
+                wb.close()
+                return
+
+            wb.create_sheet(title=nome_sheet)
+            wb.save(self.sistema_contas.file_path)
+            wb.close()
+            
+            self.sistema_contas.sheet_name = nome_sheet
+            
+            # Atualizar o label na janela principal
+            if hasattr(self, 'lbl_planilha_atual'):
+                self.lbl_planilha_atual.config(text=f"Planilha atual: {nome_sheet}")
+            
+            self.atualizar_lista_sheets()
+            messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' criada com sucesso!")
+            self.janela_sheets.destroy()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")

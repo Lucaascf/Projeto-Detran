@@ -39,8 +39,8 @@ class App(Frame):
         self.master.title("CAMPSSA")  # Título da janela
         self.master.configure(background="#2C3E50")  # Cor de fundo da janela
         self.master.geometry("350x250")  # Tamanho inicial da janela
-        self.master.maxsize(width=350, height=250)  # Tamanho máximo da janela
-        self.master.minsize(width=350, height=250)  # Tamanho mínimo da janela
+        #self.master.maxsize(width=350, height=250)  # Tamanho máximo da janela
+        #self.master.minsize(width=350, height=250)  # Tamanho mínimo da janela
         self.center()  # Centraliza a janela na tela
 
     def frames_da_tela(self):
@@ -80,9 +80,9 @@ class App(Frame):
         """Método chamado quando o login é bem-sucedido."""
         self.current_user = self.login_frame.current_user  # Armazena o usuário logado
         self.login_frame.grid_forget()  # Esconde o frame de login
-        self.master.geometry("700x300")  # Redimensiona a janela
-        self.master.maxsize(width=700, height=300)  # Tamanho máximo da janela
-        self.master.minsize(width=700, height=300)  # Tamanho mínimo da janela
+        self.master.geometry("700x500")  # Redimensiona a janela
+        #self.master.maxsize(width=700, height=300)  # Tamanho máximo da janela
+        #self.master.minsize(width=700, height=300)  # Tamanho mínimo da janela
         self.open_file()  # Abre a função para selecionar um arquivo
 
     def get_current_user(self):

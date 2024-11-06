@@ -1,6 +1,6 @@
 # Importando as bibliotecas necessárias do Tkinter
 from tkinter import *
-from funcoes_botoes import FuncoesBotoes, SistemaContas
+from funcoes_botoes import FuncoesBotoes, SistemaContas, GerenciadorPlanilhas
 from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
@@ -23,6 +23,7 @@ class MainFrame(Frame):
         self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app, current_user=self.current_user)  # Inicializa FuncoesBotoes
         self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
         self.sistema_contas = SistemaContas(file_path, current_user=self.current_user)
+        self.gerenciador_planilhas = GerenciadorPlanilhas(master, self.sistema_contas)  # Instancia GerenciadorPlanilhas
         self.master = master
         self.file_path = file_path
         self.app = app
@@ -51,6 +52,10 @@ class MainFrame(Frame):
         self.bt_format_planilha = Button(
             self, text='Fechamento contas', command=self.fechamento_contas)
         self.bt_format_planilha.grid(row=4, column=2, padx=10, pady=10, sticky='ew')
+
+        self.bt_format_planilha = Button(
+            self, text='planilha ou sheet', command=self.planilha_sheet)
+        self.bt_format_planilha.grid(row=5, column=2, padx=10, pady=10, sticky='ew')
 
         # Botão para excluir informações
         self.bt_excluir_informacao = Button(
@@ -139,6 +144,9 @@ class MainFrame(Frame):
 
     def fechamento_contas(self):
         self.sistema_contas.abrir_janela()
+
+    def planilha_sheet(self):
+        self.gerenciador_planilhas.abrir_gerenciador()
 
 
 
