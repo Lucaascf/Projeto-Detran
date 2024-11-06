@@ -1,15 +1,13 @@
-# Importando as bibliotecas necessárias do Tkinter
 from tkinter import *
 from funcoes_botoes import FuncoesBotoes, SistemaContas, GerenciadorPlanilhas
 from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
 
-
 class MainFrame(Frame):
     """Classe que representa o frame principal da aplicação, responsável por gerenciar as interações do usuário."""
 
-    def __init__(self, master, planilhas: Planilhas, file_path: str, app, current_user=None):
+    def __init__(self, master, planilhas: Planilhas, file_path: str, app):
         """Inicializa a classe MainFrame.
 
         Args:
@@ -19,8 +17,8 @@ class MainFrame(Frame):
             app: Instância da aplicação principal.
         """
         super().__init__(master, bg=master.cget('bg'))  # Chama o construtor da classe Frame
-        self.current_user = current_user
-        self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app, current_user=self.current_user)  # Inicializa FuncoesBotoes
+        self.current_user = app.get_current_user() if hasattr(app, 'get_current_user') else None
+        self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app)  # Inicializa FuncoesBotoes
         self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
         self.sistema_contas = SistemaContas(file_path, current_user=self.current_user)
         self.gerenciador_planilhas = GerenciadorPlanilhas(master, self.sistema_contas)  # Instancia GerenciadorPlanilhas
@@ -31,9 +29,13 @@ class MainFrame(Frame):
 
     def create_widgets(self):
         """Cria e organiza os widgets na interface principal."""
-        # Título da tela
-        title_label = Label(self, text="Gerenciamento de Pacientes", font=('Arial', 16, 'bold'), bg=self.cget('bg'), fg='#ECF0F1')
-        title_label.grid(row=0, column=0, columnspan=3, pady=(10, 20))  # Adiciona o título à grid
+        # Título da tela com o nome do usuário, se disponível
+        title_text = "Gerenciamento de Pacientes"
+        if self.current_user:
+            title_text += f" - {self.current_user}"
+            
+        title_label = Label(self, text=title_text, font=('Arial', 16, 'bold'), bg=self.cget('bg'), fg='#ECF0F1')
+        title_label.grid(row=0, column=0, columnspan=3, pady=(10, 20))
 
         # Botão para adicionar informações
         self.bt_adicionar_informacoes = Button(
@@ -137,19 +139,17 @@ class MainFrame(Frame):
         self.banco.add_user()
 
     def visu_marcacoes(self):
+        """Chama a função para visualizar marcações"""
         self.banco.view_marcacoes()
 
     def format_planilha(self):
+        """Chama a função para formatar planilha"""
         self.funcoes_botoes.formatar_planilha()
 
     def fechamento_contas(self):
+        """Chama a função para fechamento de contas"""
         self.sistema_contas.abrir_janela()
 
     def planilha_sheet(self):
+        """Chama a função para gerenciar planilhas/sheets"""
         self.gerenciador_planilhas.abrir_gerenciador()
-
-
-
-
-
-        

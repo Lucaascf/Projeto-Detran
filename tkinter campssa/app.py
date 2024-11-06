@@ -1,163 +1,185 @@
-# Importando as bibliotecas necessárias do Tkinter
+# app.py
 from tkinter import *
+from tkinter import filedialog, messagebox
+import logging
 from frames.login_frame import LoginFrame, CriarContaFrame
 from frames.main_frame import MainFrame
-from tkinter import filedialog, messagebox
 from funcoes_botoes import FuncoesBotoes
 from planilhas import Planilhas
 from banco import DataBaseLogin
-import logging
-
+from config import config_manager
 
 class App(Frame):
     """Classe principal do aplicativo, responsável por gerenciar a interface gráfica e a lógica do aplicativo."""
 
     def __init__(self, master=None):
-        """Inicializa a classe App.
-
-        Args:
-            master: Janela principal do Tkinter.
-        """
-        super().__init__(master)  # Chama o construtor da classe Frame
+        super().__init__(master)
         self.master = master
-        self.planilhas = None  # Inicializa a variável para armazenar planilhas
-        self.file_path = (
-            None  # Inicializa a variável para armazenar o caminho do arquivo
-        )
-        self.db = DataBaseLogin()  # Inicializa a conexão com o banco de dados
+        self._init_attributes()
+        self._setup_logging()
+
+        # Obtém as configurações do config_manager
+        self.app_config = config_manager.get_config('APP_CONFIG')
+        self.ui_config = config_manager.get_config('UI_CONFIG')
+
+        self.setup_ui()
+        self.frames_da_tela()
+        self.grid()
+
+    def _init_attributes(self):
+        """Inicializa os atributos da classe."""
+        self.planilhas = None
+        self.file_path = None
+        self.db = DataBaseLogin()
+        # Remova o current_user da inicialização
         self.funcoes_botoes = FuncoesBotoes(
-            master, self.planilhas, self.file_path, self
+            master=self.master, 
+            planilhas=self.planilhas, 
+            file_path=self.file_path, 
+            app=self
         )
         self.current_user = None
+        self.login_frame = None
+        self.criar_conta_frame = None
+        self.main_frame = None
 
-        self.setup_ui()  # Configura a interface gráfica
-        self.frames_da_tela()  # Cria e organiza os frames na tela
-        self.grid()  # Adiciona o frame principal à grid
+    def _setup_logging(self):
+        """Configura o sistema de logging."""
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler('app.log'),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
 
     def setup_ui(self):
         """Configura as propriedades da janela principal do aplicativo."""
-        self.master.title("CAMPSSA")  # Título da janela
-        self.master.configure(background="#2C3E50")  # Cor de fundo da janela
-        self.master.geometry("350x250")  # Tamanho inicial da janela
-        #self.master.maxsize(width=350, height=250)  # Tamanho máximo da janela
-        #self.master.minsize(width=350, height=250)  # Tamanho mínimo da janela
-        self.center()  # Centraliza a janela na tela
+        self.master.title(self.app_config['title'])
+        self.master.configure(background=self.ui_config['colors']['background'])
+        self.master.geometry(self.app_config['initial_geometry'])
+        self.center()
 
     def frames_da_tela(self):
         """Cria e organiza os frames de login e de criação de conta."""
-        self.master.grid_rowconfigure(0, weight=1)  # Configura a row para expandir
-        self.master.grid_columnconfigure(
-            0, weight=1
-        )  # Configura a column para expandir
-
-        # Inicializa o frame de login
-        self.login_frame = LoginFrame(
-            self.master, self.login_success, self.funcoes_botoes
-        )
-        self.login_frame.configure(
-            bg="#2C3E50"
-        )  # Define a cor de fundo do frame de login
-        self.login_frame.grid(
-            row=0, column=0, sticky="nsew", padx=20, pady=20
-        )  # Adiciona o frame à grid
-
-        # Inicializa o frame de criação de conta
-        self.criar_conta_frame = CriarContaFrame(
-            self.master, self.db, self.funcoes_botoes
-        )
-        self.criar_conta_frame.configure(
-            bg="#2C3E50"
-        )  # Define a cor de fundo do frame de criação de conta
-        self.criar_conta_frame.grid(
-            row=0, column=0, sticky="nsew", padx=20, pady=20
-        )  # Adiciona o frame à grid
-        self.criar_conta_frame.grid_forget()  # Esconde o frame de criação de conta inicialmente
-
-        # Configura as funções dos botões para gerenciar os frames
+        self._configure_grid()
+        self._create_login_frame()
+        self._create_signup_frame()
         self.funcoes_botoes.configurar_frames(self.login_frame, self.criar_conta_frame)
 
+    def _configure_grid(self):
+        """Configura o grid da janela principal."""
+        self.master.grid_rowconfigure(0, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
+
+    def _create_login_frame(self):
+        """Cria e configura o frame de login."""
+        self.login_frame = LoginFrame(self.master, self.login_success, self.funcoes_botoes)
+        # Usar self.app_config em vez de APP_CONFIG
+        self.login_frame.configure(bg=self.app_config['background_color'])
+        self.login_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+
+    def _create_signup_frame(self):
+        """Cria e configura o frame de criação de conta."""
+        self.criar_conta_frame = CriarContaFrame(self.master, self.db, self.funcoes_botoes)
+        # Usar self.app_config em vez de APP_CONFIG
+        self.criar_conta_frame.configure(bg=self.app_config['background_color'])
+        self.criar_conta_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        self.criar_conta_frame.grid_forget()
+
     def login_success(self):
-        """Método chamado quando o login é bem-sucedido."""
-        self.current_user = self.login_frame.current_user  # Armazena o usuário logado
-        self.login_frame.grid_forget()  # Esconde o frame de login
-        self.master.geometry("700x500")  # Redimensiona a janela
-        #self.master.maxsize(width=700, height=300)  # Tamanho máximo da janela
-        #self.master.minsize(width=700, height=300)  # Tamanho mínimo da janela
-        self.open_file()  # Abre a função para selecionar um arquivo
+        """Gerencia o processo após um login bem-sucedido."""
+        try:
+            self.current_user = self.login_frame.current_user
+            # Atualiza o current_user nas funcoes_botoes
+            self.funcoes_botoes.set_current_user(self.current_user)
+            self.login_frame.grid_forget()
+            self.master.geometry(self.app_config['main_geometry'])
+            self.center()
+            self.open_file()
+            self.logger.info(f"Login bem-sucedido para o usuário: {self.current_user}")
+        except Exception as e:
+            self.logger.error(f"Erro no processo de login: {str(e)}")
+            messagebox.showerror("Erro", f"Erro no processo de login: {str(e)}")
 
     def get_current_user(self):
-        """Define o usuário atual"""
-        return self.current_user.upper()
+        """Retorna o usuário atual em maiúsculas."""
+        return self.current_user.upper() if self.current_user else None
 
     def open_file(self):
         """Abre um diálogo para seleção de arquivos e carrega as planilhas."""
         try:
-            self.center()  # Centraliza a janela novamente
+            self.center()
             file_path = filedialog.askopenfilename(
                 title="Selecionar Planilha",
-                filetypes=[("Arquivos Excel", "*.xlsx"), ("Todos os Arquivos", "*.*")],
+                # Usar self.app_config em vez de APP_CONFIG
+                filetypes=self.app_config['file_types']
             )
+            
             if file_path:
-                self.file_path = file_path  # Atualiza o caminho do arquivo
-                self.planilhas = Planilhas(self.file_path)  # Carrega as planilhas
-
-                self.funcoes_botoes.planilhas = (
-                    self.planilhas
-                )  # Passa as planilhas para as funções dos botões
-                logging.info("Arquivo selecionado com sucesso")
-
-                # Instancia e mostra o MainFrame
-                self.main_frame = MainFrame(
-                    self.master, self.planilhas, self.file_path, self
-                )
-                self.main_frame.grid(
-                    row=0, column=0, sticky="nsew", padx=20, pady=20
-                )  # Adiciona o frame à grid
-                self.login_frame.grid_forget()  # Esconde o frame de login
+                self._handle_file_selection(file_path)
             else:
-                resposta = messagebox.askyesno(
-                    "Confirmação",
-                    "Você não selecionou nenhum arquivo. Deseja realmente sair?",
-                )
-                if resposta:  # Se o usuário escolher "Sim"
-                    self.master.quit()  # Encerra o programa
-                else:
-                    self.login_frame.grid(
-                        row=0, column=0, pady=150
-                    )  # Reexibe o frame de login
-                    self.open_file()  # Chama a função novamente para permitir nova seleção de arquivo
+                self._handle_no_file_selected()
+                
         except Exception as e:
-            print(f"Erro: {e}")
-            messagebox.showerror(
-                "Erro ao abrir o arquivo", str(e)
-            )  # Exibe erro em caso de falha
+            self.logger.error(f"Erro ao abrir arquivo: {str(e)}")
+            messagebox.showerror("Erro ao abrir o arquivo", str(e))
+
+    def _handle_file_selection(self, file_path):
+        """Processa a seleção de arquivo."""
+        try:
+            self.file_path = file_path
+            self.planilhas = Planilhas(self.file_path)
+            self.funcoes_botoes.planilhas = self.planilhas
+            self.logger.info("Arquivo selecionado com sucesso")
+            self._create_main_frame()
+        except Exception as e:
+            self.logger.error(f"Erro ao processar arquivo: {str(e)}")
+            messagebox.showerror("Erro", f"Erro ao processar arquivo: {str(e)}")
+
+    def _handle_no_file_selected(self):
+        """Gerencia o caso onde nenhum arquivo foi selecionado."""
+        if messagebox.askyesno("Confirmação", "Você não selecionou nenhum arquivo. Deseja realmente sair?"):
+            self.master.quit()
+        else:
+            self.login_frame.grid(row=0, column=0, pady=150)
+            self.open_file()
+
+    def _create_main_frame(self):
+        """Cria e configura o frame principal."""
+        self.main_frame = MainFrame(self.master, self.planilhas, self.file_path, self)
+        self.main_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        self.login_frame.grid_forget()
 
     def center(self):
-        """Centraliza a janela principal na tela."""
-        self.update_idletasks()  # Atualiza as tarefas pendentes
-        width = self.master.winfo_width()  # Obtém a largura da janela
-        height = self.master.winfo_height()  # Obtém a altura da janela
-        screen_width = self.master.winfo_screenwidth()  # Obtém a largura da tela
-        screen_height = self.master.winfo_screenheight()  # Obtém a altura da tela
-        x = (screen_width // 2) - (width // 2)  # Calcula a posição x para centralizar
-        y = (screen_height // 2) - (height // 2)  # Calcula a posição y para centralizar
-        self.master.geometry(
-            f"{width}x{height}+{x}+{y}"
-        )  # Define a nova geometria da janela
-        self.master.deiconify()  # Exibe a janela
+        """Centraliza a janela na tela."""
+        self.update_idletasks()
+        width = self.master.winfo_width()
+        height = self.master.winfo_height()
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+        self.master.geometry(f"{width}x{height}+{x}+{y}")
+        self.master.deiconify()
 
     def mostrar_criar_conta(self):
-        """Mostra o frame de criação de conta e esconde o frame de login."""
-        self.login_frame.grid_forget()  # Esconde o frame de login
-        self.criar_conta_frame.grid()  # Exibe o frame de criação de conta
+        """Mostra o frame de criação de conta."""
+        self.login_frame.grid_forget()
+        self.criar_conta_frame.grid()
 
     def voltar_para_login(self):
-        """Retorna ao frame de login e esconde o frame de criação de conta."""
-        self.criar_conta_frame.grid_forget()  # Esconde o frame de criação de conta
-        self.login_frame.grid()  # Exibe o frame de login
-
+        """Retorna ao frame de login."""
+        self.criar_conta_frame.grid_forget()
+        self.login_frame.grid()
 
 if __name__ == "__main__":
-    root = Tk()  # Cria a janela principal
-    app = App(master=root)  # Inicializa a aplicação
-    app.mainloop()  # Inicia o loop principal do Tkinter
+    try:
+        root = Tk()
+        app = App(master=root)
+        app.mainloop()
+    except Exception as e:
+        logging.error(f"Erro fatal na aplicação: {str(e)}")
+        messagebox.showerror("Erro Fatal", f"Um erro fatal ocorreu: {str(e)}")

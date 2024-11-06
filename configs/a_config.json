@@ -1,0 +1,124 @@
+{
+    "APP_CONFIG": {
+        "title": "CAMPSSA",
+        "version": "1.0.0",
+        "background_color": "#2C3E50",
+        "initial_geometry": "350x250",
+        "main_geometry": "700x500",
+        "file_types": [
+            [
+                "Arquivos Excel",
+                "*.xlsx"
+            ],
+            [
+                "Todos os Arquivos",
+                "*.*"
+            ]
+        ],
+        "max_recent_files": 5,
+        "auto_save": true,
+        "auto_save_interval": 300
+    },
+    "UI_CONFIG": {
+        "colors": {
+            "background": "#2C3E50",
+            "text": "#ECF0F1",
+            "success_button": "#2ecc71",
+            "success_button_active": "#27ae60",
+            "danger_button": "#e74c3c",
+            "danger_button_active": "#c0392b",
+            "warning": "#f1c40f",
+            "info": "#3498db",
+            "disabled": "#95a5a6"
+        },
+        "fonts": {
+            "title": [
+                "Arial",
+                14,
+                "bold"
+            ],
+            "header": [
+                "Arial",
+                12,
+                "bold"
+            ],
+            "normal": [
+                "Arial",
+                10
+            ],
+            "small": [
+                "Arial",
+                9
+            ],
+            "monospace": [
+                "Courier",
+                10
+            ]
+        },
+        "padding": {
+            "default": 10,
+            "small": 5,
+            "large": 20,
+            "extra_large": 30
+        },
+        "margins": {
+            "default": 10,
+            "small": 5,
+            "large": 20
+        },
+        "animations": {
+            "enabled": true,
+            "duration": 200
+        }
+    },
+    "USER_PREFERENCES": {
+        "theme": "default",
+        "language": "pt_BR",
+        "notifications": {
+            "enabled": true,
+            "sound": true,
+            "desktop": true
+        },
+        "display": {
+            "show_toolbar": true,
+            "show_statusbar": true,
+            "compact_mode": false
+        },
+        "table_settings": {
+            "rows_per_page": 10,
+            "sort_column": "name",
+            "sort_direction": "asc"
+        },
+        "recent_files": [],
+        "default_save_location": "",
+        "window_sizes": {
+            "adicionar": "500x450"
+        }
+    },
+    "SYSTEM_SETTINGS": {
+        "debug_mode": false,
+        "log_level": "INFO",
+        "backup": {
+            "enabled": true,
+            "interval": 24,
+            "keep_last": 7,
+            "location": "./backups"
+        },
+        "performance": {
+            "cache_enabled": true,
+            "cache_size": 100,
+            "max_threads": 4
+        },
+        "security": {
+            "session_timeout": 30,
+            "max_login_attempts": 3,
+            "password_expiry": 90,
+            "require_strong_password": true
+        },
+        "paths": {
+            "temp": "./temp",
+            "logs": "./logs",
+            "data": "./data"
+        }
+    }
+}
