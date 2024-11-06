@@ -4,7 +4,17 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Alignment, Font, Border, Side
 import tkinter as tk
 from tkinter import *
-from tkinter import messagebox, filedialog, Frame, Label, Entry, Button, simpledialog, ttk
+from tkinter import (
+    messagebox,
+    filedialog,
+    Frame,
+    Label,
+    Entry,
+    Button,
+    simpledialog,
+    ttk,
+)
+import sys
 from planilhas import Planilhas
 import pandas as pd
 from selenium import webdriver
@@ -122,7 +132,7 @@ class FuncoesBotoes:
 
         # Mostra a janela (se estiver oculta)
         window.deiconify()
-    
+
     def get_active_workbook(self):
         """Obtém o workbook ativo atualizado"""
         if self.planilhas:
@@ -135,17 +145,17 @@ class FuncoesBotoes:
         self.nome_entry.delete(0, tk.END)
         self.renach_entry.delete(0, tk.END)
         self.radio_var.set("")
-        
+
         # Limpa os checkbuttons
         self.d_var.set(0)
         self.c_var.set(0)
         self.e_var.set(0)
         self.p_var.set(0)
-        
+
         # Limpa e desabilita os campos de valor
         for entry in self.valor_entries.values():
             entry.delete(0, tk.END)
-            entry.config(state='disabled', bg='#F0F0F0')
+            entry.config(state="disabled", bg="#F0F0F0")
 
     def adicionar_informacao(self):
         """Cria uma nova janela para adicionar informações de pacientes."""
@@ -209,13 +219,13 @@ class FuncoesBotoes:
 
         # Dicionário para armazenar as entries de valores
         self.valor_entries = {}
-        
+
         # Lista de formas de pagamento
         formas_pagamento = [
             ("D", "Débito", self.d_var),
             ("C", "Crédito", self.c_var),
             ("E", "Espécie", self.e_var),
-            ("P", "PIX", self.p_var)
+            ("P", "PIX", self.p_var),
         ]
 
         # Função para atualizar campos de valor
@@ -224,18 +234,20 @@ class FuncoesBotoes:
             for forma, _, _ in formas_pagamento:
                 entry = self.valor_entries[forma]
                 if selected_count > 1:
-                    entry.config(state='normal')
+                    entry.config(state="normal")
                     if not entry.get():
-                        entry.config(bg='#FFE5E5')  # Vermelho claro para indicar campo obrigatório
+                        entry.config(
+                            bg="#FFE5E5"
+                        )  # Vermelho claro para indicar campo obrigatório
                 else:
                     entry.delete(0, tk.END)
-                    entry.config(state='disabled', bg='#F0F0F0')
+                    entry.config(state="disabled", bg="#F0F0F0")
 
         # Criar checkbuttons e entries
         for i, (codigo, nome, var) in enumerate(formas_pagamento):
             frame = tk.Frame(frame_pagamento, bg=cor_fundo)
             frame.pack(fill="x", padx=10, pady=2)
-            
+
             # Checkbutton
             cb = tk.Checkbutton(
                 frame,
@@ -247,22 +259,19 @@ class FuncoesBotoes:
                 activebackground=cor_fundo,
                 activeforeground=cor_texto,
                 highlightthickness=0,
-                command=on_payment_change
+                command=on_payment_change,
             )
             cb.pack(side=tk.LEFT, padx=(0, 10))
-            
+
             # Entry para valor
-            valor_entry = tk.Entry(frame, width=15, state='disabled')
+            valor_entry = tk.Entry(frame, width=15, state="disabled")
             valor_entry.pack(side=tk.LEFT)
             self.valor_entries[codigo] = valor_entry
-            
+
             # Label para valor
-            tk.Label(
-                frame,
-                text="R$",
-                bg=cor_fundo,
-                fg=cor_texto
-            ).pack(side=tk.LEFT, padx=(5, 0))
+            tk.Label(frame, text="R$", bg=cor_fundo, fg=cor_texto).pack(
+                side=tk.LEFT, padx=(5, 0)
+            )
 
         # Frame para botões
         frame_botoes = tk.Frame(self.adicionar_window, bg=cor_fundo)
@@ -300,26 +309,28 @@ class FuncoesBotoes:
         """Conta o número de pessoas e a quantidade de pagamentos."""
         n_pessoa = 0
         cont_pag = {"D": 0, "C": 0, "E": 0, "P": 0}
-        
+
         # Usa a sheet ativa correta
         wb = self.get_active_workbook()
         ws = wb.active
-        
+
         # Verifica se há conteúdo nas células antes de contar
-        for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=col_inicial, max_col=col_final):
+        for row in ws.iter_rows(
+            min_row=3, max_row=ws.max_row, min_col=col_inicial, max_col=col_final
+        ):
             nome = row[0].value
             if isinstance(nome, str) and nome.strip():
                 n_pessoa += 1
-                
+
                 # Verifica a forma de pagamento
                 pag = row[4].value
                 if isinstance(pag, str):
                     # Extrai apenas o código do pagamento (D, C, E ou P)
                     # considerando que pode ter valor após o código
-                    codigo_pag = pag.split(':')[0].strip()
+                    codigo_pag = pag.split(":")[0].strip()
                     if codigo_pag in cont_pag:
                         cont_pag[codigo_pag] += 1
-        
+
         return n_pessoa, cont_pag
 
     def criar_entry(self, frame_nome, var_name, parent):
@@ -355,7 +366,9 @@ class FuncoesBotoes:
 
         # Validar nome e RENACH
         if not nome or not renach:
-            messagebox.showerror("Erro", "Por favor, preencha os campos de nome e RENACH.")
+            messagebox.showerror(
+                "Erro", "Por favor, preencha os campos de nome e RENACH."
+            )
             return
 
         if not renach.isdigit():
@@ -365,7 +378,7 @@ class FuncoesBotoes:
         # Verificar se o RENACH já existe na planilha
         wb = self.get_active_workbook()
         ws = wb.active
-        
+
         for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
             if str(row[2].value) == renach or str(row[8].value) == renach:
                 messagebox.showerror("Erro", "Este RENACH já está registrado.")
@@ -376,7 +389,7 @@ class FuncoesBotoes:
             "D": self.d_var.get(),
             "C": self.c_var.get(),
             "E": self.e_var.get(),
-            "P": self.p_var.get()
+            "P": self.p_var.get(),
         }
 
         if not any(formas_selecionadas.values()):
@@ -385,7 +398,7 @@ class FuncoesBotoes:
 
         # Contar formas de pagamento selecionadas
         num_formas_selecionadas = sum(formas_selecionadas.values())
-        
+
         # Processar pagamentos
         pagamentos = []
         valor_total = 0
@@ -393,17 +406,17 @@ class FuncoesBotoes:
         for codigo, selecionado in formas_selecionadas.items():
             if selecionado:
                 valor = self.valor_entries[codigo].get().strip()
-                
+
                 if num_formas_selecionadas > 1:
                     # Para múltiplas formas de pagamento
                     if not valor:
                         messagebox.showerror(
-                            "Erro", 
-                            "Quando mais de uma forma de pagamento é selecionada, \ntodos os valores devem ser preenchidos."
+                            "Erro",
+                            "Quando mais de uma forma de pagamento é selecionada, \ntodos os valores devem ser preenchidos.",
                         )
                         return
                     try:
-                        valor_float = float(valor.replace(',', '.'))
+                        valor_float = float(valor.replace(",", "."))
                         valor_total += valor_float
                         pagamentos.append(f"{codigo}: {valor}")
                     except ValueError:
@@ -413,8 +426,8 @@ class FuncoesBotoes:
                     # Para forma única de pagamento
                     if valor:
                         messagebox.showerror(
-                            "Erro", 
-                            "Para uma única forma de pagamento, não informe o valor."
+                            "Erro",
+                            "Para uma única forma de pagamento, não informe o valor.",
                         )
                         return
                     pagamentos.append(codigo)
@@ -434,10 +447,12 @@ class FuncoesBotoes:
             elif escolha == "ambos":
                 valor_esperado = 341.26
 
-            if abs(valor_total - valor_esperado) > 0.01:  # Tolerância para arredondamento
+            if (
+                abs(valor_total - valor_esperado) > 0.01
+            ):  # Tolerância para arredondamento
                 messagebox.showerror(
-                    "Erro", 
-                    f"A soma dos valores ({valor_total:.2f}) deve ser igual ao valor total do serviço ({valor_esperado:.2f})"
+                    "Erro",
+                    f"A soma dos valores ({valor_total:.2f}) deve ser igual ao valor total do serviço ({valor_esperado:.2f})",
                 )
                 return
 
@@ -454,9 +469,9 @@ class FuncoesBotoes:
         try:
             wb = self.get_active_workbook()
             ws = wb.active
-            
+
             # Formatar string de pagamento
-            if len(pagamentos) == 1 and ':' not in pagamentos[0]:
+            if len(pagamentos) == 1 and ":" not in pagamentos[0]:
                 # Uma única forma de pagamento sem valor
                 info_pagamento = pagamentos[0]
             else:
@@ -465,10 +480,12 @@ class FuncoesBotoes:
 
             # Encontrar próximas linhas vazias
             nova_linha_medico = next(
-                (row for row in range(3, ws.max_row + 2) if not ws[f"B{row}"].value), None
+                (row for row in range(3, ws.max_row + 2) if not ws[f"B{row}"].value),
+                None,
             )
             nova_linha_psicologo = next(
-                (row for row in range(3, ws.max_row + 2) if not ws[f"H{row}"].value), None
+                (row for row in range(3, ws.max_row + 2) if not ws[f"H{row}"].value),
+                None,
             )
 
             if not nova_linha_medico or not nova_linha_psicologo:
@@ -571,95 +588,276 @@ class FuncoesBotoes:
         self.center(excluir_window)
 
     def exibir_informacao(self):
-        """Exibe informações dos pacientes em uma nova janela com barra de rolagem."""
-        # Carrega o workbook e seleciona a sheet correta
-        wb = self.get_active_workbook()
-        if hasattr(self.planilhas, 'sheet_name') and self.planilhas.sheet_name:
-            ws = wb[self.planilhas.sheet_name]
-        else:  
-            ws = wb.active
-        
-        medico, psi = [], []
+        """Exibe informações dos pacientes em uma interface organizada com opções de filtragem."""
+        try:
+            # Carrega o workbook e seleciona a sheet correta de forma segura
+            wb = self.get_active_workbook()
+            
+            try:
+                if hasattr(self.planilhas, 'sheet_name') and self.planilhas.sheet_name:
+                    ws = wb[self.planilhas.sheet_name]
+                else:
+                    ws = wb.active
+            except KeyError:
+                ws = wb.active
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao acessar a planilha: {str(e)}")
+                if wb:
+                    wb.close()
+                return
+            
+            if not ws:
+                messagebox.showerror("Erro", "Não foi possível encontrar uma planilha válida.")
+                if wb:
+                    wb.close()
+                return
+            
+            medico, psi = [], []
 
-        # Informações de médicos
-        for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
-            linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
-            if linha:
-                medico.append(linha)
+            # Coleta informações de médicos e psicólogos
+            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
+                linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
+                if linha:
+                    medico.append({
+                        'nome': linha[0],
+                        'renach': linha[1] if len(linha) > 1 else '',
+                        'forma_pagamento': linha[-1] if len(linha) > 2 else ''
+                    })
 
-        # Informações de psicólogos
-        for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
-            linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
-            if linha:
-                psi.append(linha)
+            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
+                linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
+                if linha:
+                    psi.append({
+                        'nome': linha[0],
+                        'renach': linha[1] if len(linha) > 1 else '',
+                        'forma_pagamento': linha[-1] if len(linha) > 2 else ''
+                    })
 
-        wb.close()  # Fecha o workbook após usar
+            wb.close()
 
-        # Verificação de dados coletados
-        if not medico and not psi:
-            messagebox.showinfo("Aviso", "Nenhuma informação encontrada!")
-            return
+            if not medico and not psi:
+                messagebox.showinfo("Aviso", "Nenhuma informação encontrada!")
+                return
 
-        # Criando uma nova janela
-        janela_informacao = tk.Toplevel(self.master)
-        janela_informacao.title("Informação dos Pacientes")
-        janela_informacao.geometry("600x600")
-        cor_fundo = self.master.cget("bg")
-        janela_informacao.configure(bg=cor_fundo)
+            # Criando a janela principal
+            janela_informacao = tk.Toplevel(self.master)
+            janela_informacao.title("Informações dos Pacientes")
+            janela_informacao.geometry("1000x700")
+            cor_fundo = self.master.cget("bg")
+            cor_texto = "#ECF0F1"
+            janela_informacao.configure(bg=cor_fundo)
 
-        # Canvas e scrollbar
-        canvas = tk.Canvas(janela_informacao, bg=cor_fundo)
-        scrollbar = tk.Scrollbar(janela_informacao, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg=cor_fundo)
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+            # Frame superior para controles
+            control_frame = tk.Frame(janela_informacao, bg=cor_fundo)
+            control_frame.pack(fill="x", padx=20, pady=10)
 
-        # Bind para rolagem com o mouse
-        def scroll(event):
-            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            # Frame para a tabela com scrollbars
+            table_container = tk.Frame(janela_informacao)
+            table_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
 
-        # Adicionar informações de médicos
-        if medico:
-            tk.Label(scrollable_frame, text="MÉDICO:", font=("Arial", 16, "bold"), bg=cor_fundo, fg="#ECF0F1").pack(pady=(10, 0), anchor="center")
-            for i, paciente in enumerate(medico, start=1):
-                tk.Label(scrollable_frame, text=f"{i} - {paciente}", bg=cor_fundo, fg="#ECF0F1", font=("Arial", 12)).pack(anchor="w", padx=10, pady=5)
+            # Canvas e scrollbars
+            canvas = tk.Canvas(table_container, bg=cor_fundo)
+            scrollbar_y = tk.Scrollbar(table_container, orient="vertical", command=canvas.yview)
+            scrollbar_x = tk.Scrollbar(table_container, orient="horizontal", command=canvas.xview)
+            
+            # Frame para a tabela
+            table_frame = tk.Frame(canvas, bg=cor_fundo)
+            
+            # Configuração do canvas
+            canvas.create_window((0, 0), window=table_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
 
-        # Adicionar informações de psicólogos
-        if psi:
-            tk.Label(scrollable_frame, text="PSICÓLOGO:", font=("Arial", 16, "bold"), bg=cor_fundo, fg="#ECF0F1").pack(pady=(10, 0), anchor="center")
-            for i, paciente in enumerate(psi, start=1):
-                tk.Label(scrollable_frame, text=f"{i} - {paciente}", bg=cor_fundo, fg="#ECF0F1", font=("Arial", 12)).pack(anchor="w", padx=10, pady=5)
+            def aplicar_filtros(*args):
+                """Aplica os filtros de tipo e busca aos dados."""
+                # Limpa a tabela atual
+                for widget in table_frame.winfo_children():
+                    if int(widget.grid_info()['row']) > 0:  # Preserva o cabeçalho
+                        widget.destroy()
 
-        # Adicionar widgets à janela
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+                # Prepara os dados conforme o filtro selecionado
+                dados_filtrados = []
+                filtro = filtro_var.get()
+                termo_busca = busca_var.get().lower()
 
-        # Detectar o sistema operacional para ajustar rolagem com mouse
-        import sys
-        if sys.platform.startswith("win") or sys.platform == "darwin":  # Windows e MacOS
-            janela_informacao.bind_all("<MouseWheel>", scroll)
-        else:  # Linux
-            janela_informacao.bind_all("<Button-4>", lambda event: canvas.yview_scroll(-1, "units"))
-            janela_informacao.bind_all("<Button-5>", lambda event: canvas.yview_scroll(1, "units"))
+                if filtro in ["todos", "medico"]:
+                    for i, pac in enumerate(medico):
+                        if termo_busca in str(pac['nome']).lower() or termo_busca in str(pac['renach']).lower():
+                            dados_filtrados.append((i+1, pac, "Médico"))
 
-        # Remover bindings do mouse ao fechar a janela
-        def on_closing():
-            janela_informacao.unbind_all("<MouseWheel>")
-            janela_informacao.unbind_all("<Button-4>")
-            janela_informacao.unbind_all("<Button-5>")
-            janela_informacao.destroy()
+                if filtro in ["todos", "psi"]:
+                    offset = len(medico) if filtro == "todos" else 0
+                    for i, pac in enumerate(psi):
+                        if termo_busca in str(pac['nome']).lower() or termo_busca in str(pac['renach']).lower():
+                            dados_filtrados.append((i+1+offset, pac, "Psicólogo"))
 
-        janela_informacao.protocol("WM_DELETE_WINDOW", on_closing)
+                # Preenche a tabela com os dados filtrados
+                for row, (num, pac, tipo) in enumerate(dados_filtrados, start=1):
+                    # Número
+                    tk.Label(
+                        table_frame,
+                        text=num,
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        font=("Arial", 10),
+                        padx=10,
+                        pady=5
+                    ).grid(row=row, column=0, sticky="nsew", padx=1, pady=1)
 
-        # Configurar região de rolagem
-        scrollable_frame.update_idletasks()  # Atualiza o frame antes de definir o scrollregion
-        canvas.configure(scrollregion=canvas.bbox("all"))
+                    # Nome
+                    tk.Label(
+                        table_frame,
+                        text=pac['nome'],
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        font=("Arial", 10),
+                        padx=10,
+                        pady=5,
+                        anchor="w"
+                    ).grid(row=row, column=1, sticky="nsew", padx=1, pady=1)
+
+                    # RENACH
+                    tk.Label(
+                        table_frame,
+                        text=pac['renach'],
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        font=("Arial", 10),
+                        padx=10,
+                        pady=5
+                    ).grid(row=row, column=2, sticky="nsew", padx=1, pady=1)
+
+                    # Forma de Pagamento
+                    tk.Label(
+                        table_frame,
+                        text=pac['forma_pagamento'],
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        font=("Arial", 10),
+                        padx=10,
+                        pady=5,
+                        anchor="w"
+                    ).grid(row=row, column=3, sticky="nsew", padx=1, pady=1)
+
+                    # Tipo
+                    tk.Label(
+                        table_frame,
+                        text=tipo,
+                        bg=cor_fundo,
+                        fg=cor_texto,
+                        font=("Arial", 10),
+                        padx=10,
+                        pady=5
+                    ).grid(row=row, column=4, sticky="nsew", padx=1, pady=1)
+
+                # Atualiza a região de rolagem
+                table_frame.update_idletasks()
+                canvas.configure(scrollregion=canvas.bbox("all"))
+
+            # Variáveis de controle (movidas para depois da definição de aplicar_filtros)
+            filtro_var = tk.StringVar(value="todos")
+            busca_var = tk.StringVar()
+            busca_var.trace("w", aplicar_filtros)
+
+            # Frame para os radiobuttons
+            radio_frame = tk.Frame(control_frame, bg=cor_fundo)
+            radio_frame.pack(side="left", padx=10)
+
+            tk.Label(radio_frame, text="Filtrar por:", bg=cor_fundo, fg=cor_texto, font=("Arial", 10, "bold")).pack(side="left")
+            for valor, texto in [("todos", "Todos"), ("medico", "Médico"), ("psi", "Psicólogo")]:
+                tk.Radiobutton(
+                    radio_frame,
+                    text=texto,
+                    variable=filtro_var,
+                    value=valor,
+                    command=aplicar_filtros,
+                    bg=cor_fundo,
+                    fg=cor_texto,
+                    selectcolor="#2C3E50",
+                    activebackground=cor_fundo,
+                    activeforeground=cor_texto
+                ).pack(side="left", padx=5)
+
+            # Frame para busca
+            search_frame = tk.Frame(control_frame, bg=cor_fundo)
+            search_frame.pack(side="right", padx=10)
+
+            tk.Label(search_frame, text="Buscar:", bg=cor_fundo, fg=cor_texto, font=("Arial", 10, "bold")).pack(side="left", padx=(0, 5))
+            tk.Entry(search_frame, textvariable=busca_var, width=30).pack(side="left")
+
+            # Cabeçalho da tabela
+            headers = ["Nº", "Nome", "RENACH", "Forma de Pagamento", "Tipo"]
+            for col, header in enumerate(headers):
+                tk.Label(
+                    table_frame,
+                    text=header,
+                    bg="#2C3E50",
+                    fg=cor_texto,
+                    font=("Arial", 11, "bold"),
+                    padx=10,
+                    pady=5,
+                    relief="raised",
+                    width=25 if col in [1, 3] else 15
+                ).grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
+
+            # Configuração do layout final
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar_y.pack(side="right", fill="y")
+            scrollbar_x.pack(side="bottom", fill="x")
+
+            # Configuração de eventos de rolagem
+            def on_mousewheel(event):
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+            # Configuração do scroll do mouse
+            if sys.platform.startswith("win") or sys.platform == "darwin":
+                canvas.bind_all("<MouseWheel>", on_mousewheel)
+            else:
+                canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+                canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
+            # Criação do frame de estatísticas
+            stats_frame = tk.Frame(janela_informacao, bg=cor_fundo)
+            stats_frame.pack(fill="x", padx=20, pady=10)
+
+            # Exibe estatísticas
+            total_medico = len(medico)
+            total_psi = len(psi)
+            total_geral = total_medico + total_psi
+
+            stats_text = f"Total de Pacientes: {total_geral} | Médico: {total_medico} | Psicólogo: {total_psi}"
+            tk.Label(
+                stats_frame,
+                text=stats_text,
+                bg=cor_fundo,
+                fg=cor_texto,
+                font=("Arial", 10, "bold")
+            ).pack(pady=5)
+
+            # Limpar bindings ao fechar
+            def on_closing():
+                canvas.unbind_all("<MouseWheel>")
+                canvas.unbind_all("<Button-4>")
+                canvas.unbind_all("<Button-5>")
+                janela_informacao.destroy()
+
+            janela_informacao.protocol("WM_DELETE_WINDOW", on_closing)
+
+            # Aplica os filtros iniciais
+            aplicar_filtros()
+
+            # Centraliza a janela
+            self.center(janela_informacao)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}")
+            if 'wb' in locals():
+                wb.close()
 
     def valores_totais(self):
         """Exibe os valores totais em uma janela Tkinter."""
         # Recarrega o workbook para garantir dados atualizados
         self.planilhas.reload_workbook()
-        
+
         # Obtém as contagens
         n_medico, pag_medico = self.planilhas.contar_medico()
         n_psicologo, pag_psicologo = self.planilhas.contar_psi()
@@ -689,8 +887,8 @@ class FuncoesBotoes:
             font=("Arial", 16, "bold"),
             bg="#2C3E50",
             fg="#ECF0F1",
-        ).pack(pady=(15,5))
-        
+        ).pack(pady=(15, 5))
+
         tk.Label(
             janela_contas,
             text=f"Número de pacientes: {n_medico}",
@@ -698,7 +896,7 @@ class FuncoesBotoes:
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
-        
+
         tk.Label(
             janela_contas,
             text=f"Valor Total: R$ {total_medico:.2f}",
@@ -706,7 +904,7 @@ class FuncoesBotoes:
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
-        
+
         tk.Label(
             janela_contas,
             text=f"Valor a Pagar: R$ {valor_medico:.2f}",
@@ -725,7 +923,7 @@ class FuncoesBotoes:
             bg="#2C3E50",
             fg="#ECF0F1",
         ).pack(pady=5)
-        
+
         tk.Label(
             janela_contas,
             text=f"Número de pacientes: {n_psicologo}",
@@ -733,7 +931,7 @@ class FuncoesBotoes:
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
-        
+
         tk.Label(
             janela_contas,
             text=f"Valor Total: R$ {total_psicologo:.2f}",
@@ -741,7 +939,7 @@ class FuncoesBotoes:
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
-        
+
         tk.Label(
             janela_contas,
             text=f"Valor a Pagar: R$ {valor_psicologo:.2f}",
@@ -760,7 +958,7 @@ class FuncoesBotoes:
             bg="#2C3E50",
             fg="#ECF0F1",
         ).pack(pady=5)
-        
+
         tk.Label(
             janela_contas,
             text=f"Total Geral: R$ {(total_medico + total_psicologo):.2f}",
@@ -768,7 +966,7 @@ class FuncoesBotoes:
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
-        
+
         tk.Label(
             janela_contas,
             text=f"Total a Pagar: R$ {(valor_medico + valor_psicologo):.2f}",
@@ -1592,7 +1790,6 @@ class FuncoesBotoes:
             print("Erro ao abrir o arquivo:", e)
 
 
-
 class SistemaContas:
     def __init__(self, file_path: str, current_user=None):
         self.file_path = file_path
@@ -1856,18 +2053,18 @@ class GerenciadorPlanilhas:
         self.file_path = None
         self.sheet_name = None
         self.active_window = None
-        
+
     def abrir_gerenciador(self):
         """Abre a janela de gerenciamento de planilhas"""
         if self.active_window:
             self.active_window.lift()
             return
-            
+
         self.active_window = Toplevel(self.master)
         self.active_window.title("Gerenciador de Planilhas")
-        self.active_window.geometry('600x700')
+        self.active_window.geometry("600x700")
         self.active_window.resizable(False, False)
-        
+
         # Centralizar a janela
         window_width = 600
         window_height = 700
@@ -1875,17 +2072,17 @@ class GerenciadorPlanilhas:
         screen_height = self.active_window.winfo_screenheight()
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
-        self.active_window.geometry(f'{window_width}x{window_height}+{x}+{y}')
+        self.active_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
         # Configurar grid da janela
         self.active_window.grid_columnconfigure(0, weight=1)
         self.active_window.grid_rowconfigure(0, weight=1)
 
         self._setup_interface()
-        
+
         # Cleanup quando a janela for fechada
         self.active_window.protocol("WM_DELETE_WINDOW", self._on_closing)
-        
+
         # Tornar a janela modal
         self.active_window.transient(self.master)
         self.active_window.grab_set()
@@ -1905,7 +2102,7 @@ class GerenciadorPlanilhas:
         title_label = ttk.Label(
             title_frame,
             text="Gerenciador de Planilhas Excel",
-            font=('Arial', 16, 'bold')
+            font=("Arial", 16, "bold"),
         )
         title_label.grid(row=0, column=0)
 
@@ -1916,13 +2113,19 @@ class GerenciadorPlanilhas:
 
         self.lbl_arquivo = ttk.Label(
             file_frame,
-            text=self.sistema_contas.file_path if hasattr(self.sistema_contas, 'file_path') else "Nenhum arquivo selecionado",
-            wraplength=500
+            text=(
+                self.sistema_contas.file_path
+                if hasattr(self.sistema_contas, "file_path")
+                else "Nenhum arquivo selecionado"
+            ),
+            wraplength=500,
         )
         self.lbl_arquivo.grid(row=0, column=0, sticky="ew", padx=5)
 
         # Frame para lista de sheets
-        list_frame = ttk.LabelFrame(main_frame, text="Planilhas Disponíveis", padding="10")
+        list_frame = ttk.LabelFrame(
+            main_frame, text="Planilhas Disponíveis", padding="10"
+        )
         list_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 20))
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(0, weight=1)
@@ -1935,35 +2138,38 @@ class GerenciadorPlanilhas:
 
         self.listbox = Listbox(
             list_container,
-            font=('Arial', 10),
+            font=("Arial", 10),
             selectmode=SINGLE,
             height=10,
             borderwidth=1,
-            relief="solid"
+            relief="solid",
         )
         self.listbox.grid(row=0, column=0, sticky="nsew")
 
-        scrollbar_y = ttk.Scrollbar(list_container, orient=VERTICAL, command=self.listbox.yview)
+        scrollbar_y = ttk.Scrollbar(
+            list_container, orient=VERTICAL, command=self.listbox.yview
+        )
         scrollbar_y.grid(row=0, column=1, sticky="ns")
-        
-        scrollbar_x = ttk.Scrollbar(list_container, orient=HORIZONTAL, command=self.listbox.xview)
+
+        scrollbar_x = ttk.Scrollbar(
+            list_container, orient=HORIZONTAL, command=self.listbox.xview
+        )
         scrollbar_x.grid(row=1, column=0, sticky="ew")
 
         self.listbox.configure(
-            yscrollcommand=scrollbar_y.set,
-            xscrollcommand=scrollbar_x.set
+            yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set
         )
 
         # Frame para criar nova sheet
-        create_frame = ttk.LabelFrame(main_frame, text="Criar Nova Planilha", padding="10")
+        create_frame = ttk.LabelFrame(
+            main_frame, text="Criar Nova Planilha", padding="10"
+        )
         create_frame.grid(row=3, column=0, sticky="ew", pady=(0, 20))
         create_frame.grid_columnconfigure(1, weight=1)
 
-        ttk.Label(
-            create_frame,
-            text="Nome:",
-            font=('Arial', 10)
-        ).grid(row=0, column=0, padx=(0, 10), sticky="w")
+        ttk.Label(create_frame, text="Nome:", font=("Arial", 10)).grid(
+            row=0, column=0, padx=(0, 10), sticky="w"
+        )
 
         self.nova_sheet_entry = ttk.Entry(create_frame)
         self.nova_sheet_entry.grid(row=0, column=1, sticky="ew")
@@ -1976,28 +2182,20 @@ class GerenciadorPlanilhas:
 
         # Primeira linha de botões
         ttk.Button(
-            button_frame,
-            text="Nova Planilha Excel",
-            command=self.criar_nova_planilha
+            button_frame, text="Nova Planilha Excel", command=self.criar_nova_planilha
         ).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         ttk.Button(
-            button_frame,
-            text="Abrir Planilha Existente",
-            command=self.abrir_planilha
+            button_frame, text="Abrir Planilha Existente", command=self.abrir_planilha
         ).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         # Segunda linha de botões
         ttk.Button(
-            button_frame,
-            text="Selecionar Sheet",
-            command=self.selecionar_sheet
+            button_frame, text="Selecionar Sheet", command=self.selecionar_sheet
         ).grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 
         ttk.Button(
-            button_frame,
-            text="Criar Nova Sheet",
-            command=self.criar_nova_sheet
+            button_frame, text="Criar Nova Sheet", command=self.criar_nova_sheet
         ).grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
         self.atualizar_lista_sheets()
@@ -2006,9 +2204,9 @@ class GerenciadorPlanilhas:
         """Cria um novo arquivo Excel"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
-            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
+            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
         )
-        
+
         if file_path:
             try:
                 wb = Workbook()
@@ -2016,7 +2214,9 @@ class GerenciadorPlanilhas:
                 self.sistema_contas.file_path = file_path
                 self.lbl_arquivo.config(text=file_path)
                 self.atualizar_lista_sheets()
-                messagebox.showinfo("Sucesso", "Nova planilha Excel criada com sucesso!")
+                messagebox.showinfo(
+                    "Sucesso", "Nova planilha Excel criada com sucesso!"
+                )
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
 
@@ -2025,27 +2225,34 @@ class GerenciadorPlanilhas:
         file_path = filedialog.askopenfilename(
             filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
         )
-        
+
         if file_path:
             try:
                 wb = load_workbook(file_path)
                 self.sistema_contas.file_path = file_path
-                
+
                 # Pega a sheet ativa atual
                 active_sheet = wb.active
                 self.sistema_contas.sheet_name = active_sheet.title
-                
+
                 wb.close()
                 self.lbl_arquivo.config(text=file_path)
                 self.atualizar_lista_sheets()
-                messagebox.showinfo("Sucesso", f"Planilha aberta com sucesso! Sheet ativa: {active_sheet.title}")
+                messagebox.showinfo(
+                    "Sucesso",
+                    f"Planilha aberta com sucesso! Sheet ativa: {active_sheet.title}",
+                )
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao abrir planilha: {str(e)}")
 
     def atualizar_lista_sheets(self):
         """Atualiza a lista de sheets disponíveis"""
         self.listbox.delete(0, END)
-        if hasattr(self.sistema_contas, 'file_path') and self.sistema_contas.file_path and os.path.exists(self.sistema_contas.file_path):
+        if (
+            hasattr(self.sistema_contas, "file_path")
+            and self.sistema_contas.file_path
+            and os.path.exists(self.sistema_contas.file_path)
+        ):
             try:
                 wb = load_workbook(self.sistema_contas.file_path)
                 for sheet in wb.sheetnames:
@@ -2060,7 +2267,7 @@ class GerenciadorPlanilhas:
         if not selection:
             messagebox.showerror("Erro", "Selecione uma planilha!")
             return
-            
+
         nome_sheet = self.listbox.get(selection[0])
         try:
             wb = load_workbook(self.sistema_contas.file_path)
@@ -2068,12 +2275,14 @@ class GerenciadorPlanilhas:
                 # Define a sheet selecionada como ativa
                 wb.active = wb[nome_sheet]
                 wb.save(self.sistema_contas.file_path)
-                
+
                 # Atualiza o nome da sheet no sistema_contas
                 self.sistema_contas.sheet_name = nome_sheet
-                
+
                 wb.close()
-                messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' selecionada e ativada!")
+                messagebox.showinfo(
+                    "Sucesso", f"Planilha '{nome_sheet}' selecionada e ativada!"
+                )
                 self.active_window.destroy()
                 self.active_window = None
         except Exception as e:
@@ -2086,7 +2295,10 @@ class GerenciadorPlanilhas:
             messagebox.showerror("Erro", "Digite um nome para a nova planilha!")
             return
 
-        if not hasattr(self.sistema_contas, 'file_path') or not self.sistema_contas.file_path:
+        if (
+            not hasattr(self.sistema_contas, "file_path")
+            or not self.sistema_contas.file_path
+        ):
             messagebox.showerror("Erro", "Primeiro abra ou crie uma planilha Excel!")
             return
 
@@ -2102,12 +2314,14 @@ class GerenciadorPlanilhas:
             wb.active = new_sheet
             wb.save(self.sistema_contas.file_path)
             wb.close()
-            
+
             # Atualiza o nome da sheet no sistema_contas
             self.sistema_contas.sheet_name = nome_sheet
-            
+
             self.atualizar_lista_sheets()
-            messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' criada e ativada com sucesso!")
+            messagebox.showinfo(
+                "Sucesso", f"Planilha '{nome_sheet}' criada e ativada com sucesso!"
+            )
             self.active_window.destroy()
             self.active_window = None
         except Exception as e:
