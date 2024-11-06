@@ -133,9 +133,8 @@ class DataBaseMarcacao:
         """Valida os campos obrigatórios do formulário."""
         name = self.name_entry.get().strip()
         renach = self.renach_entry.get().strip()
-        phone = self.phone_entry.get().strip()
         
-        if not all([name, renach, phone]):
+        if not all([name, renach]):
             messagebox.showerror("Erro", "Por favor, preencha todos os campos obrigatórios!")
             return False
         
