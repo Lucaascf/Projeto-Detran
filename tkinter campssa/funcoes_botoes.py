@@ -246,6 +246,28 @@ class FuncoesBotoes:
             activeforeground="#ECF0F1",
         ).pack(side=tk.LEFT, padx=10, pady=10)
 
+    def contar_pagamento(self, col_inicial, col_final):
+        """Conta o número de pessoas e a quantidade de pagamentos."""
+        n_pessoa = 0
+        cont_pag = {"D": 0, "C": 0, "E": 0, "P": 0}
+        
+        # Usa a sheet ativa correta
+        ws = self.get_active_sheet()
+        
+        # Verifica se há conteúdo nas células antes de contar
+        for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=col_inicial, max_col=col_final):
+            # Verifica o nome (primeira coluna do range)
+            nome = row[0].value
+            if isinstance(nome, str) and nome.strip():
+                n_pessoa += 1
+                
+                # Verifica a forma de pagamento (quinta coluna do range)
+                pag = row[4].value
+                if isinstance(pag, str) and pag.strip() in cont_pag:
+                    cont_pag[pag.strip()] += 1
+        
+        return n_pessoa, cont_pag
+
     def criar_entry(self, frame_nome, var_name, parent):
         """Cria um frame com label e entry para entradas de texto.
 
@@ -562,61 +584,122 @@ class FuncoesBotoes:
         canvas.configure(scrollregion=canvas.bbox("all"))
 
     def valores_totais(self):
+        """Exibe os valores totais em uma janela Tkinter."""
+        # Recarrega o workbook para garantir dados atualizados
+        self.planilhas.reload_workbook()
+        
+        # Obtém as contagens
         n_medico, pag_medico = self.planilhas.contar_medico()
         n_psicologo, pag_psicologo = self.planilhas.contar_psi()
 
-        total_medico = n_medico * 148.65
-        total_psicologo = n_psicologo * 192.61
+        # Valores fixos
+        VALOR_CONSULTA_MEDICO = 148.65
+        VALOR_PAGAR_MEDICO = 49.00
+        VALOR_CONSULTA_PSI = 192.61
+        VALOR_PAGAR_PSI = 63.50
 
-        valor_medico = n_medico * 49
-        valor_psicologo = n_psicologo * 63.50
+        # Cálculos
+        total_medico = n_medico * VALOR_CONSULTA_MEDICO
+        total_psicologo = n_psicologo * VALOR_CONSULTA_PSI
+        valor_medico = n_medico * VALOR_PAGAR_MEDICO
+        valor_psicologo = n_psicologo * VALOR_PAGAR_PSI
 
+        # Criação da janela
         janela_contas = tk.Toplevel(self.master)
-        janela_contas.geometry("250x220")
-        janela_contas.maxsize(width=250, height=220)
-        janela_contas.minsize(width=250, height=220)
+        janela_contas.title("Contas")
+        janela_contas.geometry("300x400")
         janela_contas.configure(bg="#2C3E50")
 
+        # Médico
         tk.Label(
             janela_contas,
             text="Contas Médico:",
-            font=("Arial", 16),
+            font=("Arial", 16, "bold"),
             bg="#2C3E50",
             fg="#ECF0F1",
-        ).pack(pady=5)
+        ).pack(pady=(15,5))
+        
         tk.Label(
             janela_contas,
-            text=f"Valor Total: {total_medico:.2f}",
+            text=f"Número de pacientes: {n_medico}",
             bg="#2C3E50",
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
+        
         tk.Label(
             janela_contas,
-            text=f"Pagar: {valor_medico:.2f}",
+            text=f"Valor Total: R$ {total_medico:.2f}",
             bg="#2C3E50",
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
-        tk.Label(janela_contas, text="", bg="#2C3E50").pack()
+        
+        tk.Label(
+            janela_contas,
+            text=f"Valor a Pagar: R$ {valor_medico:.2f}",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 12),
+        ).pack(pady=2)
 
+        tk.Label(janela_contas, text="", bg="#2C3E50").pack(pady=10)
+
+        # Psicólogo
         tk.Label(
             janela_contas,
             text="Contas Psicólogo:",
-            font=("Arial", 16),
+            font=("Arial", 16, "bold"),
             bg="#2C3E50",
             fg="#ECF0F1",
         ).pack(pady=5)
+        
         tk.Label(
             janela_contas,
-            text=f"Valor Total: {total_psicologo:.2f}",
+            text=f"Número de pacientes: {n_psicologo}",
             bg="#2C3E50",
             fg="#ECF0F1",
             font=("Arial", 12),
         ).pack(pady=2)
+        
         tk.Label(
             janela_contas,
-            text=f"Pagar: {valor_psicologo:.2f}",
+            text=f"Valor Total: R$ {total_psicologo:.2f}",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 12),
+        ).pack(pady=2)
+        
+        tk.Label(
+            janela_contas,
+            text=f"Valor a Pagar: R$ {valor_psicologo:.2f}",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 12),
+        ).pack(pady=2)
+
+        tk.Label(janela_contas, text="", bg="#2C3E50").pack(pady=10)
+
+        # Resumo Geral
+        tk.Label(
+            janela_contas,
+            text="Resumo Geral:",
+            font=("Arial", 16, "bold"),
+            bg="#2C3E50",
+            fg="#ECF0F1",
+        ).pack(pady=5)
+        
+        tk.Label(
+            janela_contas,
+            text=f"Total Geral: R$ {(total_medico + total_psicologo):.2f}",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 12),
+        ).pack(pady=2)
+        
+        tk.Label(
+            janela_contas,
+            text=f"Total a Pagar: R$ {(valor_medico + valor_psicologo):.2f}",
             bg="#2C3E50",
             fg="#ECF0F1",
             font=("Arial", 12),
