@@ -7,53 +7,64 @@ class Planilhas:
         """Inicializa a classe Planilhas com um objeto de workbook."""
         try:
             self.file_path = file_path
-            self.wb = self.load_workbook()  # Carrega a planilha
-
+            self.wb = load_workbook(file_path)  # Carrega a planilha
+            self.sheet_name = None  # Nome da sheet ativa
+            self.active_sheet = self.wb.active  # Referência à sheet ativa
         except Exception as e:
             raise ValueError(f"Erro ao carregar a planilha: {str(e)}")
 
-    def load_workbook(self):
-        """Carrega o workbook a partir do caminho do arquivo."""
+    def set_active_sheet(self, sheet_name):
+        """Define e ativa uma nova sheet."""
         try:
-            return load_workbook(self.file_path)  # Carrega e retorna o objeto workbook
+            if sheet_name in self.wb.sheetnames:
+                self.sheet_name = sheet_name
+                self.wb.active = self.wb[sheet_name]
+                self.active_sheet = self.wb[sheet_name]
+                self.wb.save(self.file_path)
+                return True
+            return False
         except Exception as e:
-            raise ValueError(f"Erro ao abrir o arquivo Excel: {str(e)}")
+            print(f"Erro ao definir sheet ativa: {e}")
+            return False
+
+    def get_active_sheet(self):
+        """Retorna a sheet ativa atual."""
+        if self.sheet_name and self.sheet_name in self.wb.sheetnames:
+            return self.wb[self.sheet_name]
+        return self.wb.active
+
+    def reload_workbook(self):
+        """Recarrega o workbook do arquivo."""
+        try:
+            self.wb = load_workbook(self.file_path)
+            if self.sheet_name and self.sheet_name in self.wb.sheetnames:
+                self.active_sheet = self.wb[self.sheet_name]
+            else:
+                self.active_sheet = self.wb.active
+            return True
+        except Exception as e:
+            print(f"Erro ao recarregar workbook: {e}")
+            return False
 
     def contar_pagamento(self, col_inicial, col_final):
-        """Conta o número de pessoas e a quantidade de pagamentos.
+        """Conta o número de pessoas e a quantidade de pagamentos."""
+        n_pessoa = 0
+        cont_pag = {"D": 0, "C": 0, "E": 0, "P": 0}
+        
+        # Usa a sheet ativa correta
+        ws = self.get_active_sheet()
 
-        Args:
-            col_inicial (int): A coluna inicial para a contagem.
-            col_final (int): A coluna final para a contagem.
-
-        Returns:
-            tuple: Número de pessoas e contagem de pagamentos por tipo.
-        """
-        n_pessoa = 0  # Contador de pessoas
-        cont_pag = {
-            "D": 0,  # D: Débito
-            "C": 0,  # C: Crédito
-            "E": 0,  # E: Efeito
-            "P": 0,  # P: Pendência
-        }
-        ws = self.wb.active  # Obtém a planilha ativa
-
-        # Itera sobre as linhas da planilha, começando na terceira linha
-        for row in ws.iter_rows(
-            min_row=3, max_row=ws.max_row, min_col=col_inicial, max_col=col_final
-        ):
+        for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=col_inicial, max_col=col_final):
             nome = row[0]
-            # Verifica se o nome é uma string não vazia
             if isinstance(nome.value, str) and nome.value.strip():
-                n_pessoa += 1  # Incrementa o contador de pessoas
+                n_pessoa += 1
 
             pag = row[4]
-            # Verifica se o pagamento é válido e atualiza a contagem
             if pag and pag.value in cont_pag:
                 cont_pag[pag.value] += 1
 
         return n_pessoa, cont_pag
-
+    
     def contar_medico(self):
         """Conta a quantidade de pessoas e pagamentos feitos por médicos."""
         return self.contar_pagamento(2, 6)
@@ -121,27 +132,20 @@ class Planilhas:
         return info
 
     def exibir_informacao(self, janela_menu):
-        """Exibe informações dos pacientes no console."""
-        ws = self.wb.active
+        """Exibe informações dos pacientes."""
+        # Usa a sheet ativa correta
+        ws = self.get_active_sheet()
         medico, psi = [], []
 
         # Informações de médicos
         for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
-            linha = [
-                cell.value
-                for cell in row
-                if isinstance(cell.value, (str, int)) and str(cell.value).strip()
-            ]
+            linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
             if linha:
                 medico.append(linha)
 
         # Informações de psicólogos
         for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
-            linha = [
-                cell.value
-                for cell in row
-                if isinstance(cell.value, (str, int)) and str(cell.value).strip()
-            ]
+            linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
             if linha:
                 psi.append(linha)
 
@@ -162,22 +166,21 @@ class Planilhas:
 
         layout_informacao.append([sg.Button("Voltar")])
 
-        janela_informacao = sg.Window(
-            "Informação dos Pacientes", layout_informacao)
-
+        janela_informacao = sg.Window("Informação dos Pacientes", layout_informacao)
         janela_menu.hide()
 
         while True:
             eventos, valores = janela_informacao.read()
             if eventos in (sg.WIN_CLOSED, "Fechar"):
                 break
-            if eventos in 'Voltar':
+            if eventos == 'Voltar':
                 janela_informacao.close()
                 janela_menu.un_hide()
+                break
 
     def adicionar_informacao(self, janela_menu):
         """Adiciona uma nova informação de paciente ao Excel com uma interface gráfica."""
-        ws = self.wb.active
+        ws = self.get_active_sheet()
 
         layout = [
             [sg.Text("Deseja adicionar informações para:")],
@@ -260,7 +263,7 @@ class Planilhas:
 
     def excluir(self, janela_menu):
         """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
-        ws = self.wb.active
+        ws = self.get_active_sheet()
         pacientes_medicos = {}
         pacientes_psicologos = {}
 
@@ -345,6 +348,8 @@ class Planilhas:
                         "RENACH inválido ou paciente não encontrado.")
 
     def valores_totais(self, janela_menu):
+        self.reload_workbook()
+
         n_medico, pag_medico = self.contar_medico()
         n_psicologo, pag_psicologo = self.contar_psi()
 

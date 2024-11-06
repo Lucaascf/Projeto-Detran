@@ -478,125 +478,88 @@ class FuncoesBotoes:
 
     def exibir_informacao(self):
         """Exibe informações dos pacientes em uma nova janela com barra de rolagem."""
-        ws = self.wb.active
+        # Carrega o workbook e seleciona a sheet correta
+        wb = load_workbook(self.file_path)
+        if hasattr(self.planilhas, 'sheet_name') and self.planilhas.sheet_name:
+            ws = wb[self.planilhas.sheet_name]
+        else:  
+            ws = wb.active
+        
         medico, psi = [], []
 
         # Informações de médicos
         for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
-            linha = [
-                cell.value
-                for cell in row
-                if isinstance(cell.value, (str, int)) and str(cell.value).strip()
-            ]
+            linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
             if linha:
                 medico.append(linha)
 
         # Informações de psicólogos
         for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
-            linha = [
-                cell.value
-                for cell in row
-                if isinstance(cell.value, (str, int)) and str(cell.value).strip()
-            ]
+            linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
             if linha:
                 psi.append(linha)
+
+        wb.close()  # Fecha o workbook após usar
+
+        # Verificação de dados coletados
+        if not medico and not psi:
+            messagebox.showinfo("Aviso", "Nenhuma informação encontrada!")
+            return
 
         # Criando uma nova janela
         janela_informacao = tk.Toplevel(self.master)
         janela_informacao.title("Informação dos Pacientes")
         janela_informacao.geometry("600x600")
-        janela_informacao.maxsize(width=600, height=600)
-        janela_informacao.minsize(width=600, height=600)
-
-        # Usando a cor de fundo da janela principal
         cor_fundo = self.master.cget("bg")
         janela_informacao.configure(bg=cor_fundo)
 
-        # Configurando o Canvas e a barra de rolagem
+        # Canvas e scrollbar
         canvas = tk.Canvas(janela_informacao, bg=cor_fundo)
-        scrollbar = tk.Scrollbar(
-            janela_informacao, orient="vertical", command=canvas.yview
-        )
+        scrollbar = tk.Scrollbar(janela_informacao, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg=cor_fundo)
-
-        scrollable_frame.bind(
-            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-
-        # Adicionando a barra de rolagem ao canvas
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        # Adicionando informações de médicos
-        if medico:
-            tk.Label(
-                scrollable_frame,
-                text="MÉDICO:",
-                font=("Arial", 16, "bold"),
-                bg=cor_fundo,
-                fg="#ECF0F1",
-            ).pack(pady=(10, 0), anchor="center")
-            for i, paciente in enumerate(medico, start=1):
-                tk.Label(
-                    scrollable_frame,
-                    text=f"{i} - {paciente}",
-                    bg=cor_fundo,
-                    fg="#ECF0F1",
-                    font=("Arial", 12),
-                ).pack(anchor="w", padx=10, pady=5)
-
-        # Adicionando informações de psicólogos
-        if psi:
-            tk.Label(
-                scrollable_frame,
-                text="PSICÓLOGO:",
-                font=("Arial", 16, "bold"),
-                bg=cor_fundo,
-                fg="#ECF0F1",
-            ).pack(pady=(10, 0), anchor="center")
-            for i, paciente in enumerate(psi, start=1):
-                tk.Label(
-                    scrollable_frame,
-                    text=f"{i} - {paciente}",
-                    bg=cor_fundo,
-                    fg="#ECF0F1",
-                    font=("Arial", 12),
-                ).pack(anchor="w", padx=10, pady=5)
-
-        # Adicionando o canvas e a barra de rolagem à janela
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Função para rolar o canvas com a roda do mouse
+        # Bind para rolagem com o mouse
         def scroll(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        # Detectar o sistema operacional
-        import sys
+        # Adicionar informações de médicos
+        if medico:
+            tk.Label(scrollable_frame, text="MÉDICO:", font=("Arial", 16, "bold"), bg=cor_fundo, fg="#ECF0F1").pack(pady=(10, 0), anchor="center")
+            for i, paciente in enumerate(medico, start=1):
+                tk.Label(scrollable_frame, text=f"{i} - {paciente}", bg=cor_fundo, fg="#ECF0F1", font=("Arial", 12)).pack(anchor="w", padx=10, pady=5)
 
-        if (
-            sys.platform.startswith("win") or sys.platform == "darwin"
-        ):  # Windows e MacOS
+        # Adicionar informações de psicólogos
+        if psi:
+            tk.Label(scrollable_frame, text="PSICÓLOGO:", font=("Arial", 16, "bold"), bg=cor_fundo, fg="#ECF0F1").pack(pady=(10, 0), anchor="center")
+            for i, paciente in enumerate(psi, start=1):
+                tk.Label(scrollable_frame, text=f"{i} - {paciente}", bg=cor_fundo, fg="#ECF0F1", font=("Arial", 12)).pack(anchor="w", padx=10, pady=5)
+
+        # Adicionar widgets à janela
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Detectar o sistema operacional para ajustar rolagem com mouse
+        import sys
+        if sys.platform.startswith("win") or sys.platform == "darwin":  # Windows e MacOS
             janela_informacao.bind_all("<MouseWheel>", scroll)
         else:  # Linux
-            janela_informacao.bind_all(
-                "<Button-4>", lambda event: canvas.yview_scroll(-1, "units")
-            )
-            janela_informacao.bind_all(
-                "<Button-5>", lambda event: canvas.yview_scroll(1, "units")
-            )
+            janela_informacao.bind_all("<Button-4>", lambda event: canvas.yview_scroll(-1, "units"))
+            janela_informacao.bind_all("<Button-5>", lambda event: canvas.yview_scroll(1, "units"))
 
-        # Remover bindings do mouse quando a janela for fechada
+        # Remover bindings do mouse ao fechar a janela
         def on_closing():
-            # Removendo os bindings
             janela_informacao.unbind_all("<MouseWheel>")
             janela_informacao.unbind_all("<Button-4>")
             janela_informacao.unbind_all("<Button-5>")
             janela_informacao.destroy()
 
         janela_informacao.protocol("WM_DELETE_WINDOW", on_closing)
-        self.center(janela_informacao)
+
+        # Configurar região de rolagem
+        scrollable_frame.update_idletasks()  # Atualiza o frame antes de definir o scrollregion
+        canvas.configure(scrollregion=canvas.bbox("all"))
 
     def valores_totais(self):
         n_medico, pag_medico = self.planilhas.contar_medico()
@@ -1735,153 +1698,154 @@ class GerenciadorPlanilhas:
     def __init__(self, master, sistema_contas):
         self.master = master
         self.sistema_contas = sistema_contas
+        self.file_path = None
+        self.sheet_name = None
+        self.active_window = None
         
-    def setup_interface(self):
-        """Configuração inicial da interface do gerenciador"""
-        # Frame principal
-        self.main_frame = ttk.Frame(self.master)
-        self.main_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", padx=10, pady=5)
-        
-        # Frame para os botões de gerenciamento
-        self.manage_frame = ttk.Frame(self.main_frame)
-        self.manage_frame.grid(row=0, column=0, sticky="ew")
-
-        # Label para mostrar planilha atual
-        self.lbl_planilha_atual = ttk.Label(
-            self.manage_frame,
-            text="Planilha atual: Nenhuma selecionada"
-        )
-        self.lbl_planilha_atual.grid(row=0, column=1, padx=10, sticky="w")
-
-        # Status inicial
-        if hasattr(self.sistema_contas, 'sheet_name') and self.sistema_contas.sheet_name:
-            self.lbl_planilha_atual.config(text=f"Planilha atual: {self.sistema_contas.sheet_name}")
-
     def abrir_gerenciador(self):
         """Abre a janela de gerenciamento de planilhas"""
-        self.janela_sheets = Toplevel(self.master)
-        self.janela_sheets.title("Gerenciador de Planilhas")
-        self.janela_sheets.geometry('500x600')
-        self.janela_sheets.resizable(False, False)
+        if self.active_window:
+            self.active_window.lift()
+            return
+            
+        self.active_window = Toplevel(self.master)
+        self.active_window.title("Gerenciador de Planilhas")
+        self.active_window.geometry('600x700')
+        self.active_window.resizable(False, False)
         
         # Centralizar a janela
-        window_width = 500
-        window_height = 600
-        screen_width = self.janela_sheets.winfo_screenwidth()
-        screen_height = self.janela_sheets.winfo_screenheight()
+        window_width = 600
+        window_height = 700
+        screen_width = self.active_window.winfo_screenwidth()
+        screen_height = self.active_window.winfo_screenheight()
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
-        self.janela_sheets.geometry(f'{window_width}x{window_height}+{x}+{y}')
+        self.active_window.geometry(f'{window_width}x{window_height}+{x}+{y}')
 
-        # Configurar estilo
-        style = ttk.Style()
-        style.configure('Custom.TFrame', background='#f0f0f0')
-        style.configure('Custom.TButton', padding=5, font=('Arial', 10))
-        style.configure('Title.TLabel', font=('Arial', 12, 'bold'), padding=10)
+        # Configurar grid da janela
+        self.active_window.grid_columnconfigure(0, weight=1)
+        self.active_window.grid_rowconfigure(0, weight=1)
 
-        # Frame principal
-        main_frame = ttk.Frame(self.janela_sheets, style='Custom.TFrame')
-        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        self._setup_interface()
+        
+        # Cleanup quando a janela for fechada
+        self.active_window.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
+        # Tornar a janela modal
+        self.active_window.transient(self.master)
+        self.active_window.grab_set()
+
+    def _setup_interface(self):
+        """Configura a interface do gerenciador"""
+        # Frame principal com padding
+        main_frame = ttk.Frame(self.active_window, padding="20 20 20 20")
+        main_frame.grid(row=0, column=0, sticky="nsew")
+        main_frame.grid_columnconfigure(0, weight=1)
 
         # Título
+        title_frame = ttk.Frame(main_frame)
+        title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
+        title_frame.grid_columnconfigure(0, weight=1)
+
         title_label = ttk.Label(
-            main_frame,
-            text="Gerenciador de Planilhas",
-            style='Title.TLabel'
+            title_frame,
+            text="Gerenciador de Planilhas Excel",
+            font=('Arial', 16, 'bold')
         )
-        title_label.grid(row=0, column=0, pady=(0, 20))
+        title_label.grid(row=0, column=0)
 
-        # Frame para seleção de arquivo
-        file_frame = ttk.LabelFrame(main_frame, text="Arquivo atual", padding=10)
-        file_frame.grid(row=1, column=0, sticky="ew", pady=10)
+        # Frame para arquivo atual
+        file_frame = ttk.LabelFrame(main_frame, text="Arquivo Atual", padding="10")
+        file_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
+        file_frame.grid_columnconfigure(0, weight=1)
 
-        # Label para mostrar arquivo atual
         self.lbl_arquivo = ttk.Label(
             file_frame,
-            text=self.sistema_contas.file_path if hasattr(self.sistema_contas, 'file_path') else "Nenhum arquivo selecionado"
+            text=self.sistema_contas.file_path if hasattr(self.sistema_contas, 'file_path') else "Nenhum arquivo selecionado",
+            wraplength=500
         )
-        self.lbl_arquivo.grid(row=0, column=0, padx=5, sticky="ew")
+        self.lbl_arquivo.grid(row=0, column=0, sticky="ew", padx=5)
 
         # Frame para lista de sheets
-        list_frame = ttk.LabelFrame(main_frame, text="Planilhas disponíveis", padding=10)
-        list_frame.grid(row=2, column=0, sticky="nsew", pady=10)
-
-        # Configurar grid weights para expansão adequada
+        list_frame = ttk.LabelFrame(main_frame, text="Planilhas Disponíveis", padding="10")
+        list_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 20))
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(0, weight=1)
 
-        # Scrollbar para a lista
-        scrollbar = ttk.Scrollbar(list_frame)
-        scrollbar.grid(row=0, column=1, sticky="ns")
+        # Container para lista e scrollbars
+        list_container = ttk.Frame(list_frame)
+        list_container.grid(row=0, column=0, sticky="nsew")
+        list_container.grid_columnconfigure(0, weight=1)
+        list_container.grid_rowconfigure(0, weight=1)
 
-        # Lista de sheets existentes
         self.listbox = Listbox(
-            list_frame,
-            yscrollcommand=scrollbar.set,
+            list_container,
             font=('Arial', 10),
             selectmode=SINGLE,
-            height=10
+            height=10,
+            borderwidth=1,
+            relief="solid"
         )
         self.listbox.grid(row=0, column=0, sticky="nsew")
-        scrollbar.config(command=self.listbox.yview)
+
+        scrollbar_y = ttk.Scrollbar(list_container, orient=VERTICAL, command=self.listbox.yview)
+        scrollbar_y.grid(row=0, column=1, sticky="ns")
+        
+        scrollbar_x = ttk.Scrollbar(list_container, orient=HORIZONTAL, command=self.listbox.xview)
+        scrollbar_x.grid(row=1, column=0, sticky="ew")
+
+        self.listbox.configure(
+            yscrollcommand=scrollbar_y.set,
+            xscrollcommand=scrollbar_x.set
+        )
 
         # Frame para criar nova sheet
-        create_frame = ttk.LabelFrame(main_frame, text="Criar nova planilha", padding=10)
-        create_frame.grid(row=3, column=0, sticky="ew", pady=10)
+        create_frame = ttk.LabelFrame(main_frame, text="Criar Nova Planilha", padding="10")
+        create_frame.grid(row=3, column=0, sticky="ew", pady=(0, 20))
+        create_frame.grid_columnconfigure(1, weight=1)
 
         ttk.Label(
             create_frame,
             text="Nome:",
             font=('Arial', 10)
-        ).grid(row=0, column=0, padx=5, sticky="w")
+        ).grid(row=0, column=0, padx=(0, 10), sticky="w")
 
         self.nova_sheet_entry = ttk.Entry(create_frame)
-        self.nova_sheet_entry.grid(row=0, column=1, padx=5, sticky="ew")
-        create_frame.grid_columnconfigure(1, weight=1)
+        self.nova_sheet_entry.grid(row=0, column=1, sticky="ew")
 
         # Frame para botões
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=4, column=0, sticky="ew", pady=20)
-        
-        # Configurar grid weights para distribuição uniforme dos botões
-        for i in range(4):
+        button_frame.grid(row=4, column=0, sticky="ew")
+        for i in range(2):
             button_frame.grid_columnconfigure(i, weight=1)
 
-        # Botões
+        # Primeira linha de botões
         ttk.Button(
             button_frame,
             text="Nova Planilha Excel",
-            command=self.criar_nova_planilha,
-            style='Custom.TButton'
-        ).grid(row=0, column=0, padx=5, sticky="ew")
+            command=self.criar_nova_planilha
+        ).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         ttk.Button(
             button_frame,
-            text="Abrir Planilha",
-            command=self.abrir_planilha,
-            style='Custom.TButton'
-        ).grid(row=0, column=1, padx=5, sticky="ew")
+            text="Abrir Planilha Existente",
+            command=self.abrir_planilha
+        ).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
+        # Segunda linha de botões
         ttk.Button(
             button_frame,
             text="Selecionar Sheet",
-            command=self.selecionar_sheet,
-            style='Custom.TButton'
-        ).grid(row=0, column=2, padx=5, sticky="ew")
+            command=self.selecionar_sheet
+        ).grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 
         ttk.Button(
             button_frame,
             text="Criar Nova Sheet",
-            command=self.criar_nova_sheet,
-            style='Custom.TButton'
-        ).grid(row=0, column=3, padx=5, sticky="ew")
+            command=self.criar_nova_sheet
+        ).grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        # Atualizar lista de sheets
         self.atualizar_lista_sheets()
-
-        # Tornar a janela modal
-        self.janela_sheets.transient(self.master)
-        self.janela_sheets.grab_set()
 
     def criar_nova_planilha(self):
         """Cria um novo arquivo Excel"""
@@ -1909,10 +1873,17 @@ class GerenciadorPlanilhas:
         
         if file_path:
             try:
+                wb = load_workbook(file_path)
                 self.sistema_contas.file_path = file_path
+                
+                # Pega a sheet ativa atual
+                active_sheet = wb.active
+                self.sistema_contas.sheet_name = active_sheet.title
+                
+                wb.close()
                 self.lbl_arquivo.config(text=file_path)
                 self.atualizar_lista_sheets()
-                messagebox.showinfo("Sucesso", "Planilha aberta com sucesso!")
+                messagebox.showinfo("Sucesso", f"Planilha aberta com sucesso! Sheet ativa: {active_sheet.title}")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao abrir planilha: {str(e)}")
 
@@ -1929,7 +1900,7 @@ class GerenciadorPlanilhas:
                 messagebox.showerror("Erro", f"Erro ao listar planilhas: {str(e)}")
 
     def selecionar_sheet(self):
-        """Seleciona uma sheet existente"""
+        """Seleciona uma sheet existente e a torna ativa"""
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showerror("Erro", "Selecione uma planilha!")
@@ -1939,23 +1910,29 @@ class GerenciadorPlanilhas:
         try:
             wb = load_workbook(self.sistema_contas.file_path)
             if nome_sheet in wb.sheetnames:
+                # Define a sheet selecionada como ativa
+                wb.active = wb[nome_sheet]
+                wb.save(self.sistema_contas.file_path)
+                
+                # Atualiza o nome da sheet no sistema_contas
                 self.sistema_contas.sheet_name = nome_sheet
                 
-                # Atualizar o label na janela principal
-                if hasattr(self, 'lbl_planilha_atual'):
-                    self.lbl_planilha_atual.config(text=f"Planilha atual: {nome_sheet}")
-                
-                messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' selecionada!")
-                self.janela_sheets.destroy()
-            wb.close()
+                wb.close()
+                messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' selecionada e ativada!")
+                self.active_window.destroy()
+                self.active_window = None
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao selecionar planilha: {str(e)}")
 
     def criar_nova_sheet(self):
-        """Cria uma nova sheet"""
+        """Cria uma nova sheet e a torna ativa"""
         nome_sheet = self.nova_sheet_entry.get().strip()
         if not nome_sheet:
             messagebox.showerror("Erro", "Digite um nome para a nova planilha!")
+            return
+
+        if not hasattr(self.sistema_contas, 'file_path') or not self.sistema_contas.file_path:
+            messagebox.showerror("Erro", "Primeiro abra ou crie uma planilha Excel!")
             return
 
         try:
@@ -1965,18 +1942,23 @@ class GerenciadorPlanilhas:
                 wb.close()
                 return
 
-            wb.create_sheet(title=nome_sheet)
+            # Cria nova sheet e a torna ativa
+            new_sheet = wb.create_sheet(title=nome_sheet)
+            wb.active = new_sheet
             wb.save(self.sistema_contas.file_path)
             wb.close()
             
+            # Atualiza o nome da sheet no sistema_contas
             self.sistema_contas.sheet_name = nome_sheet
             
-            # Atualizar o label na janela principal
-            if hasattr(self, 'lbl_planilha_atual'):
-                self.lbl_planilha_atual.config(text=f"Planilha atual: {nome_sheet}")
-            
             self.atualizar_lista_sheets()
-            messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' criada com sucesso!")
-            self.janela_sheets.destroy()
+            messagebox.showinfo("Sucesso", f"Planilha '{nome_sheet}' criada e ativada com sucesso!")
+            self.active_window.destroy()
+            self.active_window = None
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
+
+    def _on_closing(self):
+        """Handler para quando a janela for fechada"""
+        self.active_window.destroy()
+        self.active_window = None
