@@ -24,7 +24,7 @@ class MainFrame(Frame):
         
         # Definir tamanhos mínimo e máximo
         self.master.minsize(1000, 600)
-        #self.master.maxsize(1600, 1000)
+        self.master.maxsize(1600, 1000)
         
         # Centralizar a janela
         self.center_window()
