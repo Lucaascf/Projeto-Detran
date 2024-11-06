@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import ttk
 from funcoes_botoes import FuncoesBotoes, SistemaContas, GerenciadorPlanilhas
 from planilhas import Planilhas
 from tkcalendar import DateEntry
@@ -8,148 +9,259 @@ class MainFrame(Frame):
     """Classe que representa o frame principal da aplicação, responsável por gerenciar as interações do usuário."""
 
     def __init__(self, master, planilhas: Planilhas, file_path: str, app):
-        """Inicializa a classe MainFrame.
+        super().__init__(master, bg=master.cget('bg'))
+        self._init_attributes(master, planilhas, file_path, app)
+        self._setup_styles()
+        self.create_widgets()
 
-        Args:
-            master: Janela pai do Tkinter.
-            planilhas: Instância da classe Planilhas para gerenciar as planilhas.
-            file_path: Caminho do arquivo que contém os dados.
-            app: Instância da aplicação principal.
-        """
-        super().__init__(master, bg=master.cget('bg'))  # Chama o construtor da classe Frame
+    def _init_attributes(self, master, planilhas, file_path, app):
+        """Inicializa os atributos da classe."""
         self.current_user = app.get_current_user() if hasattr(app, 'get_current_user') else None
-        self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app)  # Inicializa FuncoesBotoes
+        self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app)
         self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
         self.sistema_contas = SistemaContas(file_path, current_user=self.current_user)
-        self.gerenciador_planilhas = GerenciadorPlanilhas(master, self.sistema_contas)  # Instancia GerenciadorPlanilhas
+        self.gerenciador_planilhas = GerenciadorPlanilhas(master, self.sistema_contas)
         self.master = master
         self.file_path = file_path
         self.app = app
-        self.create_widgets()  # Cria os widgets da interface
+
+        # Cores temáticas
+        self.colors = {
+            'bg': master.cget('bg'),
+            'fg': '#ECF0F1',
+            'button_primary': '#2980b9',
+            'button_secondary': '#27ae60',
+            'button_warning': '#e67e22',
+            'button_danger': '#c0392b',
+            'button_hover': '#3498db',
+            'frame_bg': '#34495e'
+        }
+
+    def _setup_styles(self):
+        """Configura os estilos dos widgets."""
+        style = ttk.Style()
+        
+        # Estilo para LabelFrame
+        style.configure(
+            'Custom.TLabelframe',
+            background=self.colors['frame_bg'],
+            foreground=self.colors['fg'],
+            padding=10
+        )
+        
+        # Estilo para Label do LabelFrame
+        style.configure(
+            'Custom.TLabelframe.Label',
+            background=self.colors['frame_bg'],
+            foreground=self.colors['fg'],
+            font=('Arial', 12, 'bold')
+        )
+
+    def create_button(self, parent, text, command, color=None, width=20):
+        """Cria um botão customizado com hover effect."""
+        if color is None:
+            color = self.colors['button_primary']
+            
+        btn = Button(
+            parent,
+            text=text,
+            command=command,
+            width=width,
+            bg=color,
+            fg=self.colors['fg'],
+            font=('Arial', 10),
+            relief='raised',
+            borderwidth=1,
+            cursor='hand2'
+        )
+        
+        # Hover effects
+        btn.bind('<Enter>', lambda e, b=btn: self._on_enter(b))
+        btn.bind('<Leave>', lambda e, b=btn, c=color: self._on_leave(b, c))
+        
+        return btn
+
+    def _on_enter(self, btn):
+        """Efeito quando o mouse passa sobre o botão."""
+        btn.config(bg=self.colors['button_hover'])
+
+    def _on_leave(self, btn, original_color):
+        """Efeito quando o mouse sai do botão."""
+        btn.config(bg=original_color)
 
     def create_widgets(self):
         """Cria e organiza os widgets na interface principal."""
-        # Título da tela com o nome do usuário, se disponível
+        # Container principal com padding
+        main_container = Frame(self, bg=self.colors['bg'])
+        main_container.pack(expand=True, fill='both', padx=20, pady=20)
+        
+        # Título
         title_text = "Gerenciamento de Pacientes"
         if self.current_user:
             title_text += f" - {self.current_user}"
             
-        title_label = Label(self, text=title_text, font=('Arial', 16, 'bold'), bg=self.cget('bg'), fg='#ECF0F1')
-        title_label.grid(row=0, column=0, columnspan=3, pady=(10, 20))
+        title_label = Label(
+            main_container,
+            text=title_text,
+            font=('Arial', 18, 'bold'),
+            bg=self.colors['bg'],
+            fg=self.colors['fg']
+        )
+        title_label.pack(pady=(0, 20))
 
-        # Botão para adicionar informações
-        self.bt_adicionar_informacoes = Button(
-            self, text='Adicionar Informações', command=self.adicionar_informacao)
-        self.bt_adicionar_informacoes.grid(row=1, column=0, padx=10, pady=10, sticky='ew')
+        # Frame para organizar as seções em grid
+        grid_frame = Frame(main_container, bg=self.colors['bg'])
+        grid_frame.pack(expand=True, fill='both')
+        
+        # Configurar grid
+        for i in range(2):  # 2 colunas
+            grid_frame.grid_columnconfigure(i, weight=1)
 
-        # Botão para exibir resultados de consulta
-        self.bt_valores_atendimento = Button(
-            self, text='Valores Atendimento', command=self.resultados_consulta)
-        self.bt_valores_atendimento.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+        # 1. Seção de Cadastro e Gestão
+        cadastro_frame = ttk.LabelFrame(
+            grid_frame,
+            text=" Cadastro e Gestão ",
+            style='Custom.TLabelframe'
+        )
+        cadastro_frame.grid(row=0, column=0, padx=10, pady=5, sticky='nsew')
+        
+        self.create_button(
+            cadastro_frame,
+            'Adicionar Informações',
+            self.adicionar_informacao,
+            self.colors['button_primary']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            cadastro_frame,
+            'Excluir Informação',
+            self.excluir_informacao,
+            self.colors['button_danger']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            cadastro_frame,
+            'Exibir Informações',
+            self.exibir,
+            self.colors['button_secondary']
+        ).pack(pady=5, padx=10, fill='x')
 
-        self.bt_format_planilha = Button(
-            self, text='Format Planilha', command=self.format_planilha)
-        self.bt_format_planilha.grid(row=4, column=0, padx=10, pady=10, sticky='ew')
+        # 2. Seção de Marcações
+        marcacao_frame = ttk.LabelFrame(
+            grid_frame,
+            text=" Agenda e Marcações ",
+            style='Custom.TLabelframe'
+        )
+        marcacao_frame.grid(row=0, column=1, padx=10, pady=5, sticky='nsew')
+        
+        self.create_button(
+            marcacao_frame,
+            'Nova Marcação',
+            self.marcar_paciente,
+            self.colors['button_primary']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            marcacao_frame,
+            'Visualizar Marcações',
+            self.visu_marcacoes,
+            self.colors['button_secondary']
+        ).pack(pady=5, padx=10, fill='x')
 
-        self.bt_format_planilha = Button(
-            self, text='Fechamento contas', command=self.fechamento_contas)
-        self.bt_format_planilha.grid(row=4, column=2, padx=10, pady=10, sticky='ew')
+        # 3. Seção Financeira
+        financeiro_frame = ttk.LabelFrame(
+            grid_frame,
+            text=" Gestão Financeira ",
+            style='Custom.TLabelframe'
+        )
+        financeiro_frame.grid(row=1, column=0, padx=10, pady=5, sticky='nsew')
+        
+        self.create_button(
+            financeiro_frame,
+            'Valores Atendimento',
+            self.resultados_consulta,
+            self.colors['button_primary']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            financeiro_frame,
+            'Exibir Contas',
+            self.exibir_contas,
+            self.colors['button_secondary']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            financeiro_frame,
+            'Fechamento Contas',
+            self.fechamento_contas,
+            self.colors['button_warning']
+        ).pack(pady=5, padx=10, fill='x')
 
-        self.bt_format_planilha = Button(
-            self, text='planilha ou sheet', command=self.planilha_sheet)
-        self.bt_format_planilha.grid(row=5, column=2, padx=10, pady=10, sticky='ew')
+        # 4. Seção de Documentos e Relatórios
+        documentos_frame = ttk.LabelFrame(
+            grid_frame,
+            text=" Documentos e Relatórios ",
+            style='Custom.TLabelframe'
+        )
+        documentos_frame.grid(row=1, column=1, padx=10, pady=5, sticky='nsew')
+        
+        self.create_button(
+            documentos_frame,
+            'Emitir NTFS-e',
+            self.emitir_notas,
+            self.colors['button_primary']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            documentos_frame,
+            'Enviar Relatório WhatsApp',
+            self.relatorio_wpp,
+            self.colors['button_secondary']
+        ).pack(pady=5, padx=10, fill='x')
+        
+        self.create_button(
+            documentos_frame,
+            'Enviar Relatório Email',
+            self.relatorio_email,
+            self.colors['button_warning']
+        ).pack(pady=5, padx=10, fill='x')
 
-        # Botão para excluir informações
-        self.bt_excluir_informacao = Button(
-            self, text='Excluir Informação', command=self.excluir_informacao)
-        self.bt_excluir_informacao.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        # 5. Seção de Ferramentas
+        tools_frame = ttk.LabelFrame(
+            grid_frame,
+            text=" Ferramentas ",
+            style='Custom.TLabelframe'
+        )
+        tools_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky='nsew')
+        
+        tools_button_frame = Frame(tools_frame, bg=self.colors['frame_bg'])
+        tools_button_frame.pack(fill='x', expand=True)
+        
+        self.create_button(
+            tools_button_frame,
+            'Formatar Planilha',
+            self.format_planilha,
+            self.colors['button_primary']
+        ).pack(side='left', pady=5, padx=10, expand=True)
+        
+        self.create_button(
+            tools_button_frame,
+            'Gerenciar Planilhas/Sheets',
+            self.planilha_sheet,
+            self.colors['button_secondary']
+        ).pack(side='left', pady=5, padx=10, expand=True)
 
-        # Botão para exibir informações
-        self.bt_exibir_informacoes = Button(
-            self, text='Exibir Informações', command=self.exibir)
-        self.bt_exibir_informacoes.grid(row=1, column=2, padx=10, pady=10, sticky='ew')
-
-        # Botão para exibir contas
-        self.bt_exibir_contas = Button(
-            self, text='Exibir Contas', command=self.exibir_contas)
-        self.bt_exibir_contas.grid(row=2, column=0, padx=10, pady=10, sticky='ew')
-
-        # Botão para enviar relatório via WhatsApp
-        self.bt_enviar_relatorio_wpp = Button(
-            self, text='Enviar Relatório Wpp', command=self.relatorio_wpp)
-        self.bt_enviar_relatorio_wpp.grid(row=2, column=2, padx=10, pady=10, sticky='ew')
-
-        # Botão para enviar relatório via e-mail
-        self.bt_enviar_relatorio_email = Button(
-            self, text='Enviar Relatório Email', command=self.relatorio_email)
-        self.bt_enviar_relatorio_email.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-
-        # Botão para emitir notas fiscais
-        self.bt_emitir_ntfs = Button(
-            self, text='Emitir NTFS-e', command=self.emitir_notas)
-        self.bt_emitir_ntfs.grid(row=3, column=0, padx=10, pady=10, sticky='ew')
-
-        self.bt_marcar_paciente = Button(
-            self, text='Marcação', command=self.marcar_paciente)
-        self.bt_marcar_paciente.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
-
-        self.bt_view_patients = Button(
-            self, text='Visualizar Marcações', command=self.visu_marcacoes)
-        self.bt_view_patients.grid(row=3, column=2, padx=10, pady=10, sticky='ew')
-
-        # Configuração das colunas da grid para que elas se expandam igualmente
-        for i in range(3):  # 3 colunas
-            self.grid_columnconfigure(i, weight=1)
-
-    # Métodos que chamam as funções correspondentes de FuncoesBotoes
-    def adicionar_informacao(self):
-        """Chama a função para adicionar informações."""
-        self.funcoes_botoes.adicionar_informacao()
-
-    def excluir_informacao(self):
-        """Chama a função para excluir informações."""
-        self.funcoes_botoes.excluir()
-
-    def exibir(self):
-        """Chama a função para exibir informações."""
-        self.funcoes_botoes.exibir_informacao()
-    
-    def exibir_contas(self):
-        """Chama a função para exibir contas."""
-        self.funcoes_botoes.valores_totais()
-
-    def emitir_notas(self):
-        """Chama a função para processar notas fiscais."""
-        self.funcoes_botoes.processar_notas_fiscais()
-
-    def resultados_consulta(self):
-        """Chama a função para exibir resultados de consulta."""
-        self.funcoes_botoes.exibir_resultado()
-
-    def relatorio_wpp(self):
-        """Chama a função para enviar relatório via WhatsApp."""
-        self.funcoes_botoes.enviar_whatsapp()
-
-    def relatorio_email(self):
-        """Chama a função para enviar relatório via e-mail."""
-        self.funcoes_botoes.enviar_email()
-
-    def marcar_paciente(self):
-        """Chama a função para marcar paciente"""
-        self.banco.add_user()
-
-    def visu_marcacoes(self):
-        """Chama a função para visualizar marcações"""
-        self.banco.view_marcacoes()
-
-    def format_planilha(self):
-        """Chama a função para formatar planilha"""
-        self.funcoes_botoes.formatar_planilha()
-
-    def fechamento_contas(self):
-        """Chama a função para fechamento de contas"""
-        self.sistema_contas.abrir_janela()
-
-    def planilha_sheet(self):
-        """Chama a função para gerenciar planilhas/sheets"""
-        self.gerenciador_planilhas.abrir_gerenciador()
+    # Os métodos de ação permanecem os mesmos
+    def adicionar_informacao(self): self.funcoes_botoes.adicionar_informacao()
+    def excluir_informacao(self): self.funcoes_botoes.excluir()
+    def exibir(self): self.funcoes_botoes.exibir_informacao()
+    def exibir_contas(self): self.funcoes_botoes.valores_totais()
+    def emitir_notas(self): self.funcoes_botoes.processar_notas_fiscais()
+    def resultados_consulta(self): self.funcoes_botoes.exibir_resultado()
+    def relatorio_wpp(self): self.funcoes_botoes.enviar_whatsapp()
+    def relatorio_email(self): self.funcoes_botoes.enviar_email()
+    def marcar_paciente(self): self.banco.add_user()
+    def visu_marcacoes(self): self.banco.view_marcacoes()
+    def format_planilha(self): self.funcoes_botoes.formatar_planilha()
+    def fechamento_contas(self): self.sistema_contas.abrir_janela()
+    def planilha_sheet(self): self.gerenciador_planilhas.abrir_gerenciador()
