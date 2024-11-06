@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Alignment, Font, Border, Side
@@ -83,6 +84,8 @@ class FuncoesBotoes:
         self.login_frame = None
         self.criar_conta_frame = None
         self.login_frame = None
+
+        self.logger = logging.getLogger(__name__)
 
         # Variáveis para opções de pagamento
         self.forma_pagamento_var = tk.StringVar(value="")
@@ -313,6 +316,58 @@ class FuncoesBotoes:
             font=("Arial", 9, "italic"),
         ).pack(pady=(0, 10))
 
+    def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
+        """Adiciona ou atualiza um paciente no banco de dados de marcação."""
+        try:
+            # Conecta ao banco de dados de marcação
+            conn = sqlite3.connect('db_marcacao.db')
+            cursor = conn.cursor()
+            
+            # Verifica se o paciente já existe
+            cursor.execute("SELECT appointment_date FROM patients WHERE renach = ?", (renach,))
+            existing_patient = cursor.fetchone()
+            
+            # Data atual para o registro
+            data_atual = datetime.now().strftime("%Y-%m-%d")
+            
+            if isinstance(pagamentos, list):
+                pagamento_info = ' | '.join(pagamentos)
+            else:
+                pagamento_info = str(pagamentos)
+                
+            observation = f"Tipo: {escolha}\nPagamento: {pagamento_info}\nRegistrado em: {data_atual}"
+            
+            if existing_patient:
+                # Atualiza a data e observações do paciente existente
+                cursor.execute("""
+                    UPDATE patients 
+                    SET appointment_date = ?,
+                        observation = ?
+                    WHERE renach = ?
+                """, (data_atual, observation, renach))
+                
+            else:
+                # Insere novo paciente
+                cursor.execute("""
+                    INSERT INTO patients (name, renach, phone, appointment_date, observation)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (nome, renach, '', data_atual, observation))
+            
+            conn.commit()
+            return True
+            
+        except sqlite3.Error as e:
+            self.logger.error(f"Erro SQLite ao adicionar/atualizar paciente: {str(e)}")
+            raise Exception(f"Erro ao salvar no banco de dados: {str(e)}")
+            
+        except Exception as e:
+            self.logger.error(f"Erro ao adicionar/atualizar paciente: {str(e)}")
+            raise
+            
+        finally:
+            if 'conn' in locals():
+                conn.close()
+
     def contar_pagamento(self, col_inicial, col_final):
         """Conta o número de pessoas e a quantidade de pagamentos."""
         n_pessoa = 0
@@ -367,110 +422,55 @@ class FuncoesBotoes:
         setattr(self, var_name, entry)
 
     def salvar_informacao(self):
-        """Valida e salva as informações do paciente."""
-        # Obter dados dos campos
-        nome = self.nome_entry.get().strip().upper()
-        renach = self.renach_entry.get().strip()
-
-        # Validar nome e RENACH
-        if not nome or not renach:
-            messagebox.showerror(
-                "Erro", "Por favor, preencha os campos de nome e RENACH."
-            )
-            return
-
-        if not renach.isdigit():
-            messagebox.showerror("Erro", "O RENACH deve ser um número inteiro.")
-            return
-
-        # Verificar se o RENACH já existe na planilha
-        wb = self.get_active_workbook()
-        ws = wb.active
-
-        for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-            if str(row[2].value) == renach or str(row[8].value) == renach:
-                messagebox.showerror("Erro", "Este RENACH já está registrado.")
-                return
-
-        # Verificar se alguma forma de pagamento foi selecionada
-        formas_selecionadas = {
-            "D": self.d_var.get(),
-            "C": self.c_var.get(),
-            "E": self.e_var.get(),
-            "P": self.p_var.get(),
-        }
-
-        if not any(formas_selecionadas.values()):
-            messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
-            return
-
-        # Contar formas de pagamento selecionadas
-        num_formas_selecionadas = sum(formas_selecionadas.values())
-
-        # Processar pagamentos
-        pagamentos = []
-        valor_total = 0
-
-        for codigo, selecionado in formas_selecionadas.items():
-            if selecionado:
-                valor = self.valor_entries[codigo].get().strip()
-
-                if num_formas_selecionadas > 1:
-                    # Para múltiplas formas de pagamento
-                    if not valor:
-                        messagebox.showerror(
-                            "Erro",
-                            "Quando mais de uma forma de pagamento é selecionada, \ntodos os valores devem ser preenchidos.",
-                        )
-                        return
-                    try:
-                        valor_float = float(valor.replace(",", "."))
-                        valor_total += valor_float
-                        pagamentos.append(f"{codigo}: {valor}")
-                    except ValueError:
-                        messagebox.showerror("Erro", f"Valor inválido para {codigo}")
-                        return
-                else:
-                    # Para forma única de pagamento
-                    if valor:
-                        messagebox.showerror(
-                            "Erro",
-                            "Para uma única forma de pagamento, não informe o valor.",
-                        )
-                        return
-                    pagamentos.append(codigo)
-
-        # Verificar se o valor total está correto para múltiplas formas de pagamento
-        escolha = self.radio_var.get()
-        if escolha not in ["medico", "psicologo", "ambos"]:
-            messagebox.showerror("Erro", "Selecione Médico, Psicólogo ou Ambos.")
-            return
-
-        if num_formas_selecionadas > 1:
-            valor_esperado = None
-            if escolha == "medico":
-                valor_esperado = 148.65
-            elif escolha == "psicologo":
-                valor_esperado = 192.61
-            elif escolha == "ambos":
-                valor_esperado = 341.26
-
-            if (
-                abs(valor_total - valor_esperado) > 0.01
-            ):  # Tolerância para arredondamento
-                messagebox.showerror(
-                    "Erro",
-                    f"A soma dos valores ({valor_total:.2f}) deve ser igual ao valor total do serviço ({valor_esperado:.2f})",
-                )
-                return
-
-        # Salvar na planilha
+        """Salva os dados no banco de dados e finaliza o processo."""
         try:
-            self.salvar_na_planilha(nome, renach, pagamentos, escolha)
-            self.adicionar_window.destroy()  # Fecha a janela após salvar com sucesso
+            # Obter dados dos campos
+            nome = self.nome_entry.get().strip().upper()
+            renach = self.renach_entry.get().strip()
+            escolha = self.radio_var.get()
+
+            # Validar dados
+            if not nome or not renach:
+                messagebox.showerror("Erro", "Por favor, preencha os campos de nome e RENACH.")
+                return
+
+            if not renach.isdigit():
+                messagebox.showerror("Erro", "O RENACH deve ser um número inteiro.")
+                return
+
+            # Verificar se alguma forma de pagamento foi selecionada
+            formas_selecionadas = {
+                "D": self.d_var.get(),
+                "C": self.c_var.get(),
+                "E": self.e_var.get(),
+                "P": self.p_var.get(),
+            }
+
+            if not any(formas_selecionadas.values()):
+                messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
+                return
+
+            # Processar pagamentos
+            pagamentos = []
+            for codigo, selecionado in formas_selecionadas.items():
+                if selecionado:
+                    valor = self.valor_entries[codigo].get().strip()
+                    if valor:
+                        pagamentos.append(f"{codigo}: {valor}")
+                    else:
+                        pagamentos.append(codigo)
+
+            # Salvar no banco de dados
+            if self._adicionar_paciente_ao_banco(nome, renach, pagamentos, escolha):
+                try:
+                    self.salvar_na_planilha(nome, renach, pagamentos, escolha)
+                    messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
+                    self.adicionar_window.destroy()
+                except Exception as e:
+                    messagebox.showerror("Erro", f"Erro ao salvar na planilha: {str(e)}")
+                    
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
-            return
 
     def salvar_na_planilha(self, nome, renach, pagamentos, escolha):
         """Salva os dados na planilha."""

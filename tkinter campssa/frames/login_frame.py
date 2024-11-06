@@ -57,63 +57,6 @@ class LoginFrame(tk.Frame):
                 self.entry_user.delete(0, 'end')
                 self.entry_password.delete(0, 'end')
 
-class CriarContaFrame(tk.Frame):
-    def __init__(self, master, db, funcoes_botoes=None):
-        super().__init__(master, bg="#2C3E50")  # Define fundo do frame principal
-        self.db = db
-        self.funcoes_botoes = funcoes_botoes
-        self.create_widgets()
-        self.current_user = None
-
-    def create_widgets(self):
-        self.master.title("Criar Conta")
-        self.master.configure(bg="#2C3E50")
-        self.grid_configure(padx=20, pady=20)
-
-        title_label = tk.Label(self, text="Criar Conta", font=("Arial", 18, "bold"), bg="#2C3E50", fg="#ECF0F1")
-        title_label.grid(row=0, column=0, columnspan=2, pady=10)
-
-        user_label = tk.Label(self, text="Novo Usuário:", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12))
-        user_label.grid(row=1, column=0, pady=10, padx=5, sticky="e")
-        self.entry_user = tk.Entry(self, font=("Arial", 12), relief=tk.FLAT)
-        self.entry_user.grid(row=1, column=1, pady=10, padx=5)
-
-        password_label = tk.Label(self, text="Senha:", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12))
-        password_label.grid(row=2, column=0, pady=10, padx=5, sticky="e")
-        self.entry_password = tk.Entry(self, show="*", font=("Arial", 12), relief=tk.FLAT)
-        self.entry_password.grid(row=2, column=1, pady=10, padx=5)
-
-        button_frame = tk.Frame(self, bg="#2C3E50")
-        button_frame.grid(row=3, columnspan=2, pady=20)
-
-        create_button = tk.Button(button_frame, text="Criar Conta", command=self.criar_conta, font=("Arial", 12), bg="#34495E", fg="#ECF0F1", relief=tk.FLAT, activebackground="#485460")
-        create_button.pack(padx=10)
-
-    def create_account(self):
-        user = self.entry_user.get()
-        password = self.entry_password.get()
-
-        if user and password:
-            if self.db.create_user(user, password):
-                messagebox.showinfo("Sucesso", "Conta criada com sucesso!")
-                if self.funcoes_botoes:
-                    self.funcoes_botoes.voltar_para_login()
-            else:
-                messagebox.showerror("Erro", "Usuário já existe")
-                self.entry_user.delete(0, 'end')
-                self.entry_password.delete(0, 'end')
-        else:
-            self.current_user = user
-            messagebox.showinfo("Sucesso", f"Usuário {user} criado com sucesso.")
-
-    def get_current_user(self):
-        return self.current_user
-
-    def voltar_login(self):
-        self.funcoes_botoes.voltar_para_login()
-
-
-
 
 class CriarContaFrame(tk.Frame):
     """Classe que representa o frame de criação de conta da aplicação."""
