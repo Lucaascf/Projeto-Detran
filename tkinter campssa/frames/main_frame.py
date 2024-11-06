@@ -10,9 +10,85 @@ class MainFrame(Frame):
 
     def __init__(self, master, planilhas: Planilhas, file_path: str, app):
         super().__init__(master, bg=master.cget('bg'))
+        # Configurar tamanho e posição da janela principal
+        self.configure_window()
+
         self._init_attributes(master, planilhas, file_path, app)
         self._setup_styles()
         self.create_widgets()
+
+    def configure_window(self):
+        """Configura o tamanho e posição inicial da janela."""
+        # Definir tamanho inicial
+        self.master.geometry("1200x600")
+        
+        # Definir tamanhos mínimo e máximo
+        self.master.minsize(1000, 600)
+        #self.master.maxsize(1600, 1000)
+        
+        # Centralizar a janela
+        self.center_window()
+        
+        # Configurar comportamento de redimensionamento
+        self.master.resizable(True, True)
+
+    def center_window(self):
+        """Centraliza a janela na tela."""
+        # Atualiza a janela para garantir dimensões corretas
+        self.master.update_idletasks()
+        
+        # Obtém dimensões da tela
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        
+        # Obtém dimensões da janela
+        window_width = self.master.winfo_width()
+        window_height = self.master.winfo_height()
+        
+        # Calcula posição para centralizar
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        
+        # Define a posição da janela
+        self.master.geometry(f"+{x}+{y}")
+    
+    def toggle_fullscreen(self, event=None):
+        """Alterna entre tela cheia e tamanho normal."""
+        is_fullscreen = self.master.attributes('-fullscreen')
+        self.master.attributes('-fullscreen', not is_fullscreen)
+    
+    def maximize_window(self, event=None):
+        """Maximiza a janela usando dimensões da tela."""
+        try:
+            # Primeiro, tenta usar o método específico do sistema
+            import sys
+            if sys.platform == "win32":
+                self.master.state('zoomed')
+            else:
+                self.master.attributes('-zoomed', True)
+        except:
+            # Se falhar, usa o método universal
+            w = self.master.winfo_screenwidth()
+            h = self.master.winfo_screenheight()
+            # Compensa a barra de título e bordas
+            h_adjusted = h - 60  # Ajuste para barra de título e barra de tarefas
+            self.master.geometry(f"{w}x{h_adjusted}+0+0")
+
+    def restore_window(self, event=None):
+        """Restaura a janela ao tamanho normal."""
+        try:
+            # Primeiro, tenta usar o método específico do sistema
+            import sys
+            if sys.platform == "win32":
+                self.master.state('normal')
+            else:
+                self.master.attributes('-zoomed', False)
+        except:
+            # Se falhar, usa o método universal
+            self.master.geometry("1200x800")
+        
+        # Em qualquer caso, centraliza a janela
+        self.center_window()
 
     def _init_attributes(self, master, planilhas, file_path, app):
         """Inicializa os atributos da classe."""
@@ -36,6 +112,9 @@ class MainFrame(Frame):
             'button_hover': '#3498db',
             'frame_bg': '#34495e'
         }
+
+        # Adiciona apenas o atalho para maximizar
+        self.master.bind('<F10>', self.maximize_window)
 
     def _setup_styles(self):
         """Configura os estilos dos widgets."""
@@ -228,10 +307,10 @@ class MainFrame(Frame):
 
         # 5. Seção de Ferramentas
         tools_frame = ttk.LabelFrame(
-            grid_frame,
-            text=" Ferramentas ",
-            style='Custom.TLabelframe'
-        )
+        grid_frame,
+        text=" Ferramentas ",
+        style='Custom.TLabelframe'
+    )
         tools_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky='nsew')
         
         tools_button_frame = Frame(tools_frame, bg=self.colors['frame_bg'])
