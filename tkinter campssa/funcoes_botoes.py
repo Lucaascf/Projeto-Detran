@@ -47,6 +47,8 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+"""Rola a página até um elemento e clica nele"""
+
 
 def role_e_click(driver, xpath):
     """Rola a página até um elemento e clica nele.
@@ -66,7 +68,9 @@ def role_e_click(driver, xpath):
 class FuncoesBotoes:
     """Classe que encapsula as funções relacionadas aos botões da interface."""
 
-    def __init__(self, master: tk, planilhas: Planilhas, file_path: str, app, current_user=None):
+    def __init__(
+        self, master: tk, planilhas: Planilhas, file_path: str, app, current_user=None
+    ):
         """Inicializa a classe FuncoesBotoes."""
         self.master = master
         self.planilhas = planilhas
@@ -81,24 +85,27 @@ class FuncoesBotoes:
         # Variáveis para pagamento
         self._init_payment_vars()
 
+    """Inicializa variáveis relacionadas a pagamento."""
 
     def _init_payment_vars(self):
         """Inicializa variáveis relacionadas a pagamento."""
         self.forma_pagamento_var = tk.StringVar(value="")
         self.radio_var = tk.StringVar(value="")
         self.payment_vars = {
-            'D': tk.IntVar(),
-            'C': tk.IntVar(),
-            'E': tk.IntVar(),
-            'P': tk.IntVar()
+            "D": tk.IntVar(),
+            "C": tk.IntVar(),
+            "E": tk.IntVar(),
+            "P": tk.IntVar(),
         }
         self.valor_entries = {}
 
+    """Define o usuário atual."""
 
     def set_current_user(self, user):
         """Define o usuário atual."""
         self.current_user = user
 
+    """Centraliza a janela na tela."""
 
     def center(self, window):
         """Centraliza a janela na tela."""
@@ -110,6 +117,7 @@ class FuncoesBotoes:
         window.geometry(f"{width}x{height}+{x}+{y}")
         window.deiconify()
 
+    """Obtém o workbook ativo atualizado."""
 
     def get_active_workbook(self):
         """Obtém o workbook ativo atualizado."""
@@ -118,6 +126,7 @@ class FuncoesBotoes:
             self.wb = self.planilhas.wb
         return self.wb
 
+    """Cria o frame de pagamento com todas as opções."""
 
     def _create_payment_frame(self, parent, cor_fundo, cor_texto, cor_selecionado):
         """Cria o frame de pagamento com todas as opções."""
@@ -126,7 +135,7 @@ class FuncoesBotoes:
             text="Formas de Pagamento",
             bg=cor_fundo,
             fg=cor_texto,
-            font=("Arial", 12, "bold")
+            font=("Arial", 12, "bold"),
         )
         frame_pagamento.pack(padx=20, pady=10, fill="x")
 
@@ -141,12 +150,7 @@ class FuncoesBotoes:
                     entry.delete(0, tk.END)
                     entry.config(state="disabled", bg="#F0F0F0")
 
-        formas_pagamento = {
-            'D': 'Débito',
-            'C': 'Crédito',
-            'E': 'Espécie',
-            'P': 'PIX'
-        }
+        formas_pagamento = {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}
 
         for codigo, nome in formas_pagamento.items():
             frame = tk.Frame(frame_pagamento, bg=cor_fundo)
@@ -162,7 +166,7 @@ class FuncoesBotoes:
                 activebackground=cor_fundo,
                 activeforeground=cor_texto,
                 highlightthickness=0,
-                command=on_payment_change
+                command=on_payment_change,
             )
             cb.pack(side=tk.LEFT, padx=(0, 10))
 
@@ -170,10 +174,13 @@ class FuncoesBotoes:
             valor_entry.pack(side=tk.LEFT)
             self.valor_entries[codigo] = valor_entry
 
-            tk.Label(frame, text="R$", bg=cor_fundo, fg=cor_texto).pack(side=tk.LEFT, padx=(5, 0))
+            tk.Label(frame, text="R$", bg=cor_fundo, fg=cor_texto).pack(
+                side=tk.LEFT, padx=(5, 0)
+            )
 
         return frame_pagamento
 
+    """Cria uma nova janela para adicionar informações de pacientes."""
 
     def adicionar_informacao(self):
         """Cria uma nova janela para adicionar informações de pacientes."""
@@ -193,6 +200,7 @@ class FuncoesBotoes:
         # Configuração da interface
         self._setup_add_interface(cor_fundo, cor_texto, cor_selecionado)
 
+    """Configura a interface de adição de paciente."""
 
     def _setup_add_interface(self, cor_fundo, cor_texto, cor_selecionado):
         """Configura a interface de adição de paciente."""
@@ -202,7 +210,7 @@ class FuncoesBotoes:
             text="Preencha as informações:",
             bg=cor_fundo,
             fg=cor_texto,
-            font=("Arial", 16, "bold")
+            font=("Arial", 16, "bold"),
         ).pack(pady=(15, 5))
 
         # Frame para RadioButtons
@@ -214,17 +222,13 @@ class FuncoesBotoes:
             text="Valor da consulta: R$ 0,00",
             bg=cor_fundo,
             fg=cor_texto,
-            font=("Arial", 10, "bold")
+            font=("Arial", 10, "bold"),
         )
         self.valor_consulta_label.pack(pady=5)
 
         # Função para atualizar o valor da consulta
         def atualizar_valor_consulta(*args):
-            valores = {
-                "medico": "148,65",
-                "psicologo": "192,61",
-                "ambos": "341,26"
-            }
+            valores = {"medico": "148,65", "psicologo": "192,61", "ambos": "341,26"}
             valor = valores.get(self.radio_var.get(), "0,00")
             self.valor_consulta_label.config(text=f"Valor da consulta: R$ {valor}")
 
@@ -236,7 +240,9 @@ class FuncoesBotoes:
         self.criar_entry("Renach:", "renach_entry", self.adicionar_window)
 
         # Frame de pagamento
-        self._create_payment_frame(self.adicionar_window, cor_fundo, cor_texto, cor_selecionado)
+        self._create_payment_frame(
+            self.adicionar_window, cor_fundo, cor_texto, cor_selecionado
+        )
 
         # Botões
         self._create_button_frame(cor_fundo)
@@ -247,9 +253,10 @@ class FuncoesBotoes:
             text="Obs.: Para múltiplas formas de pagamento, informe o valor de cada uma.",
             bg=cor_fundo,
             fg=cor_texto,
-            font=("Arial", 9, "italic")
+            font=("Arial", 9, "italic"),
         ).pack(pady=(0, 10))
 
+    """Cria o frame com os radio buttons."""
 
     def _create_radio_frame(self, cor_fundo, cor_texto, cor_selecionado):
         """Cria o frame com os radio buttons."""
@@ -269,9 +276,10 @@ class FuncoesBotoes:
                 activebackground=cor_fundo,
                 activeforeground=cor_texto,
                 highlightthickness=0,
-                font=("Arial", 12)
+                font=("Arial", 12),
             ).pack(side=tk.LEFT, padx=2)
 
+    """Cria o frame com os botões."""
 
     def _create_button_frame(self, cor_fundo):
         """Cria o frame com os botões."""
@@ -285,7 +293,7 @@ class FuncoesBotoes:
             width=15,
             highlightthickness=0,
             activebackground="#2C3E50",
-            activeforeground="#ECF0F1"
+            activeforeground="#ECF0F1",
         ).pack(side=tk.LEFT, padx=5)
 
         tk.Button(
@@ -294,62 +302,72 @@ class FuncoesBotoes:
             command=self.adicionar_window.destroy,
             width=15,
             activebackground="#2C3E50",
-            activeforeground="#ECF0F1"
+            activeforeground="#ECF0F1",
         ).pack(side=tk.LEFT, padx=5)
 
+    """Adiciona ou atualiza um paciente no banco de dados de marcação."""
 
     def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
         """Adiciona ou atualiza um paciente no banco de dados de marcação."""
         try:
             # Conecta ao banco de dados de marcação
-            conn = sqlite3.connect('db_marcacao.db')
+            conn = sqlite3.connect("db_marcacao.db")
             cursor = conn.cursor()
-            
+
             # Verifica se o paciente já existe
-            cursor.execute("SELECT appointment_date FROM patients WHERE renach = ?", (renach,))
+            cursor.execute(
+                "SELECT appointment_date FROM patients WHERE renach = ?", (renach,)
+            )
             existing_patient = cursor.fetchone()
-            
+
             # Data atual para o registro
             data_atual = datetime.now().strftime("%Y-%m-%d")
-            
+
             if isinstance(pagamentos, list):
-                pagamento_info = ' | '.join(pagamentos)
+                pagamento_info = " | ".join(pagamentos)
             else:
                 pagamento_info = str(pagamentos)
-                
+
             observation = f"Tipo: {escolha}\nPagamento: {pagamento_info}\nRegistrado em: {data_atual}"
-            
+
             if existing_patient:
                 # Atualiza a data e observações do paciente existente
-                cursor.execute("""
+                cursor.execute(
+                    """
                     UPDATE patients 
                     SET appointment_date = ?,
                         observation = ?
                     WHERE renach = ?
-                """, (data_atual, observation, renach))
-                
+                """,
+                    (data_atual, observation, renach),
+                )
+
             else:
                 # Insere novo paciente
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO patients (name, renach, phone, appointment_date, observation)
                     VALUES (?, ?, ?, ?, ?)
-                """, (nome, renach, '', data_atual, observation))
-            
+                """,
+                    (nome, renach, "", data_atual, observation),
+                )
+
             conn.commit()
             return True
-            
+
         except sqlite3.Error as e:
             self.logger.error(f"Erro SQLite ao adicionar/atualizar paciente: {str(e)}")
             raise Exception(f"Erro ao salvar no banco de dados: {str(e)}")
-            
+
         except Exception as e:
             self.logger.error(f"Erro ao adicionar/atualizar paciente: {str(e)}")
             raise
-            
+
         finally:
-            if 'conn' in locals():
+            if "conn" in locals():
                 conn.close()
 
+    """Conta o número de pessoas e a quantidade de pagamentos."""
 
     def contar_pagamento(self, col_inicial, col_final):
         """Conta o número de pessoas e a quantidade de pagamentos."""
@@ -379,6 +397,7 @@ class FuncoesBotoes:
 
         return n_pessoa, cont_pag
 
+    """Cria um frame com label e entry para entradas de texto."""
 
     def criar_entry(self, frame_nome, var_name, parent):
         """Cria um frame com label e entry para entradas de texto."""
@@ -390,13 +409,14 @@ class FuncoesBotoes:
             text=frame_nome,
             bg=parent.cget("bg"),
             fg="#ECF0F1",
-            font=("Arial", 12)
+            font=("Arial", 12),
         ).pack(side=tk.LEFT, anchor="w", padx=5)
 
         entry = tk.Entry(frame)
         entry.pack(side=tk.LEFT, padx=2)
         setattr(self, var_name, entry)
 
+    """Salva os dados no banco de dados e na planilha."""
 
     def salvar_informacao(self):
         """Salva os dados no banco de dados e na planilha."""
@@ -415,12 +435,14 @@ class FuncoesBotoes:
             valor_maximo = {
                 "medico": VALOR_MEDICO,
                 "psicologo": VALOR_PSICOLOGO,
-                "ambos": VALOR_AMBOS
+                "ambos": VALOR_AMBOS,
             }.get(escolha)
 
             # Validar dados básicos
             if not nome or not renach:
-                messagebox.showerror("Erro", "Por favor, preencha os campos de nome e RENACH.")
+                messagebox.showerror(
+                    "Erro", "Por favor, preencha os campos de nome e RENACH."
+                )
                 return
 
             if not renach.isdigit():
@@ -437,7 +459,9 @@ class FuncoesBotoes:
             }
 
             if not any(formas_selecionadas.values()):
-                messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
+                messagebox.showerror(
+                    "Erro", "Selecione pelo menos uma forma de pagamento."
+                )
                 return
 
             # Contar quantas formas de pagamento foram selecionadas
@@ -446,33 +470,34 @@ class FuncoesBotoes:
             # Processar pagamentos com as novas regras de validação
             pagamentos = []
             soma_valores = 0
-            
+
             # Se apenas uma forma de pagamento está selecionada
             if num_formas_selecionadas == 1:
-                forma_selecionada = next(forma for forma, sel in formas_selecionadas.items() if sel)
+                forma_selecionada = next(
+                    forma for forma, sel in formas_selecionadas.items() if sel
+                )
                 valor_entrada = self.valor_entries[forma_selecionada].get().strip()
-                
+
                 # Se um valor foi especificado, use-o (desde que seja igual ao valor máximo)
                 if valor_entrada:
                     try:
-                        valor_float = float(valor_entrada.replace(',', '.'))
+                        valor_float = float(valor_entrada.replace(",", "."))
                         if abs(valor_float - valor_maximo) > 0.01:
                             messagebox.showerror(
                                 "Erro",
-                                f"O valor deve ser igual ao valor da consulta ({valor_maximo:.2f})"
+                                f"O valor deve ser igual ao valor da consulta ({valor_maximo:.2f})",
                             )
                             return
                     except ValueError:
                         messagebox.showerror(
-                            "Erro",
-                            f"O valor informado não é um número válido"
+                            "Erro", f"O valor informado não é um número válido"
                         )
                         return
                 else:
                     # Se nenhum valor foi especificado, use o valor máximo
                     valor_float = valor_maximo
-                
-                valor_formatado = f"{valor_float:.2f}".replace('.', ',')
+
+                valor_formatado = f"{valor_float:.2f}".replace(".", ",")
                 pagamentos.append(f"{forma_selecionada}:{valor_formatado}")
                 soma_valores = valor_float
 
@@ -483,22 +508,21 @@ class FuncoesBotoes:
                         valor = self.valor_entries[codigo].get().strip()
                         if not valor:
                             messagebox.showerror(
-                                "Erro",
-                                f"É obrigatório informar o valor para {codigo}"
+                                "Erro", f"É obrigatório informar o valor para {codigo}"
                             )
                             return
-                        
+
                         try:
-                            valor_float = float(valor.replace(',', '.'))
+                            valor_float = float(valor.replace(",", "."))
                             soma_valores += valor_float
                         except ValueError:
                             messagebox.showerror(
                                 "Erro",
-                                f"O valor informado para {codigo} não é um número válido"
+                                f"O valor informado para {codigo} não é um número válido",
                             )
                             return
-                        
-                        valor_formatado = f"{valor_float:.2f}".replace('.', ',')
+
+                        valor_formatado = f"{valor_float:.2f}".replace(".", ",")
                         pagamentos.append(f"{codigo}:{valor_formatado}")
 
                 # Validar soma dos valores
@@ -506,7 +530,7 @@ class FuncoesBotoes:
                     messagebox.showerror(
                         "Erro",
                         f"A soma dos valores ({soma_valores:.2f}) deve ser igual ao "
-                        f"valor da consulta ({valor_maximo:.2f})"
+                        f"valor da consulta ({valor_maximo:.2f})",
                     )
                     return
 
@@ -548,11 +572,14 @@ class FuncoesBotoes:
                     self.adicionar_window.destroy()
 
                 except Exception as e:
-                    messagebox.showerror("Erro", f"Erro ao salvar na planilha: {str(e)}")
-                    
+                    messagebox.showerror(
+                        "Erro", f"Erro ao salvar na planilha: {str(e)}"
+                    )
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
 
+    """Salva os dados na planilha."""
 
     def salvar_na_planilha(self, nome, renach, pagamentos, escolha):
         """Salva os dados na planilha."""
@@ -597,6 +624,7 @@ class FuncoesBotoes:
         except Exception as e:
             raise Exception(f"Erro ao salvar na planilha: {str(e)}")
 
+    """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
 
     def excluir(self):
         """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
@@ -624,10 +652,14 @@ class FuncoesBotoes:
                             for col in range(start_col, end_col + 1):
                                 current_cell = ws.cell(row=row, column=col)
                                 next_cell = ws.cell(row=row + 1, column=col)
-                                
+
                                 # Só copia se a célula atual não for mesclada
-                                if not isinstance(current_cell, openpyxl.cell.cell.MergedCell):
-                                    if isinstance(next_cell, openpyxl.cell.cell.MergedCell):
+                                if not isinstance(
+                                    current_cell, openpyxl.cell.cell.MergedCell
+                                ):
+                                    if isinstance(
+                                        next_cell, openpyxl.cell.cell.MergedCell
+                                    ):
                                         current_cell.value = None
                                     else:
                                         current_cell.value = next_cell.value
@@ -640,13 +672,15 @@ class FuncoesBotoes:
                         for row in range(3, ws.max_row + 1):
                             cell = ws.cell(row=row, column=col_renach)
                             if not isinstance(cell, openpyxl.cell.cell.MergedCell):
-                                if cell.value and str(cell.value).strip() == str(renach):
+                                if cell.value and str(cell.value).strip() == str(
+                                    renach
+                                ):
                                     return row
                         return None
 
                     # Procura nas seções de médico e psicólogo
                     linha_medico = encontrar_paciente(3)  # Coluna C
-                    linha_psi = encontrar_paciente(9)     # Coluna I
+                    linha_psi = encontrar_paciente(9)  # Coluna I
 
                     alteracoes = False
 
@@ -656,9 +690,11 @@ class FuncoesBotoes:
                         messagebox.showinfo("Sucesso", "Removido da seção de médicos")
 
                     if linha_psi:
-                        mover_conteudo(linha_psi, 8, 12)    # Colunas H-L
+                        mover_conteudo(linha_psi, 8, 12)  # Colunas H-L
                         alteracoes = True
-                        messagebox.showinfo("Sucesso", "Removido da seção de psicólogos")
+                        messagebox.showinfo(
+                            "Sucesso", "Removido da seção de psicólogos"
+                        )
 
                     if alteracoes:
                         wb.save(self.file_path)
@@ -667,7 +703,9 @@ class FuncoesBotoes:
                         messagebox.showwarning("Aviso", "RENACH não encontrado")
 
                 except ValueError:
-                    messagebox.showerror("Erro", "Por favor, insira um RENACH válido (apenas números)")
+                    messagebox.showerror(
+                        "Erro", "Por favor, insira um RENACH válido (apenas números)"
+                    )
                 except Exception as e:
                     messagebox.showerror("Erro", f"Erro ao excluir paciente: {str(e)}")
 
@@ -682,7 +720,7 @@ class FuncoesBotoes:
 
             # Frame principal
             main_frame = tk.Frame(excluir_window, bg=self.master.cget("bg"))
-            main_frame.pack(expand=True, fill='both', padx=20, pady=20)
+            main_frame.pack(expand=True, fill="both", padx=20, pady=20)
 
             # Label
             tk.Label(
@@ -690,17 +728,17 @@ class FuncoesBotoes:
                 text="Informe o RENACH:",
                 bg=self.master.cget("bg"),
                 fg="#ECF0F1",
-                font=("Arial", 14, "bold")
+                font=("Arial", 14, "bold"),
             ).pack(pady=10)
 
             # Entry frame
             entry_frame = tk.Frame(main_frame, bg=self.master.cget("bg"))
-            entry_frame.pack(fill='x', pady=5)
+            entry_frame.pack(fill="x", pady=5)
 
-            renach_entry = tk.Entry(entry_frame, justify='center')
+            renach_entry = tk.Entry(entry_frame, justify="center")
             renach_entry.pack(pady=5)
             renach_entry.focus()
-            renach_entry.bind('<Return>', lambda e: realizar_exclusao())
+            renach_entry.bind("<Return>", lambda e: realizar_exclusao())
 
             # Botões
             button_frame = tk.Frame(main_frame, bg=self.master.cget("bg"))
@@ -713,14 +751,11 @@ class FuncoesBotoes:
                 bg="#ff4444",
                 fg="white",
                 font=("Arial", 10, "bold"),
-                width=15
+                width=15,
             ).pack(side=tk.LEFT, padx=5)
 
             tk.Button(
-                button_frame,
-                text="Cancelar",
-                command=excluir_window.destroy,
-                width=15
+                button_frame, text="Cancelar", command=excluir_window.destroy, width=15
             ).pack(side=tk.LEFT, padx=5)
 
             self.center(excluir_window)
@@ -734,6 +769,7 @@ class FuncoesBotoes:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao iniciar exclusão: {str(e)}")
 
+    """Exibe os resultados detalhados de contagem e valores por forma de pagamento."""
 
     def exibir_resultado(self):
         """Exibe os resultados detalhados de contagem e valores por forma de pagamento."""
@@ -751,34 +787,38 @@ class FuncoesBotoes:
 
             def processar_pagamentos(pagamento_str):
                 """Processa uma string de pagamento e retorna um dicionário com os valores."""
-                resultado = {'D': [], 'C': [], 'E': [], 'P': []}
+                resultado = {"D": [], "C": [], "E": [], "P": []}
                 if not pagamento_str or not isinstance(pagamento_str, str):
                     return resultado
 
                 # Divide os diferentes pagamentos por pipe
-                pagamentos = [p.strip() for p in pagamento_str.split('|')]
-                
+                pagamentos = [p.strip() for p in pagamento_str.split("|")]
+
                 for pag in pagamentos:
                     try:
                         # Remove espaços extras
                         pag = pag.strip()
-                        
+
                         # Encontra a forma de pagamento (primeira letra)
                         forma = None
                         for letra in pag:
-                            if letra.upper() in ['D', 'C', 'E', 'P']:
+                            if letra.upper() in ["D", "C", "E", "P"]:
                                 forma = letra.upper()
                                 break
-                        
+
                         if not forma:
                             continue
-                            
+
                         # Procura pelo valor após o ':' se existir
-                        if ':' in pag:
+                        if ":" in pag:
                             # Pega tudo após o primeiro ':'
-                            valor_texto = pag[pag.index(':')+1:].strip()
+                            valor_texto = pag[pag.index(":") + 1 :].strip()
                             # Limpa o texto do valor
-                            valor_texto = valor_texto.replace('R$', '').replace(' ', '').replace(',', '.')
+                            valor_texto = (
+                                valor_texto.replace("R$", "")
+                                .replace(" ", "")
+                                .replace(",", ".")
+                            )
                             try:
                                 valor = float(valor_texto)
                                 resultado[forma].append(valor)
@@ -796,25 +836,25 @@ class FuncoesBotoes:
 
             def calcular_totais(lista_pagamentos):
                 """Calcula totais por forma de pagamento."""
-                totais = {'D': [], 'C': [], 'E': [], 'P': []}
-                
+                totais = {"D": [], "C": [], "E": [], "P": []}
+
                 for pagamento in lista_pagamentos:
                     valores_pagamento = processar_pagamentos(pagamento)
-                    
+
                     for forma, valores in valores_pagamento.items():
                         totais[forma].extend(valores)
-                        
+
                 # Processa os resultados finais
                 resultados = {}
                 for forma, valores in totais.items():
                     if valores:  # Só inclui formas que têm valores
                         resultados[forma] = {
-                            'quantidade': len(valores),
-                            'valor_total': sum(valores),
-                            'valores': valores,
-                            'media': sum(valores) / len(valores) if valores else 0
+                            "quantidade": len(valores),
+                            "valor_total": sum(valores),
+                            "valores": valores,
+                            "media": sum(valores) / len(valores) if valores else 0,
                         }
-                        
+
                 return resultados
 
             # Criar frame com scrollbar
@@ -822,12 +862,14 @@ class FuncoesBotoes:
             main_frame.pack(fill="both", expand=True)
 
             canvas = tk.Canvas(main_frame, bg=cor_fundo)
-            scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+            scrollbar = tk.Scrollbar(
+                main_frame, orient="vertical", command=canvas.yview
+            )
             scrollable_frame = tk.Frame(canvas, bg=cor_fundo)
 
             scrollable_frame.bind(
                 "<Configure>",
-                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all")),
             )
 
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
@@ -852,12 +894,17 @@ class FuncoesBotoes:
                 ).pack(pady=(0, 10))
 
                 total_secao = 0
-                formas_nome = {'D': 'Débito', 'C': 'Crédito', 'E': 'Espécie', 'P': 'PIX'}
-                
+                formas_nome = {
+                    "D": "Débito",
+                    "C": "Crédito",
+                    "E": "Espécie",
+                    "P": "PIX",
+                }
+
                 for forma, info in dados.items():
-                    if info['quantidade'] > 0:
+                    if info["quantidade"] > 0:
                         nome_forma = formas_nome.get(forma, forma)
-                        
+
                         # Sumário da forma de pagamento
                         tk.Label(
                             scrollable_frame,
@@ -866,7 +913,7 @@ class FuncoesBotoes:
                             bg=cor_fundo,
                             fg="#ECF0F1",
                         ).pack(pady=2)
-                        
+
                         # Média por pagamento
                         tk.Label(
                             scrollable_frame,
@@ -875,19 +922,21 @@ class FuncoesBotoes:
                             bg=cor_fundo,
                             fg="#ECF0F1",
                         ).pack(pady=(0, 2))
-                        
+
                         # Lista de valores individuais
-                        valores_txt = ", ".join([f"R$ {v:.2f}" for v in info['valores']])
+                        valores_txt = ", ".join(
+                            [f"R$ {v:.2f}" for v in info["valores"]]
+                        )
                         tk.Label(
                             scrollable_frame,
                             text=f"Valores: {valores_txt}",
                             font=("Arial", 10),
                             bg=cor_fundo,
                             fg="#ECF0F1",
-                            wraplength=450
+                            wraplength=450,
                         ).pack(pady=(0, 5))
-                        
-                        total_secao += info['valor_total']
+
+                        total_secao += info["valor_total"]
 
                 tk.Label(
                     scrollable_frame,
@@ -896,7 +945,7 @@ class FuncoesBotoes:
                     bg=cor_fundo,
                     fg="#ECF0F1",
                 ).pack(pady=(5, 10))
-                
+
                 return total_secao
 
             # Obter dados do médico e psicólogo
@@ -917,8 +966,12 @@ class FuncoesBotoes:
                 return n_pacientes, pagamentos
 
             # Coletar dados (colunas B-F para médico, H-L para psicólogo)
-            n_medico, pagamentos_medico = contar_pacientes_e_coletar_pagamentos(2, 6)    # B a F
-            n_psicologo, pagamentos_psi = contar_pacientes_e_coletar_pagamentos(8, 12)   # H a L
+            n_medico, pagamentos_medico = contar_pacientes_e_coletar_pagamentos(
+                2, 6
+            )  # B a F
+            n_psicologo, pagamentos_psi = contar_pacientes_e_coletar_pagamentos(
+                8, 12
+            )  # H a L
 
             # Calcular totais
             totais_medico = calcular_totais(pagamentos_medico)
@@ -929,12 +982,9 @@ class FuncoesBotoes:
             total_psi = criar_secao("PSICÓLOGO", n_psicologo, totais_psi, 1)
 
             # Separador
-            tk.Frame(
-                scrollable_frame,
-                height=2,
-                bg="#34495E",
-                width=450
-            ).pack(pady=10, fill='x', padx=20)
+            tk.Frame(scrollable_frame, height=2, bg="#34495E", width=450).pack(
+                pady=10, fill="x", padx=20
+            )
 
             # Total geral
             tk.Label(
@@ -959,10 +1009,10 @@ class FuncoesBotoes:
 
             # Configurar o scroll com o mouse
             def _on_mousewheel(event):
-                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-            
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
             canvas.bind_all("<MouseWheel>", _on_mousewheel)
-            
+
             def _on_closing():
                 canvas.unbind_all("<MouseWheel>")
                 janela_exibir_resultado.destroy()
@@ -975,10 +1025,13 @@ class FuncoesBotoes:
 
         except Exception as e:
             self.logger.error(f"Erro ao exibir resultados: {str(e)}")
-            messagebox.showerror("Erro", f"Ocorreu um erro ao exibir os resultados: {str(e)}")
-            if 'wb' in locals():
+            messagebox.showerror(
+                "Erro", f"Ocorreu um erro ao exibir os resultados: {str(e)}"
+            )
+            if "wb" in locals():
                 wb.close()
 
+    """Exibe os valores totais em uma janela Tkinter."""
 
     def valores_totais(self):
         """Exibe os valores totais em uma janela Tkinter."""
@@ -1103,7 +1156,6 @@ class FuncoesBotoes:
         ).pack(pady=2)
 
         self.center(janela_contas)
-
 
     def processar_notas_fiscais(self):
         driver = webdriver.Chrome()
@@ -1312,15 +1364,17 @@ class FuncoesBotoes:
             driver.quit()
             logging.info("Processo finalizado")
             return cpfs
-            
+
+    # Exibe informações dos pacientes em uma interface organizada com opções de filtragem e detalhes de pagamento.
+
     def exibir_informacao(self):
-        """Exibe informações dos pacientes em uma interface organizada com opções de filtragem e detalhes de pagamento."""
+        # Exibe informações dos pacientes em uma interface organizada com opções de filtragem e detalhes de pagamento.
         try:
             # Carrega o workbook e seleciona a sheet correta de forma segura
             wb = self.get_active_workbook()
-            
+
             try:
-                if hasattr(self.planilhas, 'sheet_name') and self.planilhas.sheet_name:
+                if hasattr(self.planilhas, "sheet_name") and self.planilhas.sheet_name:
                     ws = wb[self.planilhas.sheet_name]
                 else:
                     ws = wb.active
@@ -1331,16 +1385,18 @@ class FuncoesBotoes:
                 if wb:
                     wb.close()
                 return
-            
+
             if not ws:
-                messagebox.showerror("Erro", "Não foi possível encontrar uma planilha válida.")
+                messagebox.showerror(
+                    "Erro", "Não foi possível encontrar uma planilha válida."
+                )
                 if wb:
                     wb.close()
                 return
-            
+
             # Coleta e estrutura os dados
             medico, psi = [], []
-            
+
             def processar_pagamento(valor):
                 """Processa e formata informações de pagamento."""
                 if not valor:
@@ -1348,33 +1404,43 @@ class FuncoesBotoes:
                 valor_str = str(valor).strip()
                 if not valor_str:
                     return ""
-                
+
                 # Se for um valor numérico, formata como moeda
                 try:
-                    valor_float = float(valor_str.replace("R$", "").replace(",", ".").strip())
+                    valor_float = float(
+                        valor_str.replace("R$", "").replace(",", ".").strip()
+                    )
                     return f"R$ {valor_float:.2f}"
                 except ValueError:
                     return valor_str
 
             # Coleta dados do médico (colunas B-F)
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
+            for row in ws.iter_rows(
+                min_row=3, max_row=ws.max_row, min_col=2, max_col=6
+            ):
                 nome = row[0].value
                 if nome and isinstance(nome, (str, int)) and str(nome).strip():
-                    medico.append({
-                        'nome': str(nome).strip(),
-                        'renach': str(row[1].value).strip() if row[1].value else '',
-                        'forma_pagamento': processar_pagamento(row[4].value)
-                    })
+                    medico.append(
+                        {
+                            "nome": str(nome).strip(),
+                            "renach": str(row[1].value).strip() if row[1].value else "",
+                            "forma_pagamento": processar_pagamento(row[4].value),
+                        }
+                    )
 
             # Coleta dados do psicólogo (colunas H-L)
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
+            for row in ws.iter_rows(
+                min_row=3, max_row=ws.max_row, min_col=8, max_col=12
+            ):
                 nome = row[0].value
                 if nome and isinstance(nome, (str, int)) and str(nome).strip():
-                    psi.append({
-                        'nome': str(nome).strip(),
-                        'renach': str(row[1].value).strip() if row[1].value else '',
-                        'forma_pagamento': processar_pagamento(row[4].value)
-                    })
+                    psi.append(
+                        {
+                            "nome": str(nome).strip(),
+                            "renach": str(row[1].value).strip() if row[1].value else "",
+                            "forma_pagamento": processar_pagamento(row[4].value),
+                        }
+                    )
 
             wb.close()
 
@@ -1406,16 +1472,18 @@ class FuncoesBotoes:
 
             # Canvas e scrollbar
             canvas = tk.Canvas(table_container, bg=cor_fundo)
-            scrollbar = tk.Scrollbar(table_container, orient="vertical", command=canvas.yview)
-            
+            scrollbar = tk.Scrollbar(
+                table_container, orient="vertical", command=canvas.yview
+            )
+
             # Frame para a tabela
             table_frame = tk.Frame(canvas, bg=cor_fundo)
-            
+
             def aplicar_filtros(*args):
                 """Aplica os filtros de tipo e busca aos dados."""
                 # Limpa a tabela atual
                 for widget in table_frame.winfo_children():
-                    if int(widget.grid_info()['row']) > 0:  # Preserva o cabeçalho
+                    if int(widget.grid_info()["row"]) > 0:  # Preserva o cabeçalho
                         widget.destroy()
 
                 dados_filtrados = []
@@ -1425,29 +1493,35 @@ class FuncoesBotoes:
 
                 def check_filtros(pac, tipo):
                     """Verifica se o paciente atende aos critérios de filtro."""
-                    busca_match = (termo_busca in str(pac['nome']).lower() or 
-                                termo_busca in str(pac['renach']).lower())
-                    pagamento_match = (not forma_pagamento_filtro or 
-                                    forma_pagamento_filtro in str(pac['forma_pagamento']).lower())
+                    busca_match = (
+                        termo_busca in str(pac["nome"]).lower()
+                        or termo_busca in str(pac["renach"]).lower()
+                    )
+                    pagamento_match = (
+                        not forma_pagamento_filtro
+                        or forma_pagamento_filtro in str(pac["forma_pagamento"]).lower()
+                    )
                     return busca_match and pagamento_match
 
                 # Aplica os filtros
                 if filtro in ["todos", "medico"]:
                     for i, pac in enumerate(medico):
                         if check_filtros(pac, "Médico"):
-                            dados_filtrados.append((i+1, pac, "Médico"))
+                            dados_filtrados.append((i + 1, pac, "Médico"))
 
                 if filtro in ["todos", "psi"]:
                     offset = len(medico) if filtro == "todos" else 0
                     for i, pac in enumerate(psi):
                         if check_filtros(pac, "Psicólogo"):
-                            dados_filtrados.append((i+1+offset, pac, "Psicólogo"))
+                            dados_filtrados.append((i + 1 + offset, pac, "Psicólogo"))
 
                 # Atualiza estatísticas
                 total_filtrado = len(dados_filtrados)
-                stats_text = (f"Exibindo: {total_filtrado} paciente(s) | "
-                            f"Total Geral: {len(medico) + len(psi)} | "
-                            f"Médico: {len(medico)} | Psicólogo: {len(psi)}")
+                stats_text = (
+                    f"Exibindo: {total_filtrado} paciente(s) | "
+                    f"Total Geral: {len(medico) + len(psi)} | "
+                    f"Médico: {len(medico)} | Psicólogo: {len(psi)}"
+                )
                 stats_label.config(text=stats_text)
 
                 # Preenche a tabela
@@ -1457,10 +1531,10 @@ class FuncoesBotoes:
 
                     items = [
                         (str(num), "center", 5),
-                        (pac['nome'], "w", 30),
-                        (pac['renach'], "center", 10),
-                        (pac['forma_pagamento'], "w", 20),
-                        (tipo, "center", 10)
+                        (pac["nome"], "w", 30),
+                        (pac["renach"], "center", 10),
+                        (pac["forma_pagamento"], "w", 20),
+                        (tipo, "center", 10),
                     ]
 
                     for col, (text, anchor, width) in enumerate(items):
@@ -1473,7 +1547,7 @@ class FuncoesBotoes:
                             padx=10,
                             pady=5,
                             anchor=anchor,
-                            width=width
+                            width=width,
                         )
                         label.grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
 
@@ -1495,10 +1569,16 @@ class FuncoesBotoes:
             filtros_frame.pack(fill="x", padx=5)
 
             # Tipo de atendimento
-            tipo_frame = tk.LabelFrame(filtros_frame, text="Tipo de Atendimento", bg=cor_fundo, fg=cor_texto)
+            tipo_frame = tk.LabelFrame(
+                filtros_frame, text="Tipo de Atendimento", bg=cor_fundo, fg=cor_texto
+            )
             tipo_frame.pack(side="left", padx=5, pady=5)
 
-            for valor, texto in [("todos", "Todos"), ("medico", "Médico"), ("psi", "Psicólogo")]:
+            for valor, texto in [
+                ("todos", "Todos"),
+                ("medico", "Médico"),
+                ("psi", "Psicólogo"),
+            ]:
                 tk.Radiobutton(
                     tipo_frame,
                     text=texto,
@@ -1509,18 +1589,27 @@ class FuncoesBotoes:
                     fg=cor_texto,
                     selectcolor=cor_header,
                     activebackground=cor_fundo,
-                    activeforeground=cor_texto
+                    activeforeground=cor_texto,
                 ).pack(side="left", padx=5)
 
             # Busca
-            busca_frame = tk.LabelFrame(filtros_frame, text="Buscar por Nome/RENACH", bg=cor_fundo, fg=cor_texto)
+            busca_frame = tk.LabelFrame(
+                filtros_frame, text="Buscar por Nome/RENACH", bg=cor_fundo, fg=cor_texto
+            )
             busca_frame.pack(side="left", padx=5, pady=5)
             tk.Entry(busca_frame, textvariable=busca_var, width=30).pack(padx=5, pady=2)
 
             # Forma de pagamento
-            pagamento_frame = tk.LabelFrame(filtros_frame, text="Filtrar por Forma de Pagamento", bg=cor_fundo, fg=cor_texto)
+            pagamento_frame = tk.LabelFrame(
+                filtros_frame,
+                text="Filtrar por Forma de Pagamento",
+                bg=cor_fundo,
+                fg=cor_texto,
+            )
             pagamento_frame.pack(side="left", padx=5, pady=5)
-            tk.Entry(pagamento_frame, textvariable=forma_pagamento_var, width=20).pack(padx=5, pady=2)
+            tk.Entry(pagamento_frame, textvariable=forma_pagamento_var, width=20).pack(
+                padx=5, pady=2
+            )
 
             # Configuração do canvas
             canvas.create_window((0, 0), window=table_frame, anchor="nw")
@@ -1532,7 +1621,7 @@ class FuncoesBotoes:
                 ("Nome", 30),
                 ("RENACH", 10),
                 ("Forma de Pagamento", 20),
-                ("Tipo", 10)
+                ("Tipo", 10),
             ]
 
             for col, (header, width) in enumerate(headers):
@@ -1545,19 +1634,19 @@ class FuncoesBotoes:
                     padx=10,
                     pady=8,
                     relief="raised",
-                    width=width
+                    width=width,
                 ).grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
 
             # Frame de estatísticas
             stats_frame = tk.Frame(main_frame, bg=cor_fundo)
             stats_frame.pack(fill="x", pady=10)
-            
+
             stats_label = tk.Label(
                 stats_frame,
                 text="",
                 bg=cor_fundo,
                 fg=cor_texto,
-                font=("Arial", 10, "bold")
+                font=("Arial", 10, "bold"),
             )
             stats_label.pack(pady=5)
 
@@ -1579,7 +1668,9 @@ class FuncoesBotoes:
             if sys.platform.startswith("win") or sys.platform == "darwin":
                 canvas.bind_all("<MouseWheel>", on_mousewheel)
             else:
-                canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+                canvas.bind_all(
+                    "<Button-4>", lambda e: canvas.yview_scroll(-1, "units")
+                )
                 canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
 
             janela_informacao.protocol("WM_DELETE_WINDOW", on_closing)
@@ -1591,8 +1682,10 @@ class FuncoesBotoes:
             self.center(janela_informacao)
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}")
-            if 'wb' in locals():
+            messagebox.showerror(
+                "Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}"
+            )
+            if "wb" in locals():
                 wb.close()
 
     def exibir_resultado(self):
@@ -1605,26 +1698,32 @@ class FuncoesBotoes:
         # Usando a cor de fundo da janela principal
         cor_fundo = self.master.cget("bg")
         janela_exibir_resultado.configure(bg=cor_fundo)
-        
+
         def processar_pagamentos(pagamento_str):
             """Processa uma string de pagamento e retorna um dicionário com os valores."""
-            resultado = {'D': [], 'C': [], 'E': [], 'P': []}
+            resultado = {"D": [], "C": [], "E": [], "P": []}
             if not pagamento_str or not isinstance(pagamento_str, str):
                 return resultado
 
             try:
                 # Dividir por pipes para separar múltiplos pagamentos
-                for pagamento in [p.strip() for p in pagamento_str.split('|')]:
+                for pagamento in [p.strip() for p in pagamento_str.split("|")]:
                     # Encontrar primeira ocorrência de cada forma de pagamento
-                    for forma in ['D', 'C', 'E', 'P']:
+                    for forma in ["D", "C", "E", "P"]:
                         if forma in pagamento:
                             # Se tem valor associado (formato FORMA:VALOR)
-                            if ':' in pagamento:
+                            if ":" in pagamento:
                                 try:
                                     # Pegar o valor após a forma de pagamento
-                                    valor_str = pagamento[pagamento.find(':') + 1:].strip()
+                                    valor_str = pagamento[
+                                        pagamento.find(":") + 1 :
+                                    ].strip()
                                     # Limpar e converter o valor
-                                    valor_str = valor_str.replace('R$', '').replace(' ', '').replace(',', '.')
+                                    valor_str = (
+                                        valor_str.replace("R$", "")
+                                        .replace(" ", "")
+                                        .replace(",", ".")
+                                    )
                                     valor = float(valor_str)
                                     resultado[forma].append(valor)
                                 except (ValueError, IndexError):
@@ -1639,20 +1738,20 @@ class FuncoesBotoes:
 
         def calcular_totais(lista_pagamentos):
             """Calcula os totais para cada forma de pagamento."""
-            totais = {'D': [], 'C': [], 'E': [], 'P': []}
-            
+            totais = {"D": [], "C": [], "E": [], "P": []}
+
             try:
                 for pagamento in lista_pagamentos:
                     valores_pagamento = processar_pagamentos(pagamento)
                     for forma, valores in valores_pagamento.items():
                         totais[forma].extend(valores)
-                
+
                 return {
                     forma: {
-                        'quantidade': len(valores),
-                        'valor_total': sum(valores),
-                        'valores': valores,
-                        'media': sum(valores) / len(valores) if valores else 0
+                        "quantidade": len(valores),
+                        "valor_total": sum(valores),
+                        "valores": valores,
+                        "media": sum(valores) / len(valores) if valores else 0,
                     }
                     for forma, valores in totais.items()
                     if valores  # Só inclui formas que têm valores
@@ -1670,10 +1769,10 @@ class FuncoesBotoes:
             pagamentos = []
             n_pacientes = 0
             for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-                nome = row[col_inicial-1].value
+                nome = row[col_inicial - 1].value
                 if nome and isinstance(nome, str) and nome.strip():
                     n_pacientes += 1
-                    pagamento = row[col_final-1].value
+                    pagamento = row[col_final - 1].value
                     if pagamento and isinstance(pagamento, str):
                         pagamentos.append(pagamento)
             return n_pacientes, pagamentos
@@ -1706,13 +1805,13 @@ class FuncoesBotoes:
             ).pack(pady=(0, 10))
 
             total_secao = 0
-            formas_nome = {'D': 'Débito', 'C': 'Crédito', 'E': 'Espécie', 'P': 'PIX'}
+            formas_nome = {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}
             valor_padrao = 148.65 if titulo == "MÉDICO" else 192.61
-            
+
             for forma, info in dados.items():
-                if info['quantidade'] > 0:
+                if info["quantidade"] > 0:
                     nome_forma = formas_nome.get(forma, forma)
-                    
+
                     # Sumário da forma de pagamento
                     tk.Label(
                         janela_exibir_resultado,
@@ -1721,27 +1820,31 @@ class FuncoesBotoes:
                         bg=cor_fundo,
                         fg="#ECF0F1",
                     ).pack(pady=2)
-                    
+
                     # Encontrar valores diferentes do padrão
-                    valores_diferentes = [v for v in info['valores'] if abs(v - valor_padrao) > 0.01]
+                    valores_diferentes = [
+                        v for v in info["valores"] if abs(v - valor_padrao) > 0.01
+                    ]
                     valores_unicos = set(valores_diferentes)  # Remove duplicatas
-                    
+
                     # Criar observações para cada valor diferente
                     for valor in valores_unicos:
                         contagem = valores_diferentes.count(valor)
-                        obs_texto = (f"Obs: {'um' if contagem == 1 else str(contagem)} " 
-                                f"pagamento{'s' if contagem > 1 else ''} no valor de R$ {valor:.2f}")
-                        
+                        obs_texto = (
+                            f"Obs: {'um' if contagem == 1 else str(contagem)} "
+                            f"pagamento{'s' if contagem > 1 else ''} no valor de R$ {valor:.2f}"
+                        )
+
                         tk.Label(
                             janela_exibir_resultado,
                             text=obs_texto,
                             font=("Arial", 10, "italic"),
                             bg=cor_fundo,
                             fg="#ECF0F1",
-                            wraplength=450
+                            wraplength=450,
                         ).pack(pady=(0, 5))
-                    
-                    total_secao += info['valor_total']
+
+                    total_secao += info["valor_total"]
 
             tk.Label(
                 janela_exibir_resultado,
@@ -1750,7 +1853,7 @@ class FuncoesBotoes:
                 bg=cor_fundo,
                 fg="#ECF0F1",
             ).pack(pady=(5, 10))
-            
+
             return total_secao
 
         # Exibir resultados
@@ -1777,7 +1880,6 @@ class FuncoesBotoes:
         self.center(janela_exibir_resultado)
         wb.close()
 
-
     def enviar_whatsapp(self):
         # Janela número ou nome do grupo
         janela_wpp = tk.Toplevel(self.master)
@@ -1801,7 +1903,6 @@ class FuncoesBotoes:
         tk.Button(
             janela_wpp, text="Enviar", command=self.processar_envio_whatsapp
         ).pack(pady=10)
-
 
     def processar_envio_whatsapp(self):
         # Captura o valor do campo de entrada
@@ -1902,7 +2003,6 @@ class FuncoesBotoes:
         finally:
             driver.quit()
 
-
     def enviar_email(self):
         janela_email = tk.Toplevel(self.master)
         janela_email.geometry("300x400")
@@ -1961,6 +2061,7 @@ class FuncoesBotoes:
             ),
         ).pack(pady=20)
 
+    """Abre diálogo para selecionar arquivo XLSX"""
 
     def selecionar_xlsx(self, email, senha, destinatario, assunto):
         """
@@ -1978,6 +2079,7 @@ class FuncoesBotoes:
         if arquivo_xlsx:
             self.enviar(email, senha, destinatario, assunto, arquivo_xlsx)
 
+    """Envia e-mail com arquivo XLSX anexado"""
 
     def enviar(self, email, senha, destinatario, assunto, caminho_xlsx):
         """
@@ -2030,23 +2132,25 @@ class FuncoesBotoes:
         except Exception as e:
             messagebox.showerror("Erro ao Enviar", f"Ocorreu um erro: {str(e)}")
 
-
     def configurar_frames(self, login_frame, criar_conta_frame):
         self.login_frame = login_frame
         self.criar_conta_frame = criar_conta_frame
 
+    """Alterna para o frame de criar conta."""
 
     def mostrar_criar_conta(self):
         """Alterna para o frame de criar conta."""
         self.login_frame.hide()
         self.criar_conta_frame.show()
 
+    """Alterna de volta para o frame de login."""
 
     def voltar_para_login(self):
         """Alterna de volta para o frame de login."""
         self.criar_conta_frame.hide()
         self.login_frame.show()
 
+    """Formata a planilha com os dados do usuário e data atual."""
 
     def formatar_planilha(self):
         """
@@ -2056,7 +2160,7 @@ class FuncoesBotoes:
             wb = self.get_active_workbook()
             if not wb:
                 return False
-                
+
             ws = wb.active
             if not ws:
                 return False
@@ -2070,7 +2174,7 @@ class FuncoesBotoes:
                 left=Side(style="thin"),
                 right=Side(style="thin"),
                 top=Side(style="thin"),
-                bottom=Side(style="thin")
+                bottom=Side(style="thin"),
             )
 
             font_bold = Font(name="Arial", bold=True, size=11, color="000000")
@@ -2079,33 +2183,39 @@ class FuncoesBotoes:
             alignment_left = Alignment(horizontal="left", vertical="center")
 
             # Limpar a formatação existente
-            for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=12):
+            for row in ws.iter_rows(
+                min_row=1, max_row=ws.max_row, min_col=1, max_col=12
+            ):
                 for cell in row:
                     cell.border = None
                     cell.font = font_regular
                     cell.alignment = alignment_left
 
             # Configurar larguras das colunas
-            ws.column_dimensions['B'].width = 55
-            ws.column_dimensions['C'].width = 13
-            ws.column_dimensions['H'].width = 55
-            ws.column_dimensions['I'].width = 13
+            ws.column_dimensions["B"].width = 55
+            ws.column_dimensions["C"].width = 13
+            ws.column_dimensions["H"].width = 55
+            ws.column_dimensions["I"].width = 13
 
             # Configurar cabeçalhos
             data_atual = datetime.now().strftime("%d/%m/%Y")
-            usuario = self.current_user if hasattr(self, 'current_user') and self.current_user else "Usuário"
+            usuario = (
+                self.current_user
+                if hasattr(self, "current_user") and self.current_user
+                else "Usuário"
+            )
 
             # Cabeçalho da seção médico
-            ws['A1'] = f"({usuario}) Atendimento Médico {data_atual}"
-            ws.merge_cells('A1:E1')
-            ws['A1'].font = font_bold
-            ws['A1'].alignment = alignment_center
+            ws["A1"] = f"({usuario}) Atendimento Médico {data_atual}"
+            ws.merge_cells("A1:E1")
+            ws["A1"].font = font_bold
+            ws["A1"].alignment = alignment_center
 
             # Cabeçalho da seção psicólogo
-            ws['G1'] = f"({usuario}) Atendimento Psicológico {data_atual}"
-            ws.merge_cells('G1:K1')
-            ws['G1'].font = font_bold
-            ws['G1'].alignment = alignment_center
+            ws["G1"] = f"({usuario}) Atendimento Psicológico {data_atual}"
+            ws.merge_cells("G1:K1")
+            ws["G1"].font = font_bold
+            ws["G1"].alignment = alignment_center
 
             # Cabeçalhos das colunas
             headers = ["Ordem", "Nome", "Renach", "Reexames", "Valor"]
@@ -2121,20 +2231,20 @@ class FuncoesBotoes:
             def processar_dados(start_col):
                 num_pacientes = 0
                 ultima_linha = 2
-                
+
                 for row in range(3, ws.max_row + 1):
                     nome = ws.cell(row=row, column=start_col + 1).value
                     if nome and str(nome).strip():
                         num_pacientes += 1
                         ultima_linha = row
-                        
+
                         # Valor fixo
                         valor = 148.65 if start_col == 1 else 192.61
                         valor_cell = ws.cell(row=row, column=start_col + 4)
                         valor_cell.value = valor
                         valor_cell.number_format = '"R$"#,##0.00'
                         valor_cell.alignment = alignment_center
-                        
+
                         # Formatar linha
                         for col in range(start_col, start_col + 5):
                             cell = ws.cell(row=row, column=col)
@@ -2143,7 +2253,7 @@ class FuncoesBotoes:
                                 cell.alignment = alignment_left
                             else:
                                 cell.alignment = alignment_center
-                
+
                 return num_pacientes, ultima_linha
 
             # Processar dados de médicos e psicólogos
@@ -2161,13 +2271,13 @@ class FuncoesBotoes:
             # Adicionar resumo se houver dados
             if num_medico > 0 or num_psi > 0:
                 linha_atual = ultima_linha + 2
-                
+
                 # Cálculos
                 total_medico = num_medico * 148.65
                 total_psi = num_psi * 192.61
                 pagamento_medico = num_medico * 49.00
                 pagamento_psi = num_psi * 63.50
-                
+
                 resumo = [
                     ("Atendimento Médico", total_medico),
                     ("Atendimento Psicológico", total_psi),
@@ -2175,30 +2285,33 @@ class FuncoesBotoes:
                     None,  # Linha em branco
                     ("Pagamento Médico", pagamento_medico),
                     ("Pagamento Psicológico", pagamento_psi),
-                    ("Total Clínica", (total_medico + total_psi) - (pagamento_medico + pagamento_psi))
+                    (
+                        "Total Clínica",
+                        (total_medico + total_psi) - (pagamento_medico + pagamento_psi),
+                    ),
                 ]
 
                 for item in resumo:
                     if item is None:
                         linha_atual += 1
                         continue
-                        
+
                     texto, valor = item
-                    
+
                     # Limpar área do resumo primeiro
                     for col in range(8, 11):
                         cell = ws.cell(row=linha_atual, column=col)
                         cell.value = None
                         cell.border = None
-                    
+
                     # Adicionar texto
                     texto_cell = ws.cell(row=linha_atual, column=8)
                     texto_cell.value = texto
                     texto_cell.font = font_bold
                     texto_cell.alignment = alignment_center
-                    
-                    ws.merge_cells(f'H{linha_atual}:J{linha_atual}')
-                    
+
+                    ws.merge_cells(f"H{linha_atual}:J{linha_atual}")
+
                     # Adicionar valor
                     valor_cell = ws.cell(row=linha_atual, column=10)
                     valor_cell.value = valor
@@ -2206,37 +2319,60 @@ class FuncoesBotoes:
                     valor_cell.font = font_bold
                     valor_cell.border = borda
                     valor_cell.alignment = alignment_center
-                    
+
                     linha_atual += 1
-                    
+
             wb.save(self.file_path)
             return True
 
         except Exception as e:
             logging.error(f"Erro ao formatar planilha: {str(e)}")
-            if 'wb' in locals():
+            if "wb" in locals():
                 wb.close()
             return False
 
+    """Adiciona os totais para uma seção (médico ou psicólogo)"""
 
-    def _adicionar_totais(self, ws, linha_inicio, col_inicio, valor_consulta, valor_profissional, num_pacientes, borda, font_bold, alignment_center):
+    def _adicionar_totais(
+        self,
+        ws,
+        linha_inicio,
+        col_inicio,
+        valor_consulta,
+        valor_profissional,
+        num_pacientes,
+        borda,
+        font_bold,
+        alignment_center,
+    ):
         """Adiciona os totais para uma seção (médico ou psicólogo)"""
         # Soma
         ws.cell(row=linha_inicio, column=col_inicio + 2, value="Soma")
-        soma_cell = ws.cell(row=linha_inicio, column=col_inicio + 4, value=valor_consulta * num_pacientes)
+        soma_cell = ws.cell(
+            row=linha_inicio,
+            column=col_inicio + 4,
+            value=valor_consulta * num_pacientes,
+        )
         soma_cell.number_format = '"R$"#,##0.00'
-        
+
         # Valor profissional
         ws.cell(row=linha_inicio + 1, column=col_inicio + 2, value="Profissional")
-        prof_cell = ws.cell(row=linha_inicio + 1, column=col_inicio + 4, value=valor_profissional * num_pacientes)
+        prof_cell = ws.cell(
+            row=linha_inicio + 1,
+            column=col_inicio + 4,
+            value=valor_profissional * num_pacientes,
+        )
         prof_cell.number_format = '"R$"#,##0.00'
-        
+
         # Total
         ws.cell(row=linha_inicio + 2, column=col_inicio + 2, value="Total")
-        total_cell = ws.cell(row=linha_inicio + 2, column=col_inicio + 4, 
-                            value=(valor_consulta - valor_profissional) * num_pacientes)
+        total_cell = ws.cell(
+            row=linha_inicio + 2,
+            column=col_inicio + 4,
+            value=(valor_consulta - valor_profissional) * num_pacientes,
+        )
         total_cell.number_format = '"R$"#,##0.00'
-        
+
         # Aplica formatação
         for row in range(linha_inicio, linha_inicio + 3):
             for col in range(col_inicio + 2, col_inicio + 5):
@@ -2245,24 +2381,27 @@ class FuncoesBotoes:
                 cell.font = font_bold
                 cell.alignment = alignment_center
 
+    """Adiciona o resumo geral na planilha"""
 
-    def _adicionar_resumo_geral(self, ws, linha_inicio, num_medico, num_psi, borda, font_bold, alignment_center):
+    def _adicionar_resumo_geral(
+        self, ws, linha_inicio, num_medico, num_psi, borda, font_bold, alignment_center
+    ):
         """Adiciona o resumo geral na planilha"""
         # Configurações
         valor_medico = 148.65
         valor_psi = 192.61
         pagamento_medico = 49.00
         pagamento_psi = 63.50
-        
+
         # Cálculos
         total_medico = num_medico * valor_medico
         total_psi = num_psi * valor_psi
         total_geral = total_medico + total_psi
-        
+
         pagamento_total_medico = num_medico * pagamento_medico
         pagamento_total_psi = num_psi * pagamento_psi
         total_clinica = total_geral - (pagamento_total_medico + pagamento_total_psi)
-        
+
         # Lista de valores a serem adicionados
         resumo = [
             ("Atendimento Médico", total_medico),
@@ -2271,9 +2410,9 @@ class FuncoesBotoes:
             ("", None),  # Linha em branco
             ("Pagamento Médico", pagamento_total_medico),
             ("Pagamento Psicológico", pagamento_total_psi),
-            ("Total Clínica", total_clinica)
+            ("Total Clínica", total_clinica),
         ]
-        
+
         # Adiciona os valores
         for idx, (texto, valor) in enumerate(resumo):
             if texto:  # Pula linha em branco
@@ -2281,14 +2420,14 @@ class FuncoesBotoes:
                 if valor is not None:
                     valor_cell = ws.cell(row=linha_inicio + idx, column=10, value=valor)
                     valor_cell.number_format = '"R$"#,##0.00'
-                
+
                 # Aplica formatação
                 for col in [8, 9, 10]:
                     cell = ws.cell(row=linha_inicio + idx, column=col)
                     cell.border = borda
                     cell.font = font_bold
                     cell.alignment = alignment_center
-                
+
                 # Mescla células para o texto
                 ws.merge_cells(f"H{linha_inicio + idx}:I{linha_inicio + idx}")
 
@@ -2300,6 +2439,7 @@ class SistemaContas:
         self.sheet_name = "Contas Fechamento"
         self.criar_sheet_se_nao_existir()
 
+    """Cria uma nova janela para o sistema de contas"""
 
     def abrir_janela(self):
         """Cria uma nova janela para o sistema de contas"""
@@ -2313,6 +2453,7 @@ class SistemaContas:
         self.window.grab_set()
         self.window.focus_set()
 
+    """Cria a planilha e a aba (sheet) se não existirem."""
 
     def criar_sheet_se_nao_existir(self):
         """Cria a planilha e a aba (sheet) se não existirem."""
@@ -2329,6 +2470,7 @@ class SistemaContas:
             ws.append(["DATA", "CONTAS", "VALOR"])
             wb.save(self.file_path)
 
+    """Cria a interface gráfica usando grid layout"""
 
     def criar_interface(self):
         """Cria a interface gráfica usando grid layout"""
@@ -2412,6 +2554,7 @@ class SistemaContas:
         # Configurar foco inicial
         self.info_entry.focus()
 
+    """Salva as informações na planilha, agrupando por data e colocando informações na mesma célula."""
 
     def salvar_informacoes(self, data_escolhida, info, valor):
         """Salva as informações na planilha, agrupando por data e colocando informações na mesma célula."""
@@ -2510,6 +2653,7 @@ class SistemaContas:
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
             return False
 
+    """Valida os campos antes de salvar"""
 
     def validar_campos(self):
         """Valida os campos antes de salvar"""
@@ -2528,12 +2672,14 @@ class SistemaContas:
             messagebox.showerror("Erro", "O valor deve ser um número válido!")
             return False
 
+    """Limpa os campos após salvar"""
 
     def limpar_campos(self):
         """Limpa os campos após salvar"""
         self.info_entry.delete(0, tk.END)
         self.valor_entry.delete(0, tk.END)
 
+    """Captura e processa os dados do formulário"""
 
     def capturar_dados(self):
         """Captura e processa os dados do formulário"""
@@ -2564,6 +2710,7 @@ class GerenciadorPlanilhas:
         self.sheet_name = None
         self.active_window = None
 
+    """Abre a janela de gerenciamento de planilhas"""
 
     def abrir_gerenciador(self):
         """Abre a janela de gerenciamento de planilhas"""
@@ -2598,6 +2745,7 @@ class GerenciadorPlanilhas:
         self.active_window.transient(self.master)
         self.active_window.grab_set()
 
+    """Configura a interface do gerenciador"""
 
     def _setup_interface(self):
         """Configura a interface do gerenciador"""
@@ -2712,6 +2860,7 @@ class GerenciadorPlanilhas:
 
         self.atualizar_lista_sheets()
 
+    """Cria um novo arquivo Excel"""
 
     def criar_nova_planilha(self):
         """Cria um novo arquivo Excel"""
@@ -2733,6 +2882,7 @@ class GerenciadorPlanilhas:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
 
+    """Abre uma planilha Excel existente"""
 
     def abrir_planilha(self):
         """Abre uma planilha Excel existente"""
@@ -2759,6 +2909,7 @@ class GerenciadorPlanilhas:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao abrir planilha: {str(e)}")
 
+    """Atualiza a lista de sheets disponíveis"""
 
     def atualizar_lista_sheets(self):
         """Atualiza a lista de sheets disponíveis"""
@@ -2776,6 +2927,7 @@ class GerenciadorPlanilhas:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao listar planilhas: {str(e)}")
 
+    """Seleciona uma sheet existente e a torna ativa"""
 
     def selecionar_sheet(self):
         """Seleciona uma sheet existente e a torna ativa"""
@@ -2804,6 +2956,7 @@ class GerenciadorPlanilhas:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao selecionar planilha: {str(e)}")
 
+    """Cria uma nova sheet e a torna ativa"""
 
     def criar_nova_sheet(self):
         """Cria uma nova sheet e a torna ativa"""
@@ -2844,6 +2997,7 @@ class GerenciadorPlanilhas:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
 
+    """Handler para quando a janela for fechada"""
 
     def _on_closing(self):
         """Handler para quando a janela for fechada"""
