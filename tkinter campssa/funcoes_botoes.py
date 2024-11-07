@@ -1,4 +1,5 @@
 import logging
+import re
 import openpyxl
 import sqlite3
 from openpyxl.utils import get_column_letter
@@ -80,6 +81,7 @@ class FuncoesBotoes:
         # Variáveis para pagamento
         self._init_payment_vars()
 
+
     def _init_payment_vars(self):
         """Inicializa variáveis relacionadas a pagamento."""
         self.forma_pagamento_var = tk.StringVar(value="")
@@ -92,9 +94,11 @@ class FuncoesBotoes:
         }
         self.valor_entries = {}
 
+
     def set_current_user(self, user):
         """Define o usuário atual."""
         self.current_user = user
+
 
     def center(self, window):
         """Centraliza a janela na tela."""
@@ -106,12 +110,14 @@ class FuncoesBotoes:
         window.geometry(f"{width}x{height}+{x}+{y}")
         window.deiconify()
 
+
     def get_active_workbook(self):
         """Obtém o workbook ativo atualizado."""
         if self.planilhas:
             self.planilhas.reload_workbook()
             self.wb = self.planilhas.wb
         return self.wb
+
 
     def _create_payment_frame(self, parent, cor_fundo, cor_texto, cor_selecionado):
         """Cria o frame de pagamento com todas as opções."""
@@ -168,6 +174,7 @@ class FuncoesBotoes:
 
         return frame_pagamento
 
+
     def adicionar_informacao(self):
         """Cria uma nova janela para adicionar informações de pacientes."""
         self.adicionar_window = tk.Toplevel(self.master)
@@ -185,6 +192,7 @@ class FuncoesBotoes:
 
         # Configuração da interface
         self._setup_add_interface(cor_fundo, cor_texto, cor_selecionado)
+
 
     def _setup_add_interface(self, cor_fundo, cor_texto, cor_selecionado):
         """Configura a interface de adição de paciente."""
@@ -242,6 +250,7 @@ class FuncoesBotoes:
             font=("Arial", 9, "italic")
         ).pack(pady=(0, 10))
 
+
     def _create_radio_frame(self, cor_fundo, cor_texto, cor_selecionado):
         """Cria o frame com os radio buttons."""
         frame_radios = tk.Frame(self.adicionar_window, bg=cor_fundo)
@@ -262,6 +271,7 @@ class FuncoesBotoes:
                 highlightthickness=0,
                 font=("Arial", 12)
             ).pack(side=tk.LEFT, padx=2)
+
 
     def _create_button_frame(self, cor_fundo):
         """Cria o frame com os botões."""
@@ -286,6 +296,7 @@ class FuncoesBotoes:
             activebackground="#2C3E50",
             activeforeground="#ECF0F1"
         ).pack(side=tk.LEFT, padx=5)
+
 
     def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
         """Adiciona ou atualiza um paciente no banco de dados de marcação."""
@@ -339,6 +350,7 @@ class FuncoesBotoes:
             if 'conn' in locals():
                 conn.close()
 
+
     def contar_pagamento(self, col_inicial, col_final):
         """Conta o número de pessoas e a quantidade de pagamentos."""
         n_pessoa = 0
@@ -367,6 +379,7 @@ class FuncoesBotoes:
 
         return n_pessoa, cont_pag
 
+
     def criar_entry(self, frame_nome, var_name, parent):
         """Cria um frame com label e entry para entradas de texto."""
         frame = tk.Frame(parent, bg=parent.cget("bg"))
@@ -383,6 +396,7 @@ class FuncoesBotoes:
         entry = tk.Entry(frame)
         entry.pack(side=tk.LEFT, padx=2)
         setattr(self, var_name, entry)
+
 
     def salvar_informacao(self):
         """Salva os dados no banco de dados e na planilha."""
@@ -433,46 +447,62 @@ class FuncoesBotoes:
             pagamentos = []
             soma_valores = 0
             
-            for codigo, selecionado in formas_selecionadas.items():
-                if selecionado:
-                    valor = self.valor_entries[codigo].get().strip()
-                    
-                    # Se mais de uma forma foi selecionada, valor é obrigatório
-                    if num_formas_selecionadas > 1:
-                        if not valor:
+            # Se apenas uma forma de pagamento está selecionada
+            if num_formas_selecionadas == 1:
+                forma_selecionada = next(forma for forma, sel in formas_selecionadas.items() if sel)
+                valor_entrada = self.valor_entries[forma_selecionada].get().strip()
+                
+                # Se um valor foi especificado, use-o (desde que seja igual ao valor máximo)
+                if valor_entrada:
+                    try:
+                        valor_float = float(valor_entrada.replace(',', '.'))
+                        if abs(valor_float - valor_maximo) > 0.01:
                             messagebox.showerror(
-                                "Erro", 
-                                "Quando mais de uma forma de pagamento é selecionada, "
-                                f"é obrigatório informar o valor para {codigo}"
+                                "Erro",
+                                f"O valor deve ser igual ao valor da consulta ({valor_maximo:.2f})"
                             )
                             return
-                        # Validar se o valor é um número válido
+                    except ValueError:
+                        messagebox.showerror(
+                            "Erro",
+                            f"O valor informado não é um número válido"
+                        )
+                        return
+                else:
+                    # Se nenhum valor foi especificado, use o valor máximo
+                    valor_float = valor_maximo
+                
+                valor_formatado = f"{valor_float:.2f}".replace('.', ',')
+                pagamentos.append(f"{forma_selecionada}:{valor_formatado}")
+                soma_valores = valor_float
+
+            # Se múltiplas formas de pagamento estão selecionadas
+            else:
+                for codigo, selecionado in formas_selecionadas.items():
+                    if selecionado:
+                        valor = self.valor_entries[codigo].get().strip()
+                        if not valor:
+                            messagebox.showerror(
+                                "Erro",
+                                f"É obrigatório informar o valor para {codigo}"
+                            )
+                            return
+                        
                         try:
                             valor_float = float(valor.replace(',', '.'))
                             soma_valores += valor_float
                         except ValueError:
                             messagebox.showerror(
-                                "Erro", 
+                                "Erro",
                                 f"O valor informado para {codigo} não é um número válido"
                             )
                             return
-                        # Formatar o valor com duas casas decimais
+                        
                         valor_formatado = f"{valor_float:.2f}".replace('.', ',')
                         pagamentos.append(f"{codigo}:{valor_formatado}")
-                    else:
-                        # Se só tem uma forma selecionada, não deve ter valor preenchido
-                        if valor:
-                            messagebox.showerror(
-                                "Erro", 
-                                "Quando apenas uma forma de pagamento é selecionada, "
-                                "não deve ser informado valor"
-                            )
-                            return
-                        pagamentos.append(codigo)
 
-            # Validar soma dos valores quando mais de uma forma de pagamento
-            if num_formas_selecionadas > 1:
-                if soma_valores != valor_maximo:
+                # Validar soma dos valores
+                if abs(soma_valores - valor_maximo) > 0.01:
                     messagebox.showerror(
                         "Erro",
                         f"A soma dos valores ({soma_valores:.2f}) deve ser igual ao "
@@ -511,7 +541,9 @@ class FuncoesBotoes:
                         ws[f"I{nova_linha_psicologo}"] = renach
                         ws[f"L{nova_linha_psicologo}"] = info_pagamento
 
+                    # Salvar e formatar
                     wb.save(self.file_path)
+                    self.formatar_planilha()  # Formata a planilha após salvar
                     messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
                     self.adicionar_window.destroy()
 
@@ -520,7 +552,8 @@ class FuncoesBotoes:
                     
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
-        
+
+
     def salvar_na_planilha(self, nome, renach, pagamentos, escolha):
         """Salva os dados na planilha."""
         try:
@@ -563,6 +596,7 @@ class FuncoesBotoes:
 
         except Exception as e:
             raise Exception(f"Erro ao salvar na planilha: {str(e)}")
+
 
     def excluir(self):
         """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
@@ -700,271 +734,251 @@ class FuncoesBotoes:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao iniciar exclusão: {str(e)}")
 
-    def exibir_informacao(self):
-        """Exibe informações dos pacientes em uma interface organizada com opções de filtragem."""
+
+    def exibir_resultado(self):
+        """Exibe os resultados detalhados de contagem e valores por forma de pagamento."""
         try:
-            # Carrega o workbook e seleciona a sheet correta de forma segura
+            # Criar janela
+            janela_exibir_resultado = tk.Toplevel(self.master)
+            janela_exibir_resultado.title("Valores de Atendimento")
+            janela_exibir_resultado.geometry("500x600")
+            janela_exibir_resultado.maxsize(width=500, height=600)
+            janela_exibir_resultado.minsize(width=500, height=600)
+
+            # Usando a cor de fundo da janela principal
+            cor_fundo = self.master.cget("bg")
+            janela_exibir_resultado.configure(bg=cor_fundo)
+
+            def processar_pagamentos(pagamento_str):
+                """Processa uma string de pagamento e retorna um dicionário com os valores."""
+                resultado = {'D': [], 'C': [], 'E': [], 'P': []}
+                if not pagamento_str or not isinstance(pagamento_str, str):
+                    return resultado
+
+                # Divide os diferentes pagamentos por pipe
+                pagamentos = [p.strip() for p in pagamento_str.split('|')]
+                
+                for pag in pagamentos:
+                    try:
+                        # Remove espaços extras
+                        pag = pag.strip()
+                        
+                        # Encontra a forma de pagamento (primeira letra)
+                        forma = None
+                        for letra in pag:
+                            if letra.upper() in ['D', 'C', 'E', 'P']:
+                                forma = letra.upper()
+                                break
+                        
+                        if not forma:
+                            continue
+                            
+                        # Procura pelo valor após o ':' se existir
+                        if ':' in pag:
+                            # Pega tudo após o primeiro ':'
+                            valor_texto = pag[pag.index(':')+1:].strip()
+                            # Limpa o texto do valor
+                            valor_texto = valor_texto.replace('R$', '').replace(' ', '').replace(',', '.')
+                            try:
+                                valor = float(valor_texto)
+                                resultado[forma].append(valor)
+                            except ValueError:
+                                print(f"Valor inválido ignorado: {valor_texto}")
+                        else:
+                            # Se não tem valor especificado e é o único pagamento
+                            if len(pagamentos) == 1:
+                                resultado[forma].append(148.65)  # Valor padrão médico
+                    except Exception as e:
+                        print(f"Erro ao processar pagamento '{pag}': {str(e)}")
+                        continue
+
+                return resultado
+
+            def calcular_totais(lista_pagamentos):
+                """Calcula totais por forma de pagamento."""
+                totais = {'D': [], 'C': [], 'E': [], 'P': []}
+                
+                for pagamento in lista_pagamentos:
+                    valores_pagamento = processar_pagamentos(pagamento)
+                    
+                    for forma, valores in valores_pagamento.items():
+                        totais[forma].extend(valores)
+                        
+                # Processa os resultados finais
+                resultados = {}
+                for forma, valores in totais.items():
+                    if valores:  # Só inclui formas que têm valores
+                        resultados[forma] = {
+                            'quantidade': len(valores),
+                            'valor_total': sum(valores),
+                            'valores': valores,
+                            'media': sum(valores) / len(valores) if valores else 0
+                        }
+                        
+                return resultados
+
+            # Criar frame com scrollbar
+            main_frame = tk.Frame(janela_exibir_resultado, bg=cor_fundo)
+            main_frame.pack(fill="both", expand=True)
+
+            canvas = tk.Canvas(main_frame, bg=cor_fundo)
+            scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+            scrollable_frame = tk.Frame(canvas, bg=cor_fundo)
+
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+
+            def criar_secao(titulo, n_pacientes, dados, row_start):
+                """Cria uma seção de informações na janela."""
+                tk.Label(
+                    scrollable_frame,
+                    text=titulo,
+                    font=("Arial", 16, "bold"),
+                    bg=cor_fundo,
+                    fg="#ECF0F1",
+                ).pack(pady=(20 if row_start > 0 else 15, 5))
+
+                tk.Label(
+                    scrollable_frame,
+                    text=f"Total de Pacientes: {n_pacientes}",
+                    font=("Arial", 12),
+                    bg=cor_fundo,
+                    fg="#ECF0F1",
+                ).pack(pady=(0, 10))
+
+                total_secao = 0
+                formas_nome = {'D': 'Débito', 'C': 'Crédito', 'E': 'Espécie', 'P': 'PIX'}
+                
+                for forma, info in dados.items():
+                    if info['quantidade'] > 0:
+                        nome_forma = formas_nome.get(forma, forma)
+                        
+                        # Sumário da forma de pagamento
+                        tk.Label(
+                            scrollable_frame,
+                            text=f"{nome_forma}: {info['quantidade']} pagamento(s) - Total: R$ {info['valor_total']:.2f}",
+                            font=("Arial", 12),
+                            bg=cor_fundo,
+                            fg="#ECF0F1",
+                        ).pack(pady=2)
+                        
+                        # Média por pagamento
+                        tk.Label(
+                            scrollable_frame,
+                            text=f"Média por pagamento: R$ {info['media']:.2f}",
+                            font=("Arial", 10),
+                            bg=cor_fundo,
+                            fg="#ECF0F1",
+                        ).pack(pady=(0, 2))
+                        
+                        # Lista de valores individuais
+                        valores_txt = ", ".join([f"R$ {v:.2f}" for v in info['valores']])
+                        tk.Label(
+                            scrollable_frame,
+                            text=f"Valores: {valores_txt}",
+                            font=("Arial", 10),
+                            bg=cor_fundo,
+                            fg="#ECF0F1",
+                            wraplength=450
+                        ).pack(pady=(0, 5))
+                        
+                        total_secao += info['valor_total']
+
+                tk.Label(
+                    scrollable_frame,
+                    text=f"Total da Seção: R$ {total_secao:.2f}",
+                    font=("Arial", 14, "bold"),
+                    bg=cor_fundo,
+                    fg="#ECF0F1",
+                ).pack(pady=(5, 10))
+                
+                return total_secao
+
+            # Obter dados do médico e psicólogo
             wb = self.get_active_workbook()
-            
-            try:
-                if hasattr(self.planilhas, 'sheet_name') and self.planilhas.sheet_name:
-                    ws = wb[self.planilhas.sheet_name]
-                else:
-                    ws = wb.active
-            except KeyError:
-                ws = wb.active
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao acessar a planilha: {str(e)}")
-                if wb:
-                    wb.close()
-                return
-            
-            if not ws:
-                messagebox.showerror("Erro", "Não foi possível encontrar uma planilha válida.")
-                if wb:
-                    wb.close()
-                return
-            
-            medico, psi = [], []
+            ws = wb.active
 
-            # Coleta informações de médicos e psicólogos
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
-                linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
-                if linha:
-                    medico.append({
-                        'nome': linha[0],
-                        'renach': linha[1] if len(linha) > 1 else '',
-                        'forma_pagamento': linha[-1] if len(linha) > 2 else ''
-                    })
+            def contar_pacientes_e_coletar_pagamentos(col_inicial, col_final):
+                """Conta pacientes e coleta pagamentos de uma seção."""
+                pagamentos = []
+                n_pacientes = 0
+                for row in range(3, ws.max_row + 1):
+                    nome = ws.cell(row=row, column=col_inicial).value
+                    if nome and isinstance(nome, str) and nome.strip():
+                        n_pacientes += 1
+                        pagamento = ws.cell(row=row, column=col_final).value
+                        if pagamento and isinstance(pagamento, str):
+                            pagamentos.append(pagamento)
+                return n_pacientes, pagamentos
 
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
-                linha = [cell.value for cell in row if isinstance(cell.value, (str, int)) and str(cell.value).strip()]
-                if linha:
-                    psi.append({
-                        'nome': linha[0],
-                        'renach': linha[1] if len(linha) > 1 else '',
-                        'forma_pagamento': linha[-1] if len(linha) > 2 else ''
-                    })
+            # Coletar dados (colunas B-F para médico, H-L para psicólogo)
+            n_medico, pagamentos_medico = contar_pacientes_e_coletar_pagamentos(2, 6)    # B a F
+            n_psicologo, pagamentos_psi = contar_pacientes_e_coletar_pagamentos(8, 12)   # H a L
 
+            # Calcular totais
+            totais_medico = calcular_totais(pagamentos_medico)
+            totais_psi = calcular_totais(pagamentos_psi)
+
+            # Exibir resultados
+            total_med = criar_secao("MÉDICO", n_medico, totais_medico, 0)
+            total_psi = criar_secao("PSICÓLOGO", n_psicologo, totais_psi, 1)
+
+            # Separador
+            tk.Frame(
+                scrollable_frame,
+                height=2,
+                bg="#34495E",
+                width=450
+            ).pack(pady=10, fill='x', padx=20)
+
+            # Total geral
+            tk.Label(
+                scrollable_frame,
+                text="TOTAL GERAL",
+                font=("Arial", 16, "bold"),
+                bg=cor_fundo,
+                fg="#ECF0F1",
+            ).pack(pady=(10, 5))
+
+            tk.Label(
+                scrollable_frame,
+                text=f"R$ {(total_med + total_psi):.2f}",
+                font=("Arial", 14, "bold"),
+                bg=cor_fundo,
+                fg="#ECF0F1",
+            ).pack(pady=(5, 20))
+
+            # Configurar o layout do scroll
+            canvas.pack(side="left", fill="both", expand=True, padx=5)
+            scrollbar.pack(side="right", fill="y")
+
+            # Configurar o scroll com o mouse
+            def _on_mousewheel(event):
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            
+            def _on_closing():
+                canvas.unbind_all("<MouseWheel>")
+                janela_exibir_resultado.destroy()
+
+            janela_exibir_resultado.protocol("WM_DELETE_WINDOW", _on_closing)
+
+            # Centralizar a janela
+            self.center(janela_exibir_resultado)
             wb.close()
 
-            if not medico and not psi:
-                messagebox.showinfo("Aviso", "Nenhuma informação encontrada!")
-                return
-
-            # Criando a janela principal
-            janela_informacao = tk.Toplevel(self.master)
-            janela_informacao.title("Informações dos Pacientes")
-            janela_informacao.geometry("1000x700")
-            cor_fundo = self.master.cget("bg")
-            cor_texto = "#ECF0F1"
-            janela_informacao.configure(bg=cor_fundo)
-
-            # Frame superior para controles
-            control_frame = tk.Frame(janela_informacao, bg=cor_fundo)
-            control_frame.pack(fill="x", padx=20, pady=10)
-
-            # Frame para a tabela com scrollbars
-            table_container = tk.Frame(janela_informacao)
-            table_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-
-            # Canvas e scrollbars
-            canvas = tk.Canvas(table_container, bg=cor_fundo)
-            scrollbar_y = tk.Scrollbar(table_container, orient="vertical", command=canvas.yview)
-            scrollbar_x = tk.Scrollbar(table_container, orient="horizontal", command=canvas.xview)
-            
-            # Frame para a tabela
-            table_frame = tk.Frame(canvas, bg=cor_fundo)
-            
-            # Configuração do canvas
-            canvas.create_window((0, 0), window=table_frame, anchor="nw")
-            canvas.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
-
-            def aplicar_filtros(*args):
-                """Aplica os filtros de tipo e busca aos dados."""
-                # Limpa a tabela atual
-                for widget in table_frame.winfo_children():
-                    if int(widget.grid_info()['row']) > 0:  # Preserva o cabeçalho
-                        widget.destroy()
-
-                # Prepara os dados conforme o filtro selecionado
-                dados_filtrados = []
-                filtro = filtro_var.get()
-                termo_busca = busca_var.get().lower()
-
-                if filtro in ["todos", "medico"]:
-                    for i, pac in enumerate(medico):
-                        if termo_busca in str(pac['nome']).lower() or termo_busca in str(pac['renach']).lower():
-                            dados_filtrados.append((i+1, pac, "Médico"))
-
-                if filtro in ["todos", "psi"]:
-                    offset = len(medico) if filtro == "todos" else 0
-                    for i, pac in enumerate(psi):
-                        if termo_busca in str(pac['nome']).lower() or termo_busca in str(pac['renach']).lower():
-                            dados_filtrados.append((i+1+offset, pac, "Psicólogo"))
-
-                # Preenche a tabela com os dados filtrados
-                for row, (num, pac, tipo) in enumerate(dados_filtrados, start=1):
-                    # Número
-                    tk.Label(
-                        table_frame,
-                        text=num,
-                        bg=cor_fundo,
-                        fg=cor_texto,
-                        font=("Arial", 10),
-                        padx=10,
-                        pady=5
-                    ).grid(row=row, column=0, sticky="nsew", padx=1, pady=1)
-
-                    # Nome
-                    tk.Label(
-                        table_frame,
-                        text=pac['nome'],
-                        bg=cor_fundo,
-                        fg=cor_texto,
-                        font=("Arial", 10),
-                        padx=10,
-                        pady=5,
-                        anchor="w"
-                    ).grid(row=row, column=1, sticky="nsew", padx=1, pady=1)
-
-                    # RENACH
-                    tk.Label(
-                        table_frame,
-                        text=pac['renach'],
-                        bg=cor_fundo,
-                        fg=cor_texto,
-                        font=("Arial", 10),
-                        padx=10,
-                        pady=5
-                    ).grid(row=row, column=2, sticky="nsew", padx=1, pady=1)
-
-                    # Forma de Pagamento
-                    tk.Label(
-                        table_frame,
-                        text=pac['forma_pagamento'],
-                        bg=cor_fundo,
-                        fg=cor_texto,
-                        font=("Arial", 10),
-                        padx=10,
-                        pady=5,
-                        anchor="w"
-                    ).grid(row=row, column=3, sticky="nsew", padx=1, pady=1)
-
-                    # Tipo
-                    tk.Label(
-                        table_frame,
-                        text=tipo,
-                        bg=cor_fundo,
-                        fg=cor_texto,
-                        font=("Arial", 10),
-                        padx=10,
-                        pady=5
-                    ).grid(row=row, column=4, sticky="nsew", padx=1, pady=1)
-
-                # Atualiza a região de rolagem
-                table_frame.update_idletasks()
-                canvas.configure(scrollregion=canvas.bbox("all"))
-
-            # Variáveis de controle (movidas para depois da definição de aplicar_filtros)
-            filtro_var = tk.StringVar(value="todos")
-            busca_var = tk.StringVar()
-            busca_var.trace("w", aplicar_filtros)
-
-            # Frame para os radiobuttons
-            radio_frame = tk.Frame(control_frame, bg=cor_fundo)
-            radio_frame.pack(side="left", padx=10)
-
-            tk.Label(radio_frame, text="Filtrar por:", bg=cor_fundo, fg=cor_texto, font=("Arial", 10, "bold")).pack(side="left")
-            for valor, texto in [("todos", "Todos"), ("medico", "Médico"), ("psi", "Psicólogo")]:
-                tk.Radiobutton(
-                    radio_frame,
-                    text=texto,
-                    variable=filtro_var,
-                    value=valor,
-                    command=aplicar_filtros,
-                    bg=cor_fundo,
-                    fg=cor_texto,
-                    selectcolor="#2C3E50",
-                    activebackground=cor_fundo,
-                    activeforeground=cor_texto
-                ).pack(side="left", padx=5)
-
-            # Frame para busca
-            search_frame = tk.Frame(control_frame, bg=cor_fundo)
-            search_frame.pack(side="right", padx=10)
-
-            tk.Label(search_frame, text="Buscar:", bg=cor_fundo, fg=cor_texto, font=("Arial", 10, "bold")).pack(side="left", padx=(0, 5))
-            tk.Entry(search_frame, textvariable=busca_var, width=30).pack(side="left")
-
-            # Cabeçalho da tabela
-            headers = ["Nº", "Nome", "RENACH", "Forma de Pagamento", "Tipo"]
-            for col, header in enumerate(headers):
-                tk.Label(
-                    table_frame,
-                    text=header,
-                    bg="#2C3E50",
-                    fg=cor_texto,
-                    font=("Arial", 11, "bold"),
-                    padx=10,
-                    pady=5,
-                    relief="raised",
-                    width=25 if col in [1, 3] else 15
-                ).grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
-
-            # Configuração do layout final
-            canvas.pack(side="left", fill="both", expand=True)
-            scrollbar_y.pack(side="right", fill="y")
-            scrollbar_x.pack(side="bottom", fill="x")
-
-            # Configuração de eventos de rolagem
-            def on_mousewheel(event):
-                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-            # Configuração do scroll do mouse
-            if sys.platform.startswith("win") or sys.platform == "darwin":
-                canvas.bind_all("<MouseWheel>", on_mousewheel)
-            else:
-                canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
-                canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
-
-            # Criação do frame de estatísticas
-            stats_frame = tk.Frame(janela_informacao, bg=cor_fundo)
-            stats_frame.pack(fill="x", padx=20, pady=10)
-
-            # Exibe estatísticas
-            total_medico = len(medico)
-            total_psi = len(psi)
-            total_geral = total_medico + total_psi
-
-            stats_text = f"Total de Pacientes: {total_geral} | Médico: {total_medico} | Psicólogo: {total_psi}"
-            tk.Label(
-                stats_frame,
-                text=stats_text,
-                bg=cor_fundo,
-                fg=cor_texto,
-                font=("Arial", 10, "bold")
-            ).pack(pady=5)
-
-            # Limpar bindings ao fechar
-            def on_closing():
-                canvas.unbind_all("<MouseWheel>")
-                canvas.unbind_all("<Button-4>")
-                canvas.unbind_all("<Button-5>")
-                janela_informacao.destroy()
-
-            janela_informacao.protocol("WM_DELETE_WINDOW", on_closing)
-
-            # Aplica os filtros iniciais
-            aplicar_filtros()
-
-            # Centraliza a janela
-            self.center(janela_informacao)
-
         except Exception as e:
-            messagebox.showerror("Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}")
+            self.logger.error(f"Erro ao exibir resultados: {str(e)}")
+            messagebox.showerror("Erro", f"Ocorreu um erro ao exibir os resultados: {str(e)}")
             if 'wb' in locals():
                 wb.close()
+
 
     def valores_totais(self):
         """Exibe os valores totais em uma janela Tkinter."""
@@ -1089,6 +1103,7 @@ class FuncoesBotoes:
         ).pack(pady=2)
 
         self.center(janela_contas)
+
 
     def processar_notas_fiscais(self):
         driver = webdriver.Chrome()
@@ -1297,85 +1312,471 @@ class FuncoesBotoes:
             driver.quit()
             logging.info("Processo finalizado")
             return cpfs
+            
+    def exibir_informacao(self):
+        """Exibe informações dos pacientes em uma interface organizada com opções de filtragem e detalhes de pagamento."""
+        try:
+            # Carrega o workbook e seleciona a sheet correta de forma segura
+            wb = self.get_active_workbook()
+            
+            try:
+                if hasattr(self.planilhas, 'sheet_name') and self.planilhas.sheet_name:
+                    ws = wb[self.planilhas.sheet_name]
+                else:
+                    ws = wb.active
+            except KeyError:
+                ws = wb.active
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao acessar a planilha: {str(e)}")
+                if wb:
+                    wb.close()
+                return
+            
+            if not ws:
+                messagebox.showerror("Erro", "Não foi possível encontrar uma planilha válida.")
+                if wb:
+                    wb.close()
+                return
+            
+            # Coleta e estrutura os dados
+            medico, psi = [], []
+            
+            def processar_pagamento(valor):
+                """Processa e formata informações de pagamento."""
+                if not valor:
+                    return ""
+                valor_str = str(valor).strip()
+                if not valor_str:
+                    return ""
+                
+                # Se for um valor numérico, formata como moeda
+                try:
+                    valor_float = float(valor_str.replace("R$", "").replace(",", ".").strip())
+                    return f"R$ {valor_float:.2f}"
+                except ValueError:
+                    return valor_str
+
+            # Coleta dados do médico (colunas B-F)
+            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=2, max_col=6):
+                nome = row[0].value
+                if nome and isinstance(nome, (str, int)) and str(nome).strip():
+                    medico.append({
+                        'nome': str(nome).strip(),
+                        'renach': str(row[1].value).strip() if row[1].value else '',
+                        'forma_pagamento': processar_pagamento(row[4].value)
+                    })
+
+            # Coleta dados do psicólogo (colunas H-L)
+            for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=8, max_col=12):
+                nome = row[0].value
+                if nome and isinstance(nome, (str, int)) and str(nome).strip():
+                    psi.append({
+                        'nome': str(nome).strip(),
+                        'renach': str(row[1].value).strip() if row[1].value else '',
+                        'forma_pagamento': processar_pagamento(row[4].value)
+                    })
+
+            wb.close()
+
+            if not medico and not psi:
+                messagebox.showinfo("Aviso", "Nenhuma informação encontrada!")
+                return
+
+            # Criando a janela principal
+            janela_informacao = tk.Toplevel(self.master)
+            janela_informacao.title("Informações dos Pacientes")
+            janela_informacao.geometry("1200x800")
+            cor_fundo = self.master.cget("bg")
+            cor_texto = "#ECF0F1"
+            cor_header = "#2C3E50"
+            cor_destaque = "#34495E"
+            janela_informacao.configure(bg=cor_fundo)
+
+            # Frame principal
+            main_frame = tk.Frame(janela_informacao, bg=cor_fundo)
+            main_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+            # Frame superior para controles
+            control_frame = tk.Frame(main_frame, bg=cor_fundo)
+            control_frame.pack(fill="x", pady=(0, 10))
+
+            # Frame para a tabela com scrollbar
+            table_container = tk.Frame(main_frame)
+            table_container.pack(fill="both", expand=True)
+
+            # Canvas e scrollbar
+            canvas = tk.Canvas(table_container, bg=cor_fundo)
+            scrollbar = tk.Scrollbar(table_container, orient="vertical", command=canvas.yview)
+            
+            # Frame para a tabela
+            table_frame = tk.Frame(canvas, bg=cor_fundo)
+            
+            def aplicar_filtros(*args):
+                """Aplica os filtros de tipo e busca aos dados."""
+                # Limpa a tabela atual
+                for widget in table_frame.winfo_children():
+                    if int(widget.grid_info()['row']) > 0:  # Preserva o cabeçalho
+                        widget.destroy()
+
+                dados_filtrados = []
+                filtro = filtro_var.get()
+                termo_busca = busca_var.get().lower()
+                forma_pagamento_filtro = forma_pagamento_var.get().lower()
+
+                def check_filtros(pac, tipo):
+                    """Verifica se o paciente atende aos critérios de filtro."""
+                    busca_match = (termo_busca in str(pac['nome']).lower() or 
+                                termo_busca in str(pac['renach']).lower())
+                    pagamento_match = (not forma_pagamento_filtro or 
+                                    forma_pagamento_filtro in str(pac['forma_pagamento']).lower())
+                    return busca_match and pagamento_match
+
+                # Aplica os filtros
+                if filtro in ["todos", "medico"]:
+                    for i, pac in enumerate(medico):
+                        if check_filtros(pac, "Médico"):
+                            dados_filtrados.append((i+1, pac, "Médico"))
+
+                if filtro in ["todos", "psi"]:
+                    offset = len(medico) if filtro == "todos" else 0
+                    for i, pac in enumerate(psi):
+                        if check_filtros(pac, "Psicólogo"):
+                            dados_filtrados.append((i+1+offset, pac, "Psicólogo"))
+
+                # Atualiza estatísticas
+                total_filtrado = len(dados_filtrados)
+                stats_text = (f"Exibindo: {total_filtrado} paciente(s) | "
+                            f"Total Geral: {len(medico) + len(psi)} | "
+                            f"Médico: {len(medico)} | Psicólogo: {len(psi)}")
+                stats_label.config(text=stats_text)
+
+                # Preenche a tabela
+                for row, (num, pac, tipo) in enumerate(dados_filtrados, start=1):
+                    # Define cor de fundo alternada para melhor legibilidade
+                    bg_color = cor_destaque if row % 2 == 0 else cor_fundo
+
+                    items = [
+                        (str(num), "center", 5),
+                        (pac['nome'], "w", 30),
+                        (pac['renach'], "center", 10),
+                        (pac['forma_pagamento'], "w", 20),
+                        (tipo, "center", 10)
+                    ]
+
+                    for col, (text, anchor, width) in enumerate(items):
+                        label = tk.Label(
+                            table_frame,
+                            text=text,
+                            bg=bg_color,
+                            fg=cor_texto,
+                            font=("Arial", 10),
+                            padx=10,
+                            pady=5,
+                            anchor=anchor,
+                            width=width
+                        )
+                        label.grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
+
+                # Atualiza a região de rolagem
+                table_frame.update_idletasks()
+                canvas.configure(scrollregion=canvas.bbox("all"))
+
+            # Variáveis de controle
+            filtro_var = tk.StringVar(value="todos")
+            busca_var = tk.StringVar()
+            forma_pagamento_var = tk.StringVar()
+
+            # Trace para as variáveis
+            for var in [busca_var, forma_pagamento_var]:
+                var.trace("w", aplicar_filtros)
+
+            # Frame para os filtros
+            filtros_frame = tk.Frame(control_frame, bg=cor_fundo)
+            filtros_frame.pack(fill="x", padx=5)
+
+            # Tipo de atendimento
+            tipo_frame = tk.LabelFrame(filtros_frame, text="Tipo de Atendimento", bg=cor_fundo, fg=cor_texto)
+            tipo_frame.pack(side="left", padx=5, pady=5)
+
+            for valor, texto in [("todos", "Todos"), ("medico", "Médico"), ("psi", "Psicólogo")]:
+                tk.Radiobutton(
+                    tipo_frame,
+                    text=texto,
+                    variable=filtro_var,
+                    value=valor,
+                    command=aplicar_filtros,
+                    bg=cor_fundo,
+                    fg=cor_texto,
+                    selectcolor=cor_header,
+                    activebackground=cor_fundo,
+                    activeforeground=cor_texto
+                ).pack(side="left", padx=5)
+
+            # Busca
+            busca_frame = tk.LabelFrame(filtros_frame, text="Buscar por Nome/RENACH", bg=cor_fundo, fg=cor_texto)
+            busca_frame.pack(side="left", padx=5, pady=5)
+            tk.Entry(busca_frame, textvariable=busca_var, width=30).pack(padx=5, pady=2)
+
+            # Forma de pagamento
+            pagamento_frame = tk.LabelFrame(filtros_frame, text="Filtrar por Forma de Pagamento", bg=cor_fundo, fg=cor_texto)
+            pagamento_frame.pack(side="left", padx=5, pady=5)
+            tk.Entry(pagamento_frame, textvariable=forma_pagamento_var, width=20).pack(padx=5, pady=2)
+
+            # Configuração do canvas
+            canvas.create_window((0, 0), window=table_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+
+            # Cabeçalho da tabela
+            headers = [
+                ("Nº", 5),
+                ("Nome", 30),
+                ("RENACH", 10),
+                ("Forma de Pagamento", 20),
+                ("Tipo", 10)
+            ]
+
+            for col, (header, width) in enumerate(headers):
+                tk.Label(
+                    table_frame,
+                    text=header,
+                    bg=cor_header,
+                    fg=cor_texto,
+                    font=("Arial", 11, "bold"),
+                    padx=10,
+                    pady=8,
+                    relief="raised",
+                    width=width
+                ).grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
+
+            # Frame de estatísticas
+            stats_frame = tk.Frame(main_frame, bg=cor_fundo)
+            stats_frame.pack(fill="x", pady=10)
+            
+            stats_label = tk.Label(
+                stats_frame,
+                text="",
+                bg=cor_fundo,
+                fg=cor_texto,
+                font=("Arial", 10, "bold")
+            )
+            stats_label.pack(pady=5)
+
+            # Configuração final do layout
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+
+            # Configuração de eventos de rolagem
+            def on_mousewheel(event):
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+            def on_closing():
+                canvas.unbind_all("<MouseWheel>")
+                canvas.unbind_all("<Button-4>")
+                canvas.unbind_all("<Button-5>")
+                janela_informacao.destroy()
+
+            # Configuração do scroll do mouse
+            if sys.platform.startswith("win") or sys.platform == "darwin":
+                canvas.bind_all("<MouseWheel>", on_mousewheel)
+            else:
+                canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+                canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
+            janela_informacao.protocol("WM_DELETE_WINDOW", on_closing)
+
+            # Aplica os filtros iniciais
+            aplicar_filtros()
+
+            # Centraliza a janela
+            self.center(janela_informacao)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}")
+            if 'wb' in locals():
+                wb.close()
 
     def exibir_resultado(self):
-        """Exibe os resultados de contagem para médicos e psicólogos."""
+        """Exibe os resultados detalhados de contagem e valores por forma de pagamento."""
         janela_exibir_resultado = tk.Toplevel(self.master)
-        janela_exibir_resultado.geometry("300x210")
-        janela_exibir_resultado.maxsize(width=300, height=210)
-        janela_exibir_resultado.minsize(width=300, height=210)
+        janela_exibir_resultado.geometry("500x600")
+        janela_exibir_resultado.maxsize(width=500, height=600)
+        janela_exibir_resultado.minsize(width=500, height=600)
 
-        # usando a cor de fundo da janela principal
+        # Usando a cor de fundo da janela principal
         cor_fundo = self.master.cget("bg")
         janela_exibir_resultado.configure(bg=cor_fundo)
+        
+        def processar_pagamentos(pagamento_str):
+            """Processa uma string de pagamento e retorna um dicionário com os valores."""
+            resultado = {'D': [], 'C': [], 'E': [], 'P': []}
+            if not pagamento_str or not isinstance(pagamento_str, str):
+                return resultado
 
-        n_medico, pag_medico = self.planilhas.contar_medico()
-        n_psicologo, pag_psicologo = self.planilhas.contar_psi()
+            try:
+                # Dividir por pipes para separar múltiplos pagamentos
+                for pagamento in [p.strip() for p in pagamento_str.split('|')]:
+                    # Encontrar primeira ocorrência de cada forma de pagamento
+                    for forma in ['D', 'C', 'E', 'P']:
+                        if forma in pagamento:
+                            # Se tem valor associado (formato FORMA:VALOR)
+                            if ':' in pagamento:
+                                try:
+                                    # Pegar o valor após a forma de pagamento
+                                    valor_str = pagamento[pagamento.find(':') + 1:].strip()
+                                    # Limpar e converter o valor
+                                    valor_str = valor_str.replace('R$', '').replace(' ', '').replace(',', '.')
+                                    valor = float(valor_str)
+                                    resultado[forma].append(valor)
+                                except (ValueError, IndexError):
+                                    print(f"Erro ao processar valor em: {pagamento}")
+                            else:
+                                # Se não tem valor especificado, usa valor padrão
+                                resultado[forma].append(148.65)  # Valor padrão
+            except Exception as e:
+                print(f"Erro ao processar pagamento: {str(e)}")
 
-        # Criando rótulos (Labels) e adicionando à janela
+            return resultado
+
+        def calcular_totais(lista_pagamentos):
+            """Calcula os totais para cada forma de pagamento."""
+            totais = {'D': [], 'C': [], 'E': [], 'P': []}
+            
+            try:
+                for pagamento in lista_pagamentos:
+                    valores_pagamento = processar_pagamentos(pagamento)
+                    for forma, valores in valores_pagamento.items():
+                        totais[forma].extend(valores)
+                
+                return {
+                    forma: {
+                        'quantidade': len(valores),
+                        'valor_total': sum(valores),
+                        'valores': valores,
+                        'media': sum(valores) / len(valores) if valores else 0
+                    }
+                    for forma, valores in totais.items()
+                    if valores  # Só inclui formas que têm valores
+                }
+            except Exception as e:
+                print(f"Erro ao calcular totais: {str(e)}")
+                return {}
+
+        # Obter dados do médico e psicólogo
+        wb = self.get_active_workbook()
+        ws = wb.active
+
+        def contar_pacientes_e_coletar_pagamentos(col_inicial, col_final):
+            """Conta pacientes e coleta pagamentos de uma seção."""
+            pagamentos = []
+            n_pacientes = 0
+            for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
+                nome = row[col_inicial-1].value
+                if nome and isinstance(nome, str) and nome.strip():
+                    n_pacientes += 1
+                    pagamento = row[col_final-1].value
+                    if pagamento and isinstance(pagamento, str):
+                        pagamentos.append(pagamento)
+            return n_pacientes, pagamentos
+
+        # Coletar dados (colunas B-F para médico, H-L para psicólogo)
+        n_medico, pagamentos_medico = contar_pacientes_e_coletar_pagamentos(2, 6)
+        n_psicologo, pagamentos_psi = contar_pacientes_e_coletar_pagamentos(8, 12)
+
+        # Calcular totais
+        totais_medico = calcular_totais(pagamentos_medico)
+        totais_psi = calcular_totais(pagamentos_psi)
+
+        # Criar labels para exibição
+        def criar_secao(titulo, n_pacientes, dados, row_start):
+            """Cria uma seção de informações com observações para valores diferentes do padrão."""
+            tk.Label(
+                janela_exibir_resultado,
+                text=titulo,
+                font=("Arial", 16, "bold"),
+                bg=cor_fundo,
+                fg="#ECF0F1",
+            ).pack(pady=(20 if row_start > 0 else 15, 5))
+
+            tk.Label(
+                janela_exibir_resultado,
+                text=f"Total de Pacientes: {n_pacientes}",
+                font=("Arial", 12),
+                bg=cor_fundo,
+                fg="#ECF0F1",
+            ).pack(pady=(0, 10))
+
+            total_secao = 0
+            formas_nome = {'D': 'Débito', 'C': 'Crédito', 'E': 'Espécie', 'P': 'PIX'}
+            valor_padrao = 148.65 if titulo == "MÉDICO" else 192.61
+            
+            for forma, info in dados.items():
+                if info['quantidade'] > 0:
+                    nome_forma = formas_nome.get(forma, forma)
+                    
+                    # Sumário da forma de pagamento
+                    tk.Label(
+                        janela_exibir_resultado,
+                        text=f"{nome_forma}: {info['quantidade']} pagamento(s) - R$ {info['valor_total']:.2f}",
+                        font=("Arial", 12),
+                        bg=cor_fundo,
+                        fg="#ECF0F1",
+                    ).pack(pady=2)
+                    
+                    # Encontrar valores diferentes do padrão
+                    valores_diferentes = [v for v in info['valores'] if abs(v - valor_padrao) > 0.01]
+                    valores_unicos = set(valores_diferentes)  # Remove duplicatas
+                    
+                    # Criar observações para cada valor diferente
+                    for valor in valores_unicos:
+                        contagem = valores_diferentes.count(valor)
+                        obs_texto = (f"Obs: {'um' if contagem == 1 else str(contagem)} " 
+                                f"pagamento{'s' if contagem > 1 else ''} no valor de R$ {valor:.2f}")
+                        
+                        tk.Label(
+                            janela_exibir_resultado,
+                            text=obs_texto,
+                            font=("Arial", 10, "italic"),
+                            bg=cor_fundo,
+                            fg="#ECF0F1",
+                            wraplength=450
+                        ).pack(pady=(0, 5))
+                    
+                    total_secao += info['valor_total']
+
+            tk.Label(
+                janela_exibir_resultado,
+                text=f"Total da Seção: R$ {total_secao:.2f}",
+                font=("Arial", 14, "bold"),
+                bg=cor_fundo,
+                fg="#ECF0F1",
+            ).pack(pady=(5, 10))
+            
+            return total_secao
+
+        # Exibir resultados
+        total_med = criar_secao("MÉDICO", n_medico, totais_medico, 0)
+        total_psi = criar_secao("PSICÓLOGO", n_psicologo, totais_psi, 1)
+
+        # Total geral
         tk.Label(
             janela_exibir_resultado,
-            text="MÉDICO:",
+            text="TOTAL GERAL",
             font=("Arial", 16, "bold"),
             bg=cor_fundo,
             fg="#ECF0F1",
-        ).pack(pady=(15, 0))
+        ).pack(pady=(20, 5))
+
         tk.Label(
             janela_exibir_resultado,
-            text=f"Pacientes: {n_medico}",
-            font=("Arial", 12),
+            text=f"R$ {(total_med + total_psi):.2f}",
+            font=("Arial", 14, "bold"),
             bg=cor_fundo,
             fg="#ECF0F1",
-        ).pack()
-
-        # Formatando as formas de pagamento
-        texto_med = "  ".join(
-            [
-                f"{tipo_pagamento}: {quantidade}"
-                for tipo_pagamento, quantidade in pag_medico.items()
-            ]
-        )
-        label = tk.Label(
-            janela_exibir_resultado,
-            text=texto_med,
-            font=("Arial", 12),
-            bg=cor_fundo,
-            fg="#ECF0F1",
-        )
-        label.pack()  # Adicionando o label com as formas de pagamento
-
-        # Se você também quiser exibir informações sobre psicólogos, adicione aqui:
-        tk.Label(
-            janela_exibir_resultado,
-            text="PSICÓLOGO:",
-            font=("Arial", 16, "bold"),
-            bg=cor_fundo,
-            fg="#ECF0F1",
-        ).pack(pady=(20, 0))
-        tk.Label(
-            janela_exibir_resultado,
-            text=f"Pacientes: {n_psicologo}",
-            font=("Arial", 12),
-            bg=cor_fundo,
-            fg="#ECF0F1",
-        ).pack()
-
-        texto_psic = "  ".join(
-            [
-                f"{tipo_pagamento}: {quantidade}"
-                for tipo_pagamento, quantidade in pag_psicologo.items()
-            ]
-        )
-        label_psic = tk.Label(
-            janela_exibir_resultado,
-            text=texto_psic,
-            font=("Arial", 12),
-            bg=cor_fundo,
-            fg="#ECF0F1",
-        )
-        label_psic.pack()  # Adicionando o label com as formas de pagamento dos psicólogos
+        ).pack(pady=(5, 20))
 
         self.center(janela_exibir_resultado)
+        wb.close()
+
 
     def enviar_whatsapp(self):
         # Janela número ou nome do grupo
@@ -1400,6 +1801,7 @@ class FuncoesBotoes:
         tk.Button(
             janela_wpp, text="Enviar", command=self.processar_envio_whatsapp
         ).pack(pady=10)
+
 
     def processar_envio_whatsapp(self):
         # Captura o valor do campo de entrada
@@ -1500,6 +1902,7 @@ class FuncoesBotoes:
         finally:
             driver.quit()
 
+
     def enviar_email(self):
         janela_email = tk.Toplevel(self.master)
         janela_email.geometry("300x400")
@@ -1558,6 +1961,7 @@ class FuncoesBotoes:
             ),
         ).pack(pady=20)
 
+
     def selecionar_xlsx(self, email, senha, destinatario, assunto):
         """
         Abre diálogo para selecionar arquivo XLSX
@@ -1573,6 +1977,7 @@ class FuncoesBotoes:
 
         if arquivo_xlsx:
             self.enviar(email, senha, destinatario, assunto, arquivo_xlsx)
+
 
     def enviar(self, email, senha, destinatario, assunto, caminho_xlsx):
         """
@@ -1625,284 +2030,267 @@ class FuncoesBotoes:
         except Exception as e:
             messagebox.showerror("Erro ao Enviar", f"Ocorreu um erro: {str(e)}")
 
+
     def configurar_frames(self, login_frame, criar_conta_frame):
         self.login_frame = login_frame
         self.criar_conta_frame = criar_conta_frame
+
 
     def mostrar_criar_conta(self):
         """Alterna para o frame de criar conta."""
         self.login_frame.hide()
         self.criar_conta_frame.show()
 
+
     def voltar_para_login(self):
         """Alterna de volta para o frame de login."""
         self.criar_conta_frame.hide()
         self.login_frame.show()
 
+
     def formatar_planilha(self):
-        """Formata a planilha com os dados do usuário e data atual."""
-        wb = self.get_active_workbook()
-        ws = wb.active
+        """
+        Formata a planilha com os dados do usuário e data atual.
+        """
+        try:
+            wb = self.get_active_workbook()
+            if not wb:
+                return False
+                
+            ws = wb.active
+            if not ws:
+                return False
 
-        # Define a borda para as células
-        borda = Border(
-            left=Side(style="thin"),
-            right=Side(style="thin"),
-            top=Side(style="thin"),
-            bottom=Side(style="thin"),
-        )
+            # Remover todas as mesclagens existentes (conversão para lista)
+            for range_str in list(ws.merged_cells.ranges):
+                ws.unmerge_cells(str(range_str))
 
-        # Define estilos de fonte
-        font_bold = Font(
-            name="Arial", bold=True, size=11, color="000000"
-        )  # Fonte em negrito
-        font_regular = Font(name="Arial", size=11)
-
-        # Define um alinhamento
-        alignment_center = Alignment(horizontal="center", vertical="center")
-
-        # Definindo largura das colunas
-        ws.column_dimensions["I"].width = 13
-        ws.column_dimensions["C"].width = 13
-        ws.column_dimensions["B"].width = 55
-        ws.column_dimensions["H"].width = 55
-
-        # Preenchendo o topo da planilha com usuário e data atual
-        usuario = (
-            "Nome do Usuário"  # Substitua pelo método que você usa para obter o usuário
-        )
-        data_atual = datetime.now().strftime("%d/%m/%Y")
-        ws["A1"] = f"({usuario}) Atendimento Médico {data_atual}"
-        ws["G1"] = f"({usuario}) Atendimento Psicológico {data_atual}"
-
-        # Aplicando a formatação ao cabeçalho
-        ws["A1"].font = font_bold
-        ws["A1"].alignment = alignment_center
-        ws["G1"].font = font_bold
-        ws["G1"].alignment = alignment_center
-
-        # Valores fixos na planilha com formatação, Medico e Psicologo
-        cabeçalhos = ["Ordem", "Nome", "Renach", "Reexames", "Valor"]
-        for col, valor in enumerate(
-            cabeçalhos, start=1
-        ):  # start=1 para começar na coluna A
-            cell = ws.cell(row=2, column=col)
-            cell.value = valor
-            cell.font = font_bold  # Aplica a formatação de fonte
-            cell.alignment = alignment_center  # Aplica o alinhamento
-
-        for col, valor in enumerate(
-            cabeçalhos, start=7
-        ):  # start=7 para começar na coluna G
-            cell = ws.cell(row=2, column=col)
-            cell.value = valor
-            cell.font = font_bold  # Aplica a formatação de fonte
-            cell.alignment = alignment_center  # Aplica o alinhamento
-
-        # Mesclando células cabeçalho planilha
-        ws.merge_cells("A1:E1")
-        ws.merge_cells("G1:K1")
-
-        # Primeiro, encontra onde termina a seção do médico e preenche os valores
-        ultima_linha_nome_medico = None
-        numero_pacientes_medico = 0
-        for row in range(3, ws.max_row + 1):
-            if ws[f"B{row}"].value is not None:
-                ultima_linha_nome_medico = row
-                numero_pacientes_medico += 1
-                # Preenche o valor fixo de 148.65 na coluna E
-                ws[f"E{row}"].value = 148.65
-                ws[f"E{row}"].alignment = Alignment(
-                    horizontal="center", vertical="center"
-                )
-                ws[f"E{row}"].border = borda
-
-        # Depois, encontra onde termina a seção do psicólogo e preenche os valores
-        ultima_linha_nome_psicologo = None
-        numero_pacientes_psicologo = 0
-        for row in range(3, ws.max_row + 1):
-            if ws[f"H{row}"].value is not None:
-                ultima_linha_nome_psicologo = row
-                numero_pacientes_psicologo += 1
-                # Preenche o valor fixo de 192.61 na coluna K
-                ws[f"K{row}"].value = 192.61
-                ws[f"K{row}"].alignment = Alignment(
-                    horizontal="center", vertical="center"
-                )
-                ws[f"K{row}"].border = borda
-
-        # Calcula as somas
-        soma_medico = numero_pacientes_medico * 148.65
-        soma_psicologo = numero_pacientes_psicologo * 192.61
-
-        # Adiciona soma e valores adicionais para médico
-        if ultima_linha_nome_medico is not None:
-            # Linha da soma
-            ws[f"D{ultima_linha_nome_medico + 1}"] = "Soma"
-            ws[f"D{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
-            ws[f"D{ultima_linha_nome_medico + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"D{ultima_linha_nome_medico + 1}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 1}"] = soma_medico
-            ws[f"E{ultima_linha_nome_medico + 1}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 1}"].font = Font(bold=True)
-            ws[f"E{ultima_linha_nome_medico + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            # Linha do valor por paciente
-            ws[f"D{ultima_linha_nome_medico + 2}"] = "Médico"
-            ws[f"D{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
-            ws[f"D{ultima_linha_nome_medico + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"D{ultima_linha_nome_medico + 2}"].border = borda
-            valor_medico = numero_pacientes_medico * 49
-            ws[f"E{ultima_linha_nome_medico + 2}"] = valor_medico
-            ws[f"E{ultima_linha_nome_medico + 2}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 2}"].font = Font(bold=True)
-            ws[f"E{ultima_linha_nome_medico + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            # Linha do total
-            ws[f"D{ultima_linha_nome_medico + 3}"] = "Total"
-            ws[f"D{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
-            ws[f"D{ultima_linha_nome_medico + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"D{ultima_linha_nome_medico + 3}"].border = borda
-            total_medico = numero_pacientes_medico * (148.65 - 49)
-            ws[f"E{ultima_linha_nome_medico + 3}"] = total_medico
-            ws[f"E{ultima_linha_nome_medico + 3}"].border = borda
-            ws[f"E{ultima_linha_nome_medico + 3}"].font = Font(bold=True)
-            ws[f"E{ultima_linha_nome_medico + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
+            # Define estilos base de borda
+            borda = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin")
             )
 
-        # Adiciona soma e valores adicionais para psicólogo
-        if ultima_linha_nome_psicologo is not None:
-            # Linha da soma
-            ws[f"J{ultima_linha_nome_psicologo + 1}"] = "Soma"
-            ws[f"J{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
-            ws[f"J{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"J{ultima_linha_nome_psicologo + 1}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 1}"] = soma_psicologo
-            ws[f"K{ultima_linha_nome_psicologo + 1}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 1}"].font = Font(bold=True)
-            ws[f"K{ultima_linha_nome_psicologo + 1}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            # Linha do valor por paciente
-            ws[f"J{ultima_linha_nome_psicologo + 2}"] = "Psicólogo"
-            ws[f"J{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
-            ws[f"J{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"J{ultima_linha_nome_psicologo + 2}"].border = borda
-            valor_psicologo = numero_pacientes_psicologo * 63.50
-            ws[f"K{ultima_linha_nome_psicologo + 2}"] = valor_psicologo
-            ws[f"K{ultima_linha_nome_psicologo + 2}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 2}"].font = Font(bold=True)
-            ws[f"K{ultima_linha_nome_psicologo + 2}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            # Linha do total
-            ws[f"J{ultima_linha_nome_psicologo + 3}"] = "Total"
-            ws[f"J{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
-            ws[f"J{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
-            ws[f"J{ultima_linha_nome_psicologo + 3}"].border = borda
-            total_psicologo = numero_pacientes_psicologo * (192.61 - 63.50)
-            ws[f"K{ultima_linha_nome_psicologo + 3}"] = total_psicologo
-            ws[f"K{ultima_linha_nome_psicologo + 3}"].border = borda
-            ws[f"K{ultima_linha_nome_psicologo + 3}"].font = Font(bold=True)
-            ws[f"K{ultima_linha_nome_psicologo + 3}"].alignment = Alignment(
-                horizontal="center", vertical="center"
-            )
+            font_bold = Font(name="Arial", bold=True, size=11, color="000000")
+            font_regular = Font(name="Arial", size=11, color="000000")
+            alignment_center = Alignment(horizontal="center", vertical="center")
+            alignment_left = Alignment(horizontal="left", vertical="center")
 
-        # Informações gerais do atendimento
-        if ultima_linha_nome_psicologo is not None:
-            medico = 49
-            psicologo = 63.50
-            total_clinica = (soma_medico + soma_psicologo) - (
-                (numero_pacientes_medico * medico)
-                + (numero_pacientes_psicologo * psicologo)
-            )
+            # Limpar a formatação existente
+            for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=12):
+                for cell in row:
+                    cell.border = None
+                    cell.font = font_regular
+                    cell.alignment = alignment_left
 
-            # Lista de células e valores a serem preenchidos
-            cells_to_fill = [
-                (
-                    f"I{ultima_linha_nome_psicologo+8}",
-                    "Atendimento Médico",
-                    f"K{ultima_linha_nome_psicologo+8}",
-                    soma_medico,
-                ),
-                (
-                    f"I{ultima_linha_nome_psicologo+9}",
-                    "Atendimento Psicológico",
-                    f"K{ultima_linha_nome_psicologo+9}",
-                    soma_psicologo,
-                ),
-                (
-                    f"I{ultima_linha_nome_psicologo+10}",
-                    "Total",
-                    f"K{ultima_linha_nome_psicologo+10}",
-                    soma_medico + soma_psicologo,
-                ),
-                (
-                    f"I{ultima_linha_nome_psicologo+12}",
-                    "Pagamento Médico",
-                    f"K{ultima_linha_nome_psicologo+12}",
-                    numero_pacientes_medico * medico,
-                ),
-                (
-                    f"I{ultima_linha_nome_psicologo+13}",
-                    "Pagamento Psicológico",
-                    f"K{ultima_linha_nome_psicologo+13}",
-                    numero_pacientes_psicologo * psicologo,
-                ),
-                (
-                    f"I{ultima_linha_nome_psicologo+14}",
-                    "Soma",
-                    f"K{ultima_linha_nome_psicologo+14}",
-                    total_clinica,
-                ),
-            ]
+            # Configurar larguras das colunas
+            ws.column_dimensions['B'].width = 55
+            ws.column_dimensions['C'].width = 13
+            ws.column_dimensions['H'].width = 55
+            ws.column_dimensions['I'].width = 13
 
-            # Loop para aplicar os valores e a formatação
-            for left_cell, left_value, right_cell, right_value in cells_to_fill:
-                ws[left_cell] = left_value
-                ws[left_cell].font = font_bold  # Aplica fonte em negrito
-                ws[right_cell] = right_value
-                ws[right_cell].font = font_bold  # Aplica fonte em negrito
+            # Configurar cabeçalhos
+            data_atual = datetime.now().strftime("%d/%m/%Y")
+            usuario = self.current_user if hasattr(self, 'current_user') and self.current_user else "Usuário"
 
-                # Alinhamento e bordas
-                ws[left_cell].alignment = alignment_center
-                ws[right_cell].alignment = alignment_center
-                ws[left_cell].border = borda
-                ws[right_cell].border = borda
+            # Cabeçalho da seção médico
+            ws['A1'] = f"({usuario}) Atendimento Médico {data_atual}"
+            ws.merge_cells('A1:E1')
+            ws['A1'].font = font_bold
+            ws['A1'].alignment = alignment_center
 
-            # Mescla as células das colunas I e J para cada linha
-            for left_cell, _, _, _ in cells_to_fill:
-                ws.merge_cells(f"{left_cell}:J{left_cell[1:]}")
+            # Cabeçalho da seção psicólogo
+            ws['G1'] = f"({usuario}) Atendimento Psicológico {data_atual}"
+            ws.merge_cells('G1:K1')
+            ws['G1'].font = font_bold
+            ws['G1'].alignment = alignment_center
 
-        # Aplica bordas nas células preenchidas
-        for row in ws.iter_rows(
-            min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
-        ):
-            for cell in row:
-                if cell.value is not None:
+            # Cabeçalhos das colunas
+            headers = ["Ordem", "Nome", "Renach", "Reexames", "Valor"]
+            for start_col in [1, 7]:  # A e G
+                for idx, header in enumerate(headers):
+                    cell = ws.cell(row=2, column=start_col + idx)
+                    cell.value = header
+                    cell.font = font_bold
+                    cell.alignment = alignment_center
                     cell.border = borda
 
-        # Salva e abre o arquivo no Linux
-        wb.save(self.file_path)
-        try:
-            subprocess.run(["xdg-open", self.file_path])
+            # Processar linhas de dados
+            def processar_dados(start_col):
+                num_pacientes = 0
+                ultima_linha = 2
+                
+                for row in range(3, ws.max_row + 1):
+                    nome = ws.cell(row=row, column=start_col + 1).value
+                    if nome and str(nome).strip():
+                        num_pacientes += 1
+                        ultima_linha = row
+                        
+                        # Valor fixo
+                        valor = 148.65 if start_col == 1 else 192.61
+                        valor_cell = ws.cell(row=row, column=start_col + 4)
+                        valor_cell.value = valor
+                        valor_cell.number_format = '"R$"#,##0.00'
+                        valor_cell.alignment = alignment_center
+                        
+                        # Formatar linha
+                        for col in range(start_col, start_col + 5):
+                            cell = ws.cell(row=row, column=col)
+                            cell.border = borda
+                            if col == start_col + 1:  # Coluna nome
+                                cell.alignment = alignment_left
+                            else:
+                                cell.alignment = alignment_center
+                
+                return num_pacientes, ultima_linha
+
+            # Processar dados de médicos e psicólogos
+            num_medico, ultima_linha_med = processar_dados(1)
+            num_psi, ultima_linha_psi = processar_dados(7)
+
+            # Limpar área após os dados
+            ultima_linha = max(ultima_linha_med, ultima_linha_psi)
+            for row in range(ultima_linha + 1, ws.max_row + 1):
+                for col in range(1, 12):
+                    cell = ws.cell(row=row, column=col)
+                    cell.value = None
+                    cell.border = None
+
+            # Adicionar resumo se houver dados
+            if num_medico > 0 or num_psi > 0:
+                linha_atual = ultima_linha + 2
+                
+                # Cálculos
+                total_medico = num_medico * 148.65
+                total_psi = num_psi * 192.61
+                pagamento_medico = num_medico * 49.00
+                pagamento_psi = num_psi * 63.50
+                
+                resumo = [
+                    ("Atendimento Médico", total_medico),
+                    ("Atendimento Psicológico", total_psi),
+                    ("Total", total_medico + total_psi),
+                    None,  # Linha em branco
+                    ("Pagamento Médico", pagamento_medico),
+                    ("Pagamento Psicológico", pagamento_psi),
+                    ("Total Clínica", (total_medico + total_psi) - (pagamento_medico + pagamento_psi))
+                ]
+
+                for item in resumo:
+                    if item is None:
+                        linha_atual += 1
+                        continue
+                        
+                    texto, valor = item
+                    
+                    # Limpar área do resumo primeiro
+                    for col in range(8, 11):
+                        cell = ws.cell(row=linha_atual, column=col)
+                        cell.value = None
+                        cell.border = None
+                    
+                    # Adicionar texto
+                    texto_cell = ws.cell(row=linha_atual, column=8)
+                    texto_cell.value = texto
+                    texto_cell.font = font_bold
+                    texto_cell.alignment = alignment_center
+                    
+                    ws.merge_cells(f'H{linha_atual}:J{linha_atual}')
+                    
+                    # Adicionar valor
+                    valor_cell = ws.cell(row=linha_atual, column=10)
+                    valor_cell.value = valor
+                    valor_cell.number_format = '"R$"#,##0.00'
+                    valor_cell.font = font_bold
+                    valor_cell.border = borda
+                    valor_cell.alignment = alignment_center
+                    
+                    linha_atual += 1
+                    
+            wb.save(self.file_path)
+            return True
+
         except Exception as e:
-            print("Erro ao abrir o arquivo:", e)
+            logging.error(f"Erro ao formatar planilha: {str(e)}")
+            if 'wb' in locals():
+                wb.close()
+            return False
+
+
+    def _adicionar_totais(self, ws, linha_inicio, col_inicio, valor_consulta, valor_profissional, num_pacientes, borda, font_bold, alignment_center):
+        """Adiciona os totais para uma seção (médico ou psicólogo)"""
+        # Soma
+        ws.cell(row=linha_inicio, column=col_inicio + 2, value="Soma")
+        soma_cell = ws.cell(row=linha_inicio, column=col_inicio + 4, value=valor_consulta * num_pacientes)
+        soma_cell.number_format = '"R$"#,##0.00'
+        
+        # Valor profissional
+        ws.cell(row=linha_inicio + 1, column=col_inicio + 2, value="Profissional")
+        prof_cell = ws.cell(row=linha_inicio + 1, column=col_inicio + 4, value=valor_profissional * num_pacientes)
+        prof_cell.number_format = '"R$"#,##0.00'
+        
+        # Total
+        ws.cell(row=linha_inicio + 2, column=col_inicio + 2, value="Total")
+        total_cell = ws.cell(row=linha_inicio + 2, column=col_inicio + 4, 
+                            value=(valor_consulta - valor_profissional) * num_pacientes)
+        total_cell.number_format = '"R$"#,##0.00'
+        
+        # Aplica formatação
+        for row in range(linha_inicio, linha_inicio + 3):
+            for col in range(col_inicio + 2, col_inicio + 5):
+                cell = ws.cell(row=row, column=col)
+                cell.border = borda
+                cell.font = font_bold
+                cell.alignment = alignment_center
+
+
+    def _adicionar_resumo_geral(self, ws, linha_inicio, num_medico, num_psi, borda, font_bold, alignment_center):
+        """Adiciona o resumo geral na planilha"""
+        # Configurações
+        valor_medico = 148.65
+        valor_psi = 192.61
+        pagamento_medico = 49.00
+        pagamento_psi = 63.50
+        
+        # Cálculos
+        total_medico = num_medico * valor_medico
+        total_psi = num_psi * valor_psi
+        total_geral = total_medico + total_psi
+        
+        pagamento_total_medico = num_medico * pagamento_medico
+        pagamento_total_psi = num_psi * pagamento_psi
+        total_clinica = total_geral - (pagamento_total_medico + pagamento_total_psi)
+        
+        # Lista de valores a serem adicionados
+        resumo = [
+            ("Atendimento Médico", total_medico),
+            ("Atendimento Psicológico", total_psi),
+            ("Total", total_geral),
+            ("", None),  # Linha em branco
+            ("Pagamento Médico", pagamento_total_medico),
+            ("Pagamento Psicológico", pagamento_total_psi),
+            ("Total Clínica", total_clinica)
+        ]
+        
+        # Adiciona os valores
+        for idx, (texto, valor) in enumerate(resumo):
+            if texto:  # Pula linha em branco
+                ws.cell(row=linha_inicio + idx, column=8, value=texto)
+                if valor is not None:
+                    valor_cell = ws.cell(row=linha_inicio + idx, column=10, value=valor)
+                    valor_cell.number_format = '"R$"#,##0.00'
+                
+                # Aplica formatação
+                for col in [8, 9, 10]:
+                    cell = ws.cell(row=linha_inicio + idx, column=col)
+                    cell.border = borda
+                    cell.font = font_bold
+                    cell.alignment = alignment_center
+                
+                # Mescla células para o texto
+                ws.merge_cells(f"H{linha_inicio + idx}:I{linha_inicio + idx}")
 
 
 class SistemaContas:
@@ -1911,6 +2299,7 @@ class SistemaContas:
         self.current_user = current_user
         self.sheet_name = "Contas Fechamento"
         self.criar_sheet_se_nao_existir()
+
 
     def abrir_janela(self):
         """Cria uma nova janela para o sistema de contas"""
@@ -1923,6 +2312,7 @@ class SistemaContas:
         self.window.transient(self.window.master)
         self.window.grab_set()
         self.window.focus_set()
+
 
     def criar_sheet_se_nao_existir(self):
         """Cria a planilha e a aba (sheet) se não existirem."""
@@ -1938,6 +2328,7 @@ class SistemaContas:
             ws.title = self.sheet_name
             ws.append(["DATA", "CONTAS", "VALOR"])
             wb.save(self.file_path)
+
 
     def criar_interface(self):
         """Cria a interface gráfica usando grid layout"""
@@ -2020,6 +2411,7 @@ class SistemaContas:
 
         # Configurar foco inicial
         self.info_entry.focus()
+
 
     def salvar_informacoes(self, data_escolhida, info, valor):
         """Salva as informações na planilha, agrupando por data e colocando informações na mesma célula."""
@@ -2118,6 +2510,7 @@ class SistemaContas:
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
             return False
 
+
     def validar_campos(self):
         """Valida os campos antes de salvar"""
         info = self.info_entry.get().strip()
@@ -2135,10 +2528,12 @@ class SistemaContas:
             messagebox.showerror("Erro", "O valor deve ser um número válido!")
             return False
 
+
     def limpar_campos(self):
         """Limpa os campos após salvar"""
         self.info_entry.delete(0, tk.END)
         self.valor_entry.delete(0, tk.END)
+
 
     def capturar_dados(self):
         """Captura e processa os dados do formulário"""
@@ -2168,6 +2563,7 @@ class GerenciadorPlanilhas:
         self.file_path = None
         self.sheet_name = None
         self.active_window = None
+
 
     def abrir_gerenciador(self):
         """Abre a janela de gerenciamento de planilhas"""
@@ -2201,6 +2597,7 @@ class GerenciadorPlanilhas:
         # Tornar a janela modal
         self.active_window.transient(self.master)
         self.active_window.grab_set()
+
 
     def _setup_interface(self):
         """Configura a interface do gerenciador"""
@@ -2315,6 +2712,7 @@ class GerenciadorPlanilhas:
 
         self.atualizar_lista_sheets()
 
+
     def criar_nova_planilha(self):
         """Cria um novo arquivo Excel"""
         file_path = filedialog.asksaveasfilename(
@@ -2334,6 +2732,7 @@ class GerenciadorPlanilhas:
                 )
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
+
 
     def abrir_planilha(self):
         """Abre uma planilha Excel existente"""
@@ -2360,6 +2759,7 @@ class GerenciadorPlanilhas:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao abrir planilha: {str(e)}")
 
+
     def atualizar_lista_sheets(self):
         """Atualiza a lista de sheets disponíveis"""
         self.listbox.delete(0, END)
@@ -2375,6 +2775,7 @@ class GerenciadorPlanilhas:
                 wb.close()
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao listar planilhas: {str(e)}")
+
 
     def selecionar_sheet(self):
         """Seleciona uma sheet existente e a torna ativa"""
@@ -2402,6 +2803,7 @@ class GerenciadorPlanilhas:
                 self.active_window = None
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao selecionar planilha: {str(e)}")
+
 
     def criar_nova_sheet(self):
         """Cria uma nova sheet e a torna ativa"""
@@ -2441,6 +2843,7 @@ class GerenciadorPlanilhas:
             self.active_window = None
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
+
 
     def _on_closing(self):
         """Handler para quando a janela for fechada"""

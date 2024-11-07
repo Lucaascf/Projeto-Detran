@@ -26,7 +26,7 @@ class MainFrame(Frame):
         self.master.minsize(1000, 600)
         self.master.maxsize(1600, 1000)
         
-        # Centralizar a janela
+        # Centralizar a janela-
         self.center_window()
         
         # Configurar comportamento de redimensionamento
