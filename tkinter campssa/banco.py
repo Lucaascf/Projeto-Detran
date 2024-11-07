@@ -49,7 +49,7 @@ class DataBaseLogin:
         except sqlite3.Error as e:
             logger.error(f"Erro ao criar banco de dados de usuários: {e}")
             raise
-
+    
     """Cria um novo usuário"""
 
     def create_user(self, user: str, password: str) -> bool:
@@ -173,6 +173,9 @@ class DataBaseMarcacao:
         self.appointment_entry: Optional[DateEntry] = None
         self.observation_text: Optional[tk.Text] = None
 
+        # Verifica marcações expiradas na inicialização
+        self.check_expired_appointments()
+
     """Cria e atualiza a estrutura do banco de dados"""
 
     def create_db(self) -> None:
@@ -259,6 +262,57 @@ class DataBaseMarcacao:
 
         except sqlite3.Error as e:
             logger.error(f"Erro ao criar/atualizar banco de dados de marcações: {e}")
+            raise
+    
+        """Verifica e atualiza o status de marcações expiradas"""
+    
+    """Verifica e atualiza o status de marcações expiradas"""
+    def check_expired_appointments(self) -> None:
+        """Verifica e atualiza o status de marcações expiradas"""
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                today = datetime.now().date().strftime("%Y-%m-%d")
+                
+                # Busca marcações pendentes com data anterior a hoje
+                cursor.execute("""
+                    SELECT renach, data_agendamento, historico_comparecimento 
+                    FROM marcacoes 
+                    WHERE status_comparecimento = 'pending' 
+                    AND data_agendamento < ?
+                """, (today,))
+                
+                expired_appointments = cursor.fetchall()
+                
+                for renach, data_agendamento, historico_atual in expired_appointments:
+                    try:
+                        historico = json.loads(historico_atual) if historico_atual else []
+                    except json.JSONDecodeError:
+                        logger.warning(f"Histórico inválido para RENACH {renach}, iniciando novo")
+                        historico = []
+                    
+                    # Adiciona entrada ao histórico
+                    historico.append({
+                        "data": data_agendamento,
+                        "status": "missed",
+                        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "observacao": "Status atualizado automaticamente - Data expirada"
+                    })
+                    
+                    # Atualiza o status da marcação
+                    cursor.execute("""
+                        UPDATE marcacoes 
+                        SET status_comparecimento = 'missed',
+                            historico_comparecimento = ?
+                        WHERE renach = ?
+                    """, (json.dumps(historico), renach))
+                    
+                    logger.info(f"Marcação expirada atualizada para RENACH {renach}: {data_agendamento}")
+                
+                conn.commit()
+                
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao verificar marcações expiradas: {e}")
             raise
 
     """Realiza a migração do banco de dados para a estrutura mais recente"""
@@ -534,6 +588,9 @@ class DataBaseMarcacao:
 
     def view_marcacoes(self):
         """Cria a interface para visualização e gestão das marcações."""
+        # Verifica marcações expiradas antes de mostrar a interface
+        self.check_expired_appointments()
+
         # Configuração da janela principal
         self.marcacoes_window = tk.Toplevel(self.master)
         self.marcacoes_window.title("Gerenciador de Marcações")
@@ -702,6 +759,9 @@ class DataBaseMarcacao:
 
     def update_patient_list(self, event=None):
         """Atualiza a lista de pacientes com status de comparecimento."""
+        # Verifica marcações expiradas antes de atualizar a lista
+        self.check_expired_appointments()
+        
         search_term = self.search_var.get().strip()
         selected_date = self.date_entry.get_date().strftime("%Y-%m-%d")
         patients = self.get_patients_by_name_or_renach(search_term, selected_date)
