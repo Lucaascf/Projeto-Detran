@@ -1,64 +1,77 @@
 import sqlite3
 import tkinter as tk
-import tkinter as ttk
+from tkinter import ttk, messagebox, Toplevel, Frame, Label
 from tkcalendar import DateEntry
 from datetime import datetime
-from tkinter import messagebox, Toplevel, Frame, Label
-from tkcalendar import DateEntry
+import json
 from funcoes_botoes import FuncoesBotoes
 from planilhas import Planilhas
-import json
-from datetime import datetime
+from typing import Optional, List, Dict, Any, Tuple
+import logging
+from database_connection import DatabaseConnection 
+
+
+# Configuração de logging
+logging.basicConfig(
+    filename="database_operations.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 class DataBaseLogin:
-    """Função CRUD"""
+    """Gerenciamento de autenticação de usuários"""
 
-    def __init__(self, db_name="login.db"):
+    def __init__(self, db_name: str = "login.db"):
         self.db_name = db_name
-        self.conn = sqlite3.connect(db_name)
         self.create_db()
 
-    """Função para criar o banco de dados e a tabela de usuários"""
+    """Cria o banco de dados de usuários se não existir"""
 
-    def create_db(self):
-        """Função para criar o banco de dados e a tabela de usuários"""
-        conn = sqlite3.connect("login.db")
-        cursor = conn.cursor()
+    def create_db(self) -> None:
+        """Cria o banco de dados de usuários se não existir"""
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user TEXT NOT NULL UNIQUE,
+                        password TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """
+                )
+                conn.commit()
+                logger.info("Tabela de usuários criada/verificada com sucesso")
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao criar banco de dados de usuários: {e}")
+            raise
 
-        # Criação da tabela de usuários
-        cursor.execute(
-            """CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user TEXT NOT NULL,
-                    password TEXT NOT NULL)"""
-        )
+    """Cria um novo usuário"""
 
-        conn.commit()
-        conn.close()
-
-    """Função para criar novo usuário"""
-
-    def create_user(self, user, password):
-        """Função para criar novo usuário"""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
-        # Verifica se o usuario já existe
-        cursor.execute("SELECT * FROM users WHERE user = ?", (user,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            conn.close()
+    def create_user(self, user: str, password: str) -> bool:
+        """
+        Cria um novo usuário
+        Returns: True se criado com sucesso, False se já existe
+        """
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO users (user, password) VALUES (?, ?)", (user, password)
+                )
+                conn.commit()
+                logger.info(f"Novo usuário criado: {user}")
+                return True
+        except sqlite3.IntegrityError:
+            logger.warning(f"Tentativa de criar usuário duplicado: {user}")
             return False
-
-        # Se nao existir, cria um novo usuário
-        cursor.execute(
-            "INSERT INTO users (user, password) VALUES (?, ?)", (user, password)
-        )
-        conn.commit()
-        conn.close()
-        return True
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao criar usuário: {e}")
+            raise
 
     """Função para ser um usuário com base no user"""
 
@@ -91,101 +104,232 @@ class DataBaseLogin:
         conn.comit()
         conn.close()
 
-    """Verifica se o nome de usuário e a senha são válidos no banco de dados."""
+    """Valida credenciais do usuário"""
 
-    def validate_user(self, user, password):
-        """Verifica se o nome de usuário e a senha são válidos no banco de dados."""
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT * FROM users WHERE user = ? AND password = ?", (user, password)
-        )
-        result = cursor.fetchone()
-        return result is not None
+    def validate_user(self, user: str, password: str) -> bool:
+        """Valida credenciais do usuário"""
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id FROM users WHERE user = ? AND password = ?",
+                    (user, password),
+                )
+                is_valid = cursor.fetchone() is not None
+                logger.info(
+                    f"Tentativa de login para usuário {user}: {'sucesso' if is_valid else 'falha'}"
+                )
+                return is_valid
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao validar usuário: {e}")
+            return False
 
 
 class DataBaseMarcacao:
-    def __init__(
-        self,
-        master,
-        planilhas: Planilhas,
-        file_path: str,
-        app,
-        db_name="db_marcacao.db",
-    ):
+    """Gerenciamento de marcações de pacientes"""
+
+    def __init__(self, master: tk.Tk, planilhas: Planilhas, file_path: str, app: Any, db_name: str = "db_marcacao.db"):
+        # Configuração do logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        
+        # Verifica se já existe um handler para evitar duplicação de logs
+        if not self.logger.handlers:
+            # Handler para arquivo
+            fh = logging.FileHandler('database_operations.log')
+            fh.setLevel(logging.INFO)
+            
+            # Handler para console
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            
+            # Formato do log
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            fh.setFormatter(formatter)
+            ch.setFormatter(formatter)
+            
+            # Adiciona os handlers ao logger
+            self.logger.addHandler(fh)
+            self.logger.addHandler(ch)
+
         self.db_name = db_name
         self.master = master
         self.create_db()
         self.funcoes_botoes = FuncoesBotoes(self.master, planilhas, file_path, app)
+        
+        # UI Components
+        self.window: Optional[Toplevel] = None
+        self.marcacoes_window: Optional[Toplevel] = None
+        self.results_frame: Optional[Frame] = None
+        self.date_entry: Optional[DateEntry] = None
+        self.search_window: Optional[Toplevel] = None
+        self.search_var: Optional[tk.StringVar] = None
+        self.table_frame: Optional[Frame] = None
+        
+        # Form fields
+        self.name_entry: Optional[tk.Entry] = None
+        self.renach_entry: Optional[tk.Entry] = None
+        self.phone_entry: Optional[tk.Entry] = None
+        self.appointment_entry: Optional[DateEntry] = None
+        self.observation_text: Optional[tk.Text] = None
 
-        # Inicializar os campos de entrada como atributos da classe
-        self.name_entry = None
-        self.renach_entry = None
-        self.phone_entry = None
-        self.appointment_entry = None
-        self.observation_text = None
-        self.window = None
-        self.marcacoes_window = None
-        self.results_frame = None
-        self.date_entry = None
-        self.search_window = None
-        self.search_var = None
-        self.table_frame = None
+    """Cria e atualiza a estrutura do banco de dados"""
 
-    """Cria o banco de dados e atualiza a estrutura se necessário."""
-
-    def create_db(self):
-        """Cria o banco de dados e atualiza a estrutura se necessário."""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
+    def create_db(self) -> None:
+        """Cria e atualiza a estrutura do banco de dados"""
         try:
-            # Primeiro cria a tabela se não existir
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS patients (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    renach TEXT NOT NULL,
-                    phone TEXT,
-                    appointment_date TEXT NOT NULL,
-                    observation TEXT
-                )
-            """
-            )
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
 
-            # Verifica se as colunas novas existem
-            cursor.execute("PRAGMA table_info(patients)")
-            columns = [column[1] for column in cursor.fetchall()]
-
-            # Adiciona a coluna attendance_status se não existir
-            if "attendance_status" not in columns:
+                # Verifica se a tabela existe
                 cursor.execute(
                     """
-                    ALTER TABLE patients 
-                    ADD COLUMN attendance_status TEXT DEFAULT 'pending'
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='marcacoes'
                 """
                 )
 
-            # Adiciona a coluna attendance_history se não existir
-            if "attendance_history" not in columns:
-                cursor.execute(
+                if cursor.fetchone() is None:
+                    # Criação da tabela principal com nomes de colunas corrigidos
+                    cursor.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS marcacoes (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            nome TEXT NOT NULL,
+                            telefone TEXT,
+                            renach TEXT NOT NULL UNIQUE,
+                            data_agendamento TEXT NOT NULL,
+                            observacao TEXT,
+                            status_comparecimento TEXT DEFAULT 'pending',
+                            historico_comparecimento TEXT DEFAULT '[]',
+                            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
                     """
-                    ALTER TABLE patients 
-                    ADD COLUMN attendance_history TEXT DEFAULT '[]'
-                """
-                )
+                    )
 
-            conn.commit()
+                    # Trigger para atualizar atualizado_em
+                    cursor.execute(
+                        """
+                        CREATE TRIGGER IF NOT EXISTS update_marcacoes_timestamp 
+                        AFTER UPDATE ON marcacoes
+                        BEGIN
+                            UPDATE marcacoes SET atualizado_em = CURRENT_TIMESTAMP 
+                            WHERE id = NEW.id;
+                        END;
+                    """
+                    )
+
+                    conn.commit()
+                    logger.info("Tabela de marcações criada com sucesso")
+                else:
+                    # Verificar e atualizar estrutura da tabela existente
+                    cursor.execute("PRAGMA table_info(marcacoes)")
+                    columns = {column[1] for column in cursor.fetchall()}
+
+                    # Mapeamento de colunas antigas para novas
+                    needed_columns = {
+                        "nome": "TEXT NOT NULL",
+                        "telefone": "TEXT",
+                        "renach": "TEXT NOT NULL UNIQUE",
+                        "data_agendamento": "TEXT NOT NULL",
+                        "observacao": "TEXT",
+                        "status_comparecimento": 'TEXT DEFAULT "pending"',
+                        "historico_comparecimento": 'TEXT DEFAULT "[]"',
+                        "criado_em": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                        "atualizado_em": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                    }
+
+                    # Adicionar colunas faltantes
+                    for col_name, col_type in needed_columns.items():
+                        if col_name not in columns:
+                            try:
+                                cursor.execute(
+                                    f"ALTER TABLE marcacoes ADD COLUMN {col_name} {col_type}"
+                                )
+                                logger.info(
+                                    f"Coluna {col_name} adicionada à tabela marcacoes"
+                                )
+                            except sqlite3.Error as e:
+                                logger.error(
+                                    f"Erro ao adicionar coluna {col_name}: {e}"
+                                )
+
+                    conn.commit()
 
         except sqlite3.Error as e:
-            print(f"Erro ao criar/atualizar banco de dados: {e}")
-        finally:
-            conn.close()
+            logger.error(f"Erro ao criar/atualizar banco de dados de marcações: {e}")
+            raise
 
+    """Realiza a migração do banco de dados para a estrutura mais recente"""
+    def migrate_database(self) -> None:
+        """Realiza a migração do banco de dados para a estrutura mais recente"""
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                
+                # Primeiro fazemos backup da tabela atual
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS marcacoes_backup AS 
+                    SELECT * FROM marcacoes
+                """)
+                
+                # Removemos a tabela antiga
+                cursor.execute("DROP TABLE IF EXISTS marcacoes")
+                
+                # Criamos a nova tabela com a estrutura correta
+                cursor.execute("""
+                    CREATE TABLE marcacoes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nome TEXT NOT NULL,
+                        renach TEXT NOT NULL UNIQUE,
+                        telefone TEXT,
+                        data_agendamento TEXT NOT NULL,
+                        observacao TEXT,
+                        status_comparecimento TEXT DEFAULT 'pending',
+                        historico_comparecimento TEXT DEFAULT '[]',
+                        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Tentamos migrar os dados antigos
+                try:
+                    cursor.execute("""
+                        INSERT INTO marcacoes (
+                            nome, renach, telefone, data_agendamento, 
+                            observacao, status_comparecimento, historico_comparecimento
+                        )
+                        SELECT 
+                            nome, renach, telefone, data_agendamento,
+                            observacao, status_comparecimento, historico_comparecimento
+                        FROM marcacoes_backup
+                    """)
+                except sqlite3.Error as e:
+                    logger.error(f"Erro ao migrar dados antigos: {e}")
+                
+                # Criamos o trigger para atualização de timestamp
+                cursor.execute("""
+                    CREATE TRIGGER IF NOT EXISTS update_marcacoes_timestamp 
+                    AFTER UPDATE ON marcacoes
+                    BEGIN
+                        UPDATE marcacoes SET atualizado_em = CURRENT_TIMESTAMP 
+                        WHERE id = NEW.id;
+                    END;
+                """)
+                
+                conn.commit()
+                logger.info("Migração do banco de dados concluída com sucesso")
+                
+        except sqlite3.Error as e:
+            logger.error(f"Erro durante a migração do banco: {e}")
+            raise
+    
     """Formata o número de telefone no padrão (XX) XXXXX-XXXX ou (XX) XXXX-XXXX."""
 
-    def format_phone(self, phone):
-        """Formata o número de telefone no padrão (XX) XXXXX-XXXX ou (XX) XXXX-XXXX."""
+    @staticmethod
+    def format_phone(phone: str) -> str:
+        """Formata número de telefone para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX"""
         phone = "".join(filter(str.isdigit, phone))
         if len(phone) == 11:
             return f"({phone[:2]}) {phone[2:7]}-{phone[7:]}"
@@ -195,92 +339,104 @@ class DataBaseMarcacao:
 
     """Valida os campos obrigatórios do formulário."""
 
-    def validate_fields(self):
-        """Valida os campos obrigatórios do formulário."""
+    def validate_fields(self) -> bool:
+        """Valida os campos obrigatórios do formulário"""
+        if not all([self.name_entry, self.renach_entry]):
+            logger.error("Campos de formulário não inicializados")
+            messagebox.showerror("Erro", "Erro de inicialização do formulário")
+            return False
+
         name = self.name_entry.get().strip()
         renach = self.renach_entry.get().strip()
 
         if not all([name, renach]):
-            messagebox.showerror(
-                "Erro", "Por favor, preencha todos os campos obrigatórios!"
-            )
+            logger.warning("Tentativa de submissão com campos obrigatórios vazios")
+            messagebox.showerror("Erro", "Nome e RENACH são obrigatórios!")
             return False
 
         if not renach.isdigit():
-            messagebox.showerror("Erro", "O RENACH deve conter apenas números!")
+            logger.warning(f"RENACH inválido fornecido: {renach}")
+            messagebox.showerror("Erro", "RENACH deve conter apenas números!")
             return False
 
         return True
 
     """Limpa todos os campos do formulário."""
 
-    def clear_fields(self):
-        """Limpa todos os campos do formulário."""
-        self.name_entry.delete(0, tk.END)
-        self.renach_entry.delete(0, tk.END)
-        self.phone_entry.delete(0, tk.END)
-        self.observation_text.delete("1.0", tk.END)
+    def clear_fields(self) -> None:
+        """Limpa todos os campos do formulário"""
+        if all(
+            [
+                self.name_entry,
+                self.renach_entry,
+                self.phone_entry,
+                self.observation_text,
+            ]
+        ):
+            self.name_entry.delete(0, tk.END)
+            self.renach_entry.delete(0, tk.END)
+            self.phone_entry.delete(0, tk.END)
+            self.observation_text.delete("1.0", tk.END)
+            logger.info("Campos do formulário limpos")
+        else:
+            logger.warning("Tentativa de limpar campos não inicializados")
 
     """Processa o envio do formulário de paciente."""
 
-    def submit_patient(self):
-        """Processa o envio do formulário de paciente."""
+    def submit_patient(self) -> None:
+        """Processa o envio do formulário de paciente"""
         if not self.validate_fields():
             return
 
-        name = self.name_entry.get().strip().upper()
-        renach = self.renach_entry.get().strip()
-        phone = self.format_phone(self.phone_entry.get().strip())
-        appointment_date = self.appointment_entry.get_date().strftime("%Y-%m-%d")
-        observation = self.observation_text.get("1.0", tk.END).strip()
-
-        # Verifica se o RENACH já existe
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute(
-                "SELECT id, appointment_date FROM patients WHERE renach = ?", (renach,)
-            )
-            existing_patient = cursor.fetchone()
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
 
-            if existing_patient:
-                # Pergunta se deseja atualizar a data do paciente existente
-                if messagebox.askyesno(
-                    "Paciente Existente",
-                    "Este RENACH já está cadastrado. Deseja atualizar a data da consulta?",
-                ):
+                nome = self.name_entry.get().strip().upper()
+                renach = self.renach_entry.get().strip()
+                telefone = self.format_phone(self.phone_entry.get().strip())
+                data_agendamento = self.appointment_entry.get_date().strftime(
+                    "%Y-%m-%d"
+                )
+                observacao = self.observation_text.get("1.0", tk.END).strip()
+
+                # Verifica existência do RENACH
+                cursor.execute("SELECT id FROM marcacoes WHERE renach = ?", (renach,))
+
+                if cursor.fetchone():
+                    if messagebox.askyesno(
+                        "Paciente Existente",
+                        "Este RENACH já está cadastrado. Deseja atualizar a data da consulta?",
+                    ):
+                        cursor.execute(
+                            """
+                            UPDATE marcacoes 
+                            SET data_agendamento = ?, 
+                                observacao = ?
+                            WHERE renach = ?
+                        """,
+                            (data_agendamento, observacao, renach),
+                        )
+                        logger.info(f"Marcação atualizada para RENACH: {renach}")
+                        messagebox.showinfo("Sucesso", "Data da consulta atualizada!")
+                else:
                     cursor.execute(
                         """
-                        UPDATE patients 
-                        SET appointment_date = ?, observation = ?
-                        WHERE renach = ?
+                        INSERT INTO marcacoes (
+                            nome, renach, telefone, data_agendamento, observacao
+                        ) VALUES (?, ?, ?, ?, ?)
                     """,
-                        (appointment_date, observation, renach),
+                        (nome, renach, telefone, data_agendamento, observacao),
                     )
-                    messagebox.showinfo(
-                        "Sucesso", "Data da consulta atualizada com sucesso!"
-                    )
-                else:
-                    return
-            else:
-                # Adiciona novo paciente
-                cursor.execute(
-                    """
-                    INSERT INTO patients (name, renach, phone, appointment_date, observation)
-                    VALUES (?, ?, ?, ?, ?)
-                """,
-                    (name, renach, phone, appointment_date, observation),
-                )
-                messagebox.showinfo("Sucesso", "Paciente cadastrado com sucesso!")
+                    logger.info(f"Nova marcação criada para RENACH: {renach}")
+                    messagebox.showinfo("Sucesso", "Paciente cadastrado com sucesso!")
 
-            conn.commit()
-            self.clear_fields()
+                conn.commit()
+                self.clear_fields()
 
         except sqlite3.Error as e:
-            messagebox.showerror("Erro", f"Erro ao processar operação: {str(e)}")
-        finally:
-            conn.close()
+            logger.error(f"Erro ao submeter paciente: {e}")
+            messagebox.showerror("Erro", "Erro ao processar operação. Verifique o log.")
 
     """Cria a interface para adicionar/atualizar paciente."""
 
@@ -513,37 +669,34 @@ class DataBaseMarcacao:
 
     """Obtém os pacientes por nome ou renach, independentemente da data."""
 
-    def get_patients_by_name_or_renach(self, search_term, selected_date=None):
-        """Obtém os pacientes por nome ou renach, filtrando pela data selecionada, se fornecida."""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        search_term = search_term.lower() if search_term else ""
-
+    def get_patients_by_name_or_renach(self, search_term: str, selected_date: Optional[str] = None) -> List[Tuple]:
+        """Busca pacientes por nome ou RENACH"""
         try:
-            query = """
-                SELECT name, phone, renach, 
-                    COALESCE(attendance_status, 'pending') as attendance_status, 
-                    observation, appointment_date
-                FROM patients 
-                WHERE (LOWER(name) LIKE ? OR LOWER(renach) LIKE ?)
-            """
-            params = [f"%{search_term}%", f"%{search_term}%"]
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                search_term = search_term.lower() if search_term else ""
 
-            if selected_date and not search_term:
-                query += " AND appointment_date = ?"
-                params.append(selected_date)
+                query = """
+                    SELECT nome, telefone, renach, 
+                        COALESCE(status_comparecimento, 'pending') as status_comparecimento, 
+                        observacao, data_agendamento
+                    FROM marcacoes 
+                    WHERE (LOWER(nome) LIKE ? OR LOWER(renach) LIKE ?)
+                """
+                params = [f"%{search_term}%", f"%{search_term}%"]
 
-            query += " ORDER BY name"
+                if selected_date and not search_term:
+                    query += " AND data_agendamento = ?"
+                    params.append(selected_date)
 
-            cursor.execute(query, params)
-
-            patients = cursor.fetchall()
-            return patients
+                query += " ORDER BY nome"
+                
+                cursor.execute(query, params)
+                return cursor.fetchall()
+                
         except sqlite3.Error as e:
-            messagebox.showerror("Erro", f"Erro ao buscar pacientes: {str(e)}")
+            self.logger.error(f"Erro ao buscar pacientes: {e}")
             return []
-        finally:
-            conn.close()
 
     """Atualiza a lista de pacientes com status de comparecimento."""
 
@@ -1053,58 +1206,54 @@ class DataBaseMarcacao:
 
     """Atualiza o status de comparecimento do paciente."""
 
-    def update_attendance_status(self, renach: str, status: str):
-        """Atualiza o status de comparecimento do paciente."""
+    def update_attendance_status(self, renach: str, status: str) -> None:
+        """Atualiza o status de comparecimento do paciente"""
         try:
-            conn = sqlite3.connect(self.db_name)
-            cursor = conn.cursor()
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
 
-            # Recupera informações atuais do paciente
-            cursor.execute(
-                """
-                SELECT attendance_history, appointment_date
-                FROM patients 
-                WHERE renach = ?
-            """,
-                (renach,),
-            )
+                cursor.execute(
+                    """
+                    SELECT historico_comparecimento, data_agendamento 
+                    FROM marcacoes 
+                    WHERE renach = ?
+                    """,
+                    (renach,)
+                )
+                result = cursor.fetchone()
+                
+                if not result:
+                    logger.warning(f"RENACH não encontrado: {renach}")
+                    return
 
-            result = cursor.fetchone()
-            if not result:
-                return
+                historico_atual, data_agendamento = result
 
-            current_history, appointment_date = result
+                try:
+                    historico = json.loads(historico_atual) if historico_atual else []
+                except json.JSONDecodeError:
+                    logger.warning(f"Histórico inválido para RENACH {renach}, iniciando novo")
+                    historico = []
 
-            # Carrega o histórico existente ou cria novo
-            try:
-                history = json.loads(current_history)
-            except:
-                history = []
-
-            # Adiciona nova entrada ao histórico
-            history.append(
-                {
-                    "date": appointment_date,
+                historico.append({
+                    "data": data_agendamento,
                     "status": status,
-                    "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                }
-            )
+                    "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
 
-            # Atualiza o banco de dados
-            cursor.execute(
-                """
-                UPDATE patients 
-                SET attendance_status = ?, 
-                    attendance_history = ?
-                WHERE renach = ?
-            """,
-                (status, json.dumps(history), renach),
-            )
+                cursor.execute(
+                    """
+                    UPDATE marcacoes 
+                    SET status_comparecimento = ?, 
+                        historico_comparecimento = ?
+                    WHERE renach = ?
+                    """, 
+                    (status, json.dumps(historico), renach)
+                )
 
-            conn.commit()
-            self.update_patient_list()
+                conn.commit()
+                logger.info(f"Status atualizado para RENACH {renach}: {status}")
+                self.update_patient_list()
 
         except sqlite3.Error as e:
-            messagebox.showerror("Erro", f"Erro ao atualizar status: {str(e)}")
-        finally:
-            conn.close()
+            logger.error(f"Erro ao atualizar status: {e}")
+            messagebox.showerror("Erro", "Erro ao atualizar status. Verifique o log.")

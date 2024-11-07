@@ -1,4 +1,5 @@
 import logging
+import json
 import re
 import openpyxl
 import sqlite3
@@ -40,6 +41,8 @@ from openpyxl.styles import Font
 import subprocess
 from datetime import datetime
 from tkcalendar import DateEntry
+import logging
+from database_connection import DatabaseConnection
 
 
 # Configurando logs
@@ -68,10 +71,7 @@ def role_e_click(driver, xpath):
 class FuncoesBotoes:
     """Classe que encapsula as funções relacionadas aos botões da interface."""
 
-    def __init__(
-        self, master: tk, planilhas: Planilhas, file_path: str, app, current_user=None
-    ):
-        """Inicializa a classe FuncoesBotoes."""
+    def __init__(self, master, planilhas, file_path, app, current_user=None):
         self.master = master
         self.planilhas = planilhas
         self.wb = self.planilhas.wb if self.planilhas else None
@@ -308,64 +308,103 @@ class FuncoesBotoes:
     """Adiciona ou atualiza um paciente no banco de dados de marcação."""
 
     def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
-        """Adiciona ou atualiza um paciente no banco de dados de marcação."""
+        """
+        Adiciona ou atualiza paciente no banco de dados de marcação com status 'Compareceu'.
+        """
         try:
-            # Conecta ao banco de dados de marcação
-            conn = sqlite3.connect("db_marcacao.db")
-            cursor = conn.cursor()
-
-            # Verifica se o paciente já existe
-            cursor.execute(
-                "SELECT appointment_date FROM patients WHERE renach = ?", (renach,)
-            )
-            existing_patient = cursor.fetchone()
-
-            # Data atual para o registro
-            data_atual = datetime.now().strftime("%Y-%m-%d")
-
-            if isinstance(pagamentos, list):
-                pagamento_info = " | ".join(pagamentos)
-            else:
-                pagamento_info = str(pagamentos)
-
-            observation = f"Tipo: {escolha}\nPagamento: {pagamento_info}\nRegistrado em: {data_atual}"
-
-            if existing_patient:
-                # Atualiza a data e observações do paciente existente
-                cursor.execute(
-                    """
-                    UPDATE patients 
-                    SET appointment_date = ?,
-                        observation = ?
+            with DatabaseConnection("db_marcacao.db") as conn:
+                cursor = conn.cursor()
+                
+                data_atual = datetime.now().strftime("%Y-%m-%d")
+                STATUS_COMPARECEU = "attended"  # Usando o mesmo status que é verificado na listagem
+                
+                # Prepara informações de pagamento
+                pagamento_info = " | ".join(pagamentos) if isinstance(pagamentos, list) else str(pagamentos)
+                observacao = f"Tipo: {escolha}\nPagamento: {pagamento_info}\nRegistrado em: {data_atual}"
+                
+                # Verifica se o paciente existe
+                cursor.execute("""
+                    SELECT data_agendamento, status_comparecimento 
+                    FROM marcacoes 
                     WHERE renach = ?
-                """,
-                    (data_atual, observation, renach),
-                )
-
-            else:
-                # Insere novo paciente
-                cursor.execute(
-                    """
-                    INSERT INTO patients (name, renach, phone, appointment_date, observation)
-                    VALUES (?, ?, ?, ?, ?)
-                """,
-                    (nome, renach, "", data_atual, observation),
-                )
-
-            conn.commit()
-            return True
+                    ORDER BY data_agendamento DESC 
+                    LIMIT 1
+                """, (renach,))
+                
+                resultado = cursor.fetchone()
+                
+                if resultado:
+                    # Se o paciente existe, atualiza os dados
+                    data_anterior = resultado[0]
+                    status_anterior = resultado[1]
+                    
+                    cursor.execute("""
+                        UPDATE marcacoes 
+                        SET nome = ?,
+                            data_agendamento = ?,
+                            status_comparecimento = ?,
+                            observacao = ?
+                        WHERE renach = ?
+                    """, (nome, data_atual, STATUS_COMPARECEU, observacao, renach))
+                    
+                    # Atualiza histórico
+                    cursor.execute("""
+                        SELECT historico_comparecimento 
+                        FROM marcacoes 
+                        WHERE renach = ?
+                    """, (renach,))
+                    
+                    historico_atual = cursor.fetchone()[0]
+                    try:
+                        historico = json.loads(historico_atual) if historico_atual else []
+                    except:
+                        historico = []
+                        
+                    historico.append({
+                        "data_anterior": data_anterior,
+                        "data_nova": data_atual,
+                        "status_anterior": status_anterior,
+                        "status_novo": STATUS_COMPARECEU,
+                        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                    
+                    cursor.execute("""
+                        UPDATE marcacoes 
+                        SET historico_comparecimento = ?
+                        WHERE renach = ?
+                    """, (json.dumps(historico), renach))
+                    
+                    self.logger.info(f"Atualizado status do paciente {renach} para Compareceu")
+                    messagebox.showinfo("Sucesso", "Paciente atualizado com status Compareceu!")
+                    
+                else:
+                    # Se o paciente não existe, insere novo registro
+                    cursor.execute("""
+                        INSERT INTO marcacoes (
+                            nome,
+                            renach,
+                            telefone,
+                            data_agendamento,
+                            status_comparecimento,
+                            observacao,
+                            historico_comparecimento
+                        ) VALUES (?, ?, ?, ?, ?, ?, '[]')
+                    """, (nome, renach, "", data_atual, STATUS_COMPARECEU, observacao))
+                    
+                    self.logger.info(f"Novo paciente {renach} adicionado com status Compareceu")
+                    messagebox.showinfo("Sucesso", "Novo paciente adicionado com status Compareceu!")
+                
+                conn.commit()
+                return True
 
         except sqlite3.Error as e:
-            self.logger.error(f"Erro SQLite ao adicionar/atualizar paciente: {str(e)}")
-            raise Exception(f"Erro ao salvar no banco de dados: {str(e)}")
-
+            self.logger.error(f"Erro no banco de dados: {e}")
+            messagebox.showerror("Erro", f"Erro ao processar operação no banco de dados: {e}")
+            return False
         except Exception as e:
-            self.logger.error(f"Erro ao adicionar/atualizar paciente: {str(e)}")
-            raise
-
-        finally:
-            if "conn" in locals():
-                conn.close()
+            self.logger.error(f"Erro inesperado: {e}")
+            messagebox.showerror("Erro", f"Erro inesperado: {e}")
+            return False
 
     """Conta o número de pessoas e a quantidade de pagamentos."""
 
