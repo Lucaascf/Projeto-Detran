@@ -1,4 +1,5 @@
 import logging
+import openpyxl
 import sqlite3
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook, Workbook
@@ -564,84 +565,140 @@ class FuncoesBotoes:
             raise Exception(f"Erro ao salvar na planilha: {str(e)}")
 
     def excluir(self):
-        """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário e reorganiza as linhas."""
-        wb = self.get_active_workbook()
-        ws = wb.active
-        pacientes_medicos = {}
-        pacientes_psicologos = {}
+        """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
+        try:
+            wb = self.get_active_workbook()
+            ws = wb.active
 
-        # Armazenar pacientes de médicos
-        for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-            if row[1].value and row[2].value:
+            def realizar_exclusao():
                 try:
-                    renach_medico = int(row[2].value)
-                    pacientes_medicos.setdefault(renach_medico, []).append(row[0].row)
+                    renach = int(renach_entry.get().strip())
+
+                    def limpar_linha(row_num, start_col, end_col):
+                        """Limpa os valores de uma linha específica"""
+                        for col in range(start_col, end_col + 1):
+                            cell = ws.cell(row=row_num, column=col)
+                            # Verifica se não é uma célula mesclada
+                            if not isinstance(cell, openpyxl.cell.cell.MergedCell):
+                                cell.value = None
+
+                    def mover_conteudo(start_row, start_col, end_col):
+                        """Move o conteúdo das células para cima"""
+                        max_row = ws.max_row
+                        # Move de baixo para cima para evitar sobrescrever dados
+                        for row in range(start_row, max_row):
+                            for col in range(start_col, end_col + 1):
+                                current_cell = ws.cell(row=row, column=col)
+                                next_cell = ws.cell(row=row + 1, column=col)
+                                
+                                # Só copia se a célula atual não for mesclada
+                                if not isinstance(current_cell, openpyxl.cell.cell.MergedCell):
+                                    if isinstance(next_cell, openpyxl.cell.cell.MergedCell):
+                                        current_cell.value = None
+                                    else:
+                                        current_cell.value = next_cell.value
+
+                        # Limpa a última linha
+                        limpar_linha(max_row, start_col, end_col)
+
+                    def encontrar_paciente(col_renach):
+                        """Encontra a linha do paciente pelo RENACH"""
+                        for row in range(3, ws.max_row + 1):
+                            cell = ws.cell(row=row, column=col_renach)
+                            if not isinstance(cell, openpyxl.cell.cell.MergedCell):
+                                if cell.value and str(cell.value).strip() == str(renach):
+                                    return row
+                        return None
+
+                    # Procura nas seções de médico e psicólogo
+                    linha_medico = encontrar_paciente(3)  # Coluna C
+                    linha_psi = encontrar_paciente(9)     # Coluna I
+
+                    alteracoes = False
+
+                    if linha_medico:
+                        mover_conteudo(linha_medico, 2, 6)  # Colunas B-F
+                        alteracoes = True
+                        messagebox.showinfo("Sucesso", "Removido da seção de médicos")
+
+                    if linha_psi:
+                        mover_conteudo(linha_psi, 8, 12)    # Colunas H-L
+                        alteracoes = True
+                        messagebox.showinfo("Sucesso", "Removido da seção de psicólogos")
+
+                    if alteracoes:
+                        wb.save(self.file_path)
+                        excluir_window.destroy()
+                    else:
+                        messagebox.showwarning("Aviso", "RENACH não encontrado")
+
                 except ValueError:
-                    print(f"RENACH inválido na linha {row[0].row}: {row[2].value}")
+                    messagebox.showerror("Erro", "Por favor, insira um RENACH válido (apenas números)")
+                except Exception as e:
+                    messagebox.showerror("Erro", f"Erro ao excluir paciente: {str(e)}")
 
-        # Armazenar pacientes psicólogos
-        for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-            if row[7].value and row[8].value:
-                try:
-                    renach_psicologo = int(row[8].value)
-                    pacientes_psicologos.setdefault(renach_psicologo, []).append(
-                        row[0].row
-                    )
-                except ValueError:
-                    print(f"RENACH inválido na linha {row[0].row}: {row[8].value}")
+            # Interface da janela de exclusão
+            excluir_window = tk.Toplevel(self.master)
+            excluir_window.title("Excluir Paciente")
+            excluir_window.geometry("400x150")
+            excluir_window.resizable(False, False)
+            excluir_window.configure(bg=self.master.cget("bg"))
+            excluir_window.transient(self.master)
+            excluir_window.grab_set()
 
-        # Janela de exclusão
-        excluir_window = tk.Toplevel(self.master)
-        excluir_window.title("Excluir Paciente")
-        excluir_window.geometry("400x150")
-        excluir_window.configure(bg=self.master.cget("bg"))
+            # Frame principal
+            main_frame = tk.Frame(excluir_window, bg=self.master.cget("bg"))
+            main_frame.pack(expand=True, fill='both', padx=20, pady=20)
 
-        tk.Label(
-            excluir_window,
-            text="Informe o RENACH:",
-            bg=self.master.cget("bg"),
-            fg="#ECF0F1",
-            font=("Arial", 14, "bold"),
-        ).pack(pady=10)
-        renach_entry = tk.Entry(excluir_window)
-        renach_entry.pack(pady=5)
+            # Label
+            tk.Label(
+                main_frame,
+                text="Informe o RENACH:",
+                bg=self.master.cget("bg"),
+                fg="#ECF0F1",
+                font=("Arial", 14, "bold")
+            ).pack(pady=10)
 
-        def excluir_paciente():
-            """Função para excluir o paciente com o RENACH fornecido"""
-            try:
-                renach = int(renach_entry.get())
+            # Entry frame
+            entry_frame = tk.Frame(main_frame, bg=self.master.cget("bg"))
+            entry_frame.pack(fill='x', pady=5)
 
-                def reorganizar_linhas(linha_excluida):
-                    """Função auxiliar para mover os dados de cada linha uma posição para cima"""
-                    for row in range(linha_excluida, ws.max_row):
-                        for col in range(1, ws.max_column + 1):
-                            ws.cell(row=row, column=col).value = ws.cell(
-                                row=row + 1, column=col
-                            ).value
-                    # Limpar a última linha
-                    for col in range(1, ws.max_column + 1):
-                        ws.cell(row=ws.max_row, column=col).value = None
+            renach_entry = tk.Entry(entry_frame, justify='center')
+            renach_entry.pack(pady=5)
+            renach_entry.focus()
+            renach_entry.bind('<Return>', lambda e: realizar_exclusao())
 
-                # Excluir paciente de médico
-                if renach in pacientes_medicos:
-                    for linha in pacientes_medicos[renach]:
-                        reorganizar_linhas(linha)
+            # Botões
+            button_frame = tk.Frame(main_frame, bg=self.master.cget("bg"))
+            button_frame.pack(pady=10)
 
-                # Excluir paciente de psicólogo
-                if renach in pacientes_psicologos:
-                    for linha in pacientes_psicologos[renach]:
-                        reorganizar_linhas(linha)
+            tk.Button(
+                button_frame,
+                text="Excluir",
+                command=realizar_exclusao,
+                bg="#ff4444",
+                fg="white",
+                font=("Arial", 10, "bold"),
+                width=15
+            ).pack(side=tk.LEFT, padx=5)
 
-                wb.save(self.file_path)
-                print("Paciente foi excluído com sucesso!")
-            except ValueError:
-                print("RENACH inválido. Por favor, insira um número válido.")
+            tk.Button(
+                button_frame,
+                text="Cancelar",
+                command=excluir_window.destroy,
+                width=15
+            ).pack(side=tk.LEFT, padx=5)
 
-        tk.Button(excluir_window, text="Excluir", command=excluir_paciente).pack(
-            pady=10
-        )
+            self.center(excluir_window)
 
-        self.center(excluir_window)
+            def on_closing():
+                wb.close()
+                excluir_window.destroy()
+
+            excluir_window.protocol("WM_DELETE_WINDOW", on_closing)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao iniciar exclusão: {str(e)}")
 
     def exibir_informacao(self):
         """Exibe informações dos pacientes em uma interface organizada com opções de filtragem."""
