@@ -64,17 +64,8 @@ def role_e_click(driver, xpath):
 class FuncoesBotoes:
     """Classe que encapsula as funções relacionadas aos botões da interface."""
 
-    def __init__(
-        self, master: tk, planilhas: Planilhas, file_path: str, app, current_user=None
-    ):
-        """Inicializa a classe FuncoesBotoes.
-
-        Args:
-            master: Janela pai do Tkinter.
-            planilhas: Instância da classe Planilhas.
-            file_path: Caminho do arquivo de planilha.
-            app: Instância da aplicação principal.
-        """
+    def __init__(self, master: tk, planilhas: Planilhas, file_path: str, app, current_user=None):
+        """Inicializa a classe FuncoesBotoes."""
         self.master = master
         self.planilhas = planilhas
         self.wb = self.planilhas.wb if self.planilhas else None
@@ -83,100 +74,107 @@ class FuncoesBotoes:
         self.current_user = current_user
         self.login_frame = None
         self.criar_conta_frame = None
-        self.login_frame = None
-
         self.logger = logging.getLogger(__name__)
 
-        # Variáveis para opções de pagamento
+        # Variáveis para pagamento
+        self._init_payment_vars()
+
+    def _init_payment_vars(self):
+        """Inicializa variáveis relacionadas a pagamento."""
         self.forma_pagamento_var = tk.StringVar(value="")
         self.radio_var = tk.StringVar(value="")
-
-        # Variáveis de controle para checkbuttons
-        self.d_var = tk.IntVar()
-        self.c_var = tk.IntVar()
-        self.e_var = tk.IntVar()
-        self.p_var = tk.IntVar()
-
-        # Entradas para os campos de pagamento
-        self.entry_d = tk.Entry(master)
-        self.entry_c = tk.Entry(master)
-        self.entry_e = tk.Entry(master)
-        self.entry_p = tk.Entry(master)
-
-        # Entradas para os valores associados
-        self.entry_valor_d = tk.Entry(master)  # Entrada para valor de D
-        self.entry_valor_c = tk.Entry(master)  # Entrada para valor de C
-        self.entry_valor_e = tk.Entry(master)  # Entrada para valor de E
-        self.entry_valor_p = tk.Entry(master)  # Entrada para valor de P
+        self.payment_vars = {
+            'D': tk.IntVar(),
+            'C': tk.IntVar(),
+            'E': tk.IntVar(),
+            'P': tk.IntVar()
+        }
+        self.valor_entries = {}
 
     def set_current_user(self, user):
-        """Define o usuário atual.
-
-        Args:
-            user: O usuário a ser atribuído como o atual.
-        """
+        """Define o usuário atual."""
         self.current_user = user
 
     def center(self, window):
-        """Centraliza a janela na tela.
-
-        Args:
-            window: A instância da janela Tkinter que deve ser centralizada.
-        """
-        # Atualiza o tamanho solicitado pela janela
+        """Centraliza a janela na tela."""
         window.update_idletasks()
-
-        # Obtém as dimensões atuais da janela
         width = window.winfo_width()
         height = window.winfo_height()
-
-        # Obtém as dimensões da tela
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-
-        # Calcula as coordenadas x e y para centralizar a janela
-        x = (screen_width // 2) - (width // 2)
-        y = (screen_height // 2) - (height // 2)
-
-        # Aplica a nova geometria à janela
+        x = (window.winfo_screenwidth() // 2) - (width // 2)
+        y = (window.winfo_screenheight() // 2) - (height // 2)
         window.geometry(f"{width}x{height}+{x}+{y}")
-
-        # Mostra a janela (se estiver oculta)
         window.deiconify()
 
     def get_active_workbook(self):
-        """Obtém o workbook ativo atualizado"""
+        """Obtém o workbook ativo atualizado."""
         if self.planilhas:
-            self.planilhas.reload_workbook()  # Recarrega o workbook
-            self.wb = self.planilhas.wb  # Atualiza a referência local
+            self.planilhas.reload_workbook()
+            self.wb = self.planilhas.wb
         return self.wb
 
-    def limpar_campos(self):
-        """Limpa todos os campos do formulário após salvar"""
-        self.nome_entry.delete(0, tk.END)
-        self.renach_entry.delete(0, tk.END)
-        self.radio_var.set("")
+    def _create_payment_frame(self, parent, cor_fundo, cor_texto, cor_selecionado):
+        """Cria o frame de pagamento com todas as opções."""
+        frame_pagamento = tk.LabelFrame(
+            parent,
+            text="Formas de Pagamento",
+            bg=cor_fundo,
+            fg=cor_texto,
+            font=("Arial", 12, "bold")
+        )
+        frame_pagamento.pack(padx=20, pady=10, fill="x")
 
-        # Limpa os checkbuttons
-        self.d_var.set(0)
-        self.c_var.set(0)
-        self.e_var.set(0)
-        self.p_var.set(0)
+        def on_payment_change():
+            selected_count = sum(var.get() for var in self.payment_vars.values())
+            for forma, entry in self.valor_entries.items():
+                if selected_count > 1:
+                    entry.config(state="normal")
+                    if not entry.get():
+                        entry.config(bg="#FFE5E5")
+                else:
+                    entry.delete(0, tk.END)
+                    entry.config(state="disabled", bg="#F0F0F0")
 
-        # Limpa e desabilita os campos de valor
-        for entry in self.valor_entries.values():
-            entry.delete(0, tk.END)
-            entry.config(state="disabled", bg="#F0F0F0")
+        formas_pagamento = {
+            'D': 'Débito',
+            'C': 'Crédito',
+            'E': 'Espécie',
+            'P': 'PIX'
+        }
+
+        for codigo, nome in formas_pagamento.items():
+            frame = tk.Frame(frame_pagamento, bg=cor_fundo)
+            frame.pack(fill="x", padx=10, pady=2)
+
+            cb = tk.Checkbutton(
+                frame,
+                text=nome,
+                variable=self.payment_vars[codigo],
+                bg=cor_fundo,
+                fg=cor_texto,
+                selectcolor=cor_selecionado,
+                activebackground=cor_fundo,
+                activeforeground=cor_texto,
+                highlightthickness=0,
+                command=on_payment_change
+            )
+            cb.pack(side=tk.LEFT, padx=(0, 10))
+
+            valor_entry = tk.Entry(frame, width=15, state="disabled")
+            valor_entry.pack(side=tk.LEFT)
+            self.valor_entries[codigo] = valor_entry
+
+            tk.Label(frame, text="R$", bg=cor_fundo, fg=cor_texto).pack(side=tk.LEFT, padx=(5, 0))
+
+        return frame_pagamento
 
     def adicionar_informacao(self):
         """Cria uma nova janela para adicionar informações de pacientes."""
         self.adicionar_window = tk.Toplevel(self.master)
         self.adicionar_window.title("Adicionar Paciente")
         self.adicionar_window.geometry("500x450")
-        self.adicionar_window.minsize(width=500, height=450)
-        self.adicionar_window.maxsize(width=500, height=450)
+        self.adicionar_window.minsize(500, 450)
+        self.adicionar_window.maxsize(500, 450)
 
-        # Configuração das cores
         cor_fundo = self.master.cget("bg")
         cor_texto = "#ECF0F1"
         cor_selecionado = "#2C3E50"
@@ -184,20 +182,70 @@ class FuncoesBotoes:
         self.adicionar_window.configure(bg=cor_fundo)
         self.center(self.adicionar_window)
 
+        # Configuração da interface
+        self._setup_add_interface(cor_fundo, cor_texto, cor_selecionado)
+
+    def _setup_add_interface(self, cor_fundo, cor_texto, cor_selecionado):
+        """Configura a interface de adição de paciente."""
         # Título
         tk.Label(
             self.adicionar_window,
             text="Preencha as informações:",
             bg=cor_fundo,
             fg=cor_texto,
-            font=("Arial", 16, "bold"),
+            font=("Arial", 16, "bold")
         ).pack(pady=(15, 5))
 
-        # Frame para os RadioButtons
+        # Frame para RadioButtons
+        self._create_radio_frame(cor_fundo, cor_texto, cor_selecionado)
+
+        # Label para mostrar valor da consulta
+        self.valor_consulta_label = tk.Label(
+            self.adicionar_window,
+            text="Valor da consulta: R$ 0,00",
+            bg=cor_fundo,
+            fg=cor_texto,
+            font=("Arial", 10, "bold")
+        )
+        self.valor_consulta_label.pack(pady=5)
+
+        # Função para atualizar o valor da consulta
+        def atualizar_valor_consulta(*args):
+            valores = {
+                "medico": "148,65",
+                "psicologo": "192,61",
+                "ambos": "341,26"
+            }
+            valor = valores.get(self.radio_var.get(), "0,00")
+            self.valor_consulta_label.config(text=f"Valor da consulta: R$ {valor}")
+
+        # Associar a função ao radio_var
+        self.radio_var.trace("w", atualizar_valor_consulta)
+
+        # Entradas para nome e Renach (removido duplicatas)
+        self.criar_entry("Nome:", "nome_entry", self.adicionar_window)
+        self.criar_entry("Renach:", "renach_entry", self.adicionar_window)
+
+        # Frame de pagamento
+        self._create_payment_frame(self.adicionar_window, cor_fundo, cor_texto, cor_selecionado)
+
+        # Botões
+        self._create_button_frame(cor_fundo)
+
+        # Texto de ajuda
+        tk.Label(
+            self.adicionar_window,
+            text="Obs.: Para múltiplas formas de pagamento, informe o valor de cada uma.",
+            bg=cor_fundo,
+            fg=cor_texto,
+            font=("Arial", 9, "italic")
+        ).pack(pady=(0, 10))
+
+    def _create_radio_frame(self, cor_fundo, cor_texto, cor_selecionado):
+        """Cria o frame com os radio buttons."""
         frame_radios = tk.Frame(self.adicionar_window, bg=cor_fundo)
         frame_radios.pack(pady=5)
 
-        # RadioButtons para seleção de tipo
         tipos = [("Médico", "medico"), ("Psicólogo", "psicologo"), ("Ambos", "ambos")]
         for tipo, valor in tipos:
             tk.Radiobutton(
@@ -211,80 +259,11 @@ class FuncoesBotoes:
                 activebackground=cor_fundo,
                 activeforeground=cor_texto,
                 highlightthickness=0,
-                font=("Arial", 12),
+                font=("Arial", 12)
             ).pack(side=tk.LEFT, padx=2)
 
-        # Frame para entrada de nome e Renach
-        self.criar_entry("Nome:", "nome_entry", self.adicionar_window)
-        self.criar_entry("Renach:", "renach_entry", self.adicionar_window)
-
-        # Frame para formas de pagamento
-        frame_pagamento = tk.LabelFrame(
-            self.adicionar_window,
-            text="Formas de Pagamento",
-            bg=cor_fundo,
-            fg=cor_texto,
-            font=("Arial", 12, "bold"),
-        )
-        frame_pagamento.pack(padx=20, pady=10, fill="x")
-
-        # Dicionário para armazenar as entries de valores
-        self.valor_entries = {}
-
-        # Lista de formas de pagamento
-        formas_pagamento = [
-            ("D", "Débito", self.d_var),
-            ("C", "Crédito", self.c_var),
-            ("E", "Espécie", self.e_var),
-            ("P", "PIX", self.p_var),
-        ]
-
-        # Função para atualizar campos de valor
-        def on_payment_change():
-            selected_count = sum([var.get() for _, _, var in formas_pagamento])
-            for forma, _, _ in formas_pagamento:
-                entry = self.valor_entries[forma]
-                if selected_count > 1:
-                    entry.config(state="normal")
-                    if not entry.get():
-                        entry.config(
-                            bg="#FFE5E5"
-                        )  # Vermelho claro para indicar campo obrigatório
-                else:
-                    entry.delete(0, tk.END)
-                    entry.config(state="disabled", bg="#F0F0F0")
-
-        # Criar checkbuttons e entries
-        for i, (codigo, nome, var) in enumerate(formas_pagamento):
-            frame = tk.Frame(frame_pagamento, bg=cor_fundo)
-            frame.pack(fill="x", padx=10, pady=2)
-
-            # Checkbutton
-            cb = tk.Checkbutton(
-                frame,
-                text=nome,
-                variable=var,
-                bg=cor_fundo,
-                fg=cor_texto,
-                selectcolor=cor_selecionado,
-                activebackground=cor_fundo,
-                activeforeground=cor_texto,
-                highlightthickness=0,
-                command=on_payment_change,
-            )
-            cb.pack(side=tk.LEFT, padx=(0, 10))
-
-            # Entry para valor
-            valor_entry = tk.Entry(frame, width=15, state="disabled")
-            valor_entry.pack(side=tk.LEFT)
-            self.valor_entries[codigo] = valor_entry
-
-            # Label para valor
-            tk.Label(frame, text="R$", bg=cor_fundo, fg=cor_texto).pack(
-                side=tk.LEFT, padx=(5, 0)
-            )
-
-        # Frame para botões
+    def _create_button_frame(self, cor_fundo):
+        """Cria o frame com os botões."""
         frame_botoes = tk.Frame(self.adicionar_window, bg=cor_fundo)
         frame_botoes.pack(pady=20)
 
@@ -295,7 +274,7 @@ class FuncoesBotoes:
             width=15,
             highlightthickness=0,
             activebackground="#2C3E50",
-            activeforeground="#ECF0F1",
+            activeforeground="#ECF0F1"
         ).pack(side=tk.LEFT, padx=5)
 
         tk.Button(
@@ -304,17 +283,8 @@ class FuncoesBotoes:
             command=self.adicionar_window.destroy,
             width=15,
             activebackground="#2C3E50",
-            activeforeground="#ECF0F1",
+            activeforeground="#ECF0F1"
         ).pack(side=tk.LEFT, padx=5)
-
-        # Adicionar texto de ajuda
-        tk.Label(
-            self.adicionar_window,
-            text="Obs.: Para múltiplas formas de pagamento, informe o valor de cada uma.",
-            bg=cor_fundo,
-            fg=cor_texto,
-            font=("Arial", 9, "italic"),
-        ).pack(pady=(0, 10))
 
     def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
         """Adiciona ou atualiza um paciente no banco de dados de marcação."""
@@ -397,13 +367,7 @@ class FuncoesBotoes:
         return n_pessoa, cont_pag
 
     def criar_entry(self, frame_nome, var_name, parent):
-        """Cria um frame com label e entry para entradas de texto.
-
-        Args:
-            frame_nome: O texto do label.
-            var_name: O nome da variável de entrada a ser criada.
-            parent: O widget pai onde o frame será adicionado.
-        """
+        """Cria um frame com label e entry para entradas de texto."""
         frame = tk.Frame(parent, bg=parent.cget("bg"))
         frame.pack(pady=2)
 
@@ -412,24 +376,34 @@ class FuncoesBotoes:
             text=frame_nome,
             bg=parent.cget("bg"),
             fg="#ECF0F1",
-            font=("Arial", 12),
+            font=("Arial", 12)
         ).pack(side=tk.LEFT, anchor="w", padx=5)
 
         entry = tk.Entry(frame)
         entry.pack(side=tk.LEFT, padx=2)
-
-        # Armazena a entrada na instância da classe
         setattr(self, var_name, entry)
 
     def salvar_informacao(self):
-        """Salva os dados no banco de dados e finaliza o processo."""
+        """Salva os dados no banco de dados e na planilha."""
         try:
             # Obter dados dos campos
             nome = self.nome_entry.get().strip().upper()
             renach = self.renach_entry.get().strip()
             escolha = self.radio_var.get()
 
-            # Validar dados
+            # Valores máximos por tipo de atendimento
+            VALOR_MEDICO = 148.65
+            VALOR_PSICOLOGO = 192.61
+            VALOR_AMBOS = 341.26
+
+            # Definir valor máximo baseado na escolha
+            valor_maximo = {
+                "medico": VALOR_MEDICO,
+                "psicologo": VALOR_PSICOLOGO,
+                "ambos": VALOR_AMBOS
+            }.get(escolha)
+
+            # Validar dados básicos
             if not nome or not renach:
                 messagebox.showerror("Erro", "Por favor, preencha os campos de nome e RENACH.")
                 return
@@ -438,40 +412,114 @@ class FuncoesBotoes:
                 messagebox.showerror("Erro", "O RENACH deve ser um número inteiro.")
                 return
 
-            # Verificar se alguma forma de pagamento foi selecionada
+            if not escolha:
+                messagebox.showerror("Erro", "Selecione o tipo de atendimento.")
+                return
+
+            # Verificar formas de pagamento selecionadas
             formas_selecionadas = {
-                "D": self.d_var.get(),
-                "C": self.c_var.get(),
-                "E": self.e_var.get(),
-                "P": self.p_var.get(),
+                forma: var.get() for forma, var in self.payment_vars.items()
             }
 
             if not any(formas_selecionadas.values()):
                 messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
                 return
 
-            # Processar pagamentos
+            # Contar quantas formas de pagamento foram selecionadas
+            num_formas_selecionadas = sum(formas_selecionadas.values())
+
+            # Processar pagamentos com as novas regras de validação
             pagamentos = []
+            soma_valores = 0
+            
             for codigo, selecionado in formas_selecionadas.items():
                 if selecionado:
                     valor = self.valor_entries[codigo].get().strip()
-                    if valor:
-                        pagamentos.append(f"{codigo}: {valor}")
+                    
+                    # Se mais de uma forma foi selecionada, valor é obrigatório
+                    if num_formas_selecionadas > 1:
+                        if not valor:
+                            messagebox.showerror(
+                                "Erro", 
+                                "Quando mais de uma forma de pagamento é selecionada, "
+                                f"é obrigatório informar o valor para {codigo}"
+                            )
+                            return
+                        # Validar se o valor é um número válido
+                        try:
+                            valor_float = float(valor.replace(',', '.'))
+                            soma_valores += valor_float
+                        except ValueError:
+                            messagebox.showerror(
+                                "Erro", 
+                                f"O valor informado para {codigo} não é um número válido"
+                            )
+                            return
+                        # Formatar o valor com duas casas decimais
+                        valor_formatado = f"{valor_float:.2f}".replace('.', ',')
+                        pagamentos.append(f"{codigo}:{valor_formatado}")
                     else:
+                        # Se só tem uma forma selecionada, não deve ter valor preenchido
+                        if valor:
+                            messagebox.showerror(
+                                "Erro", 
+                                "Quando apenas uma forma de pagamento é selecionada, "
+                                "não deve ser informado valor"
+                            )
+                            return
                         pagamentos.append(codigo)
 
-            # Salvar no banco de dados
+            # Validar soma dos valores quando mais de uma forma de pagamento
+            if num_formas_selecionadas > 1:
+                if soma_valores != valor_maximo:
+                    messagebox.showerror(
+                        "Erro",
+                        f"A soma dos valores ({soma_valores:.2f}) deve ser igual ao "
+                        f"valor da consulta ({valor_maximo:.2f})"
+                    )
+                    return
+
+            # Continua com o salvamento após validações
             if self._adicionar_paciente_ao_banco(nome, renach, pagamentos, escolha):
                 try:
-                    self.salvar_na_planilha(nome, renach, pagamentos, escolha)
+                    wb = self.get_active_workbook()
+                    ws = wb.active
+
+                    # Formatar string de pagamento (com espaço após a barra vertical)
+                    info_pagamento = " | ".join(pagamentos)
+
+                    # Função para encontrar próxima linha vazia ou criar nova
+                    def encontrar_proxima_linha(coluna_inicial):
+                        ultima_linha = 3
+                        for row in range(3, ws.max_row + 2):
+                            if ws[f"{coluna_inicial}{row}"].value is None:
+                                return row
+                            ultima_linha = row
+                        return ultima_linha + 1
+
+                    # Salvar dados conforme o tipo de atendimento
+                    if escolha in ["medico", "ambos"]:
+                        nova_linha_medico = encontrar_proxima_linha("B")
+                        ws[f"B{nova_linha_medico}"] = nome
+                        ws[f"C{nova_linha_medico}"] = renach
+                        ws[f"F{nova_linha_medico}"] = info_pagamento
+
+                    if escolha in ["psicologo", "ambos"]:
+                        nova_linha_psicologo = encontrar_proxima_linha("H")
+                        ws[f"H{nova_linha_psicologo}"] = nome
+                        ws[f"I{nova_linha_psicologo}"] = renach
+                        ws[f"L{nova_linha_psicologo}"] = info_pagamento
+
+                    wb.save(self.file_path)
                     messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
                     self.adicionar_window.destroy()
+
                 except Exception as e:
                     messagebox.showerror("Erro", f"Erro ao salvar na planilha: {str(e)}")
                     
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
-
+        
     def salvar_na_planilha(self, nome, renach, pagamentos, escolha):
         """Salva os dados na planilha."""
         try:
@@ -1525,12 +1573,14 @@ class FuncoesBotoes:
         self.criar_conta_frame = criar_conta_frame
 
     def mostrar_criar_conta(self):
-        self.login_frame.grid_forget()
-        self.criar_conta_frame.grid()
+        """Alterna para o frame de criar conta."""
+        self.login_frame.hide()
+        self.criar_conta_frame.show()
 
     def voltar_para_login(self):
-        self.criar_conta_frame.grid_forget()
-        self.login_frame.grid()
+        """Alterna de volta para o frame de login."""
+        self.criar_conta_frame.hide()
+        self.login_frame.show()
 
     def formatar_planilha(self):
         """Formata a planilha com os dados do usuário e data atual."""

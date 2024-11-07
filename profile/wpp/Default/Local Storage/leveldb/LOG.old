@@ -1,5 +1,7 @@
-2024/10/26-15:22:52.754 7c7c Reusing MANIFEST /home/lusca/py_excel/profile/wpp/Default/Local Storage/leveldb/MANIFEST-000001
-2024/10/26-15:22:52.758 7c7c Recovering log #4
-2024/10/26-15:22:52.759 7c7c Level-0 table #6: started
-2024/10/26-15:22:52.761 7c7c Level-0 table #6: 17470 bytes OK
-2024/10/26-15:22:52.764 7c7c Delete type=0 #4
+2024/10/31-18:10:52.726 22f4e Reusing MANIFEST /home/lusca/py_excel/profile/wpp/Default/Local Storage/leveldb/MANIFEST-000001
+2024/10/31-18:10:52.729 22f4e Recovering log #7
+2024/10/31-18:10:52.729 22f4e Level-0 table #9: started
+2024/10/31-18:10:52.732 22f4e Level-0 table #9: 5150 bytes OK
+2024/10/31-18:10:52.732 22f4e Recovering log #10
+2024/10/31-18:10:52.732 22f4e Reusing old log /home/lusca/py_excel/profile/wpp/Default/Local Storage/leveldb/000010.log 
+2024/10/31-18:10:52.734 22f4e Delete type=0 #7
