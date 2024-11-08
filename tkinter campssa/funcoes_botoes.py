@@ -3252,6 +3252,19 @@ class PatientInfoDisplay:
         filtered = []
         # Primeiro adiciona médicos
         if current_filter in ["todos", "medico"]:
+            medicos = [p for p in self.data_cache['medico'] if matches_criteria(p)]
+            filtered.extend(medicos)
+        
+        # Depois adiciona psicólogos
+        if current_filter in ["todos", "psi"]:
+            psicologos = [p for p in self.data_cache['psi'] if matches_criteria(p)]
+            filtered.extend(psicologos)
+        
+        return filtered
+        
+        filtered = []
+        # Primeiro adiciona médicos
+        if current_filter in ["todos", "medico"]:
             medicos = sorted(
                 [p for p in self.data_cache['medico'] if matches_criteria(p)],
                 key=lambda x: x.nome.lower()
