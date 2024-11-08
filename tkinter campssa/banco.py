@@ -8,7 +8,7 @@ from funcoes_botoes import FuncoesBotoes
 from planilhas import Planilhas
 from typing import Optional, List, Dict, Any, Tuple
 import logging
-from database_connection import DatabaseConnection 
+from database_connection import DatabaseConnection
 
 
 # Configuração de logging
@@ -21,14 +21,17 @@ logger = logging.getLogger(__name__)
 
 
 class DataBaseLogin:
-    """Gerenciamento de autenticação de usuários"""
+    """
+    SEÇÃO 1: INICIALIZAÇÃO E CONFIGURAÇÃO
+    """
 
+    # Inicializa o gerenciador do banco de dados
     def __init__(self, db_name: str = "login.db"):
+        """Inicializa o gerenciador de login."""
         self.db_name = db_name
         self.create_db()
 
-    """Cria o banco de dados de usuários se não existir"""
-
+    # Cria estrutura inicial do banco
     def create_db(self) -> None:
         """Cria o banco de dados de usuários se não existir"""
         try:
@@ -49,9 +52,12 @@ class DataBaseLogin:
         except sqlite3.Error as e:
             logger.error(f"Erro ao criar banco de dados de usuários: {e}")
             raise
-    
-    """Cria um novo usuário"""
 
+    """
+    SEÇÃO 2: OPERAÇÕES DE CRIAÇÃO E VALIDAÇÃO
+    """
+
+    # Cria novo usuário no sistema
     def create_user(self, user: str, password: str) -> bool:
         """
         Cria um novo usuário
@@ -73,39 +79,7 @@ class DataBaseLogin:
             logger.error(f"Erro ao criar usuário: {e}")
             raise
 
-    """Função para ser um usuário com base no user"""
-
-    def read_user(self, user):
-        """Função para ser um usuário com base no user"""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE user = ?", (user,))
-        usuario = cursor.fetchone()
-        conn.close()
-        return usuario
-
-    """Função para atualizar a senha de um usuário"""
-
-    def update_user(self, user, new_password):
-        """Função para atualizar a senha de um usuário"""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE users SET password = ? WHERE user =?", (new_password, user)
-        )
-
-    """Função para deletar um usuário com base no user"""
-
-    def delete_user(self, user):
-        """Função para deletar um usuário com base no user"""
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM users WHERE user = ?", (user,))
-        conn.comit()
-        conn.close()
-
-    """Valida credenciais do usuário"""
-
+    # Valida credenciais do usuário
     def validate_user(self, user: str, password: str) -> bool:
         """Valida credenciais do usuário"""
         try:
@@ -124,30 +98,77 @@ class DataBaseLogin:
             logger.error(f"Erro ao validar usuário: {e}")
             return False
 
+    """
+    SEÇÃO 3: OPERAÇÕES DE CONSULTA
+    """
+
+    # Busca usuário por nome
+    def read_user(self, user):
+        """Função para ser um usuário com base no user"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE user = ?", (user,))
+        usuario = cursor.fetchone()
+        conn.close()
+        return usuario
+
+    """
+    SEÇÃO 4: OPERAÇÕES DE MODIFICAÇÃO
+    """
+
+    # Atualiza senha do usuário
+    def update_user(self, user, new_password):
+        """Função para atualizar a senha de um usuário"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET password = ? WHERE user =?", (new_password, user)
+        )
+
+    # Remove usuário do sistema
+    def delete_user(self, user):
+        """Função para deletar um usuário com base no user"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE user = ?", (user,))
+        conn.comit()
+        conn.close()
+
 
 class DataBaseMarcacao:
-    """Gerenciamento de marcações de pacientes"""
+    """
+    SEÇÃO 1: INICIALIZAÇÃO E CONFIGURAÇÃO
+    """
 
-    def __init__(self, master: tk.Tk, planilhas: Planilhas, file_path: str, app: Any, db_name: str = "db_marcacao.db"):
+    # Inicializa o banco de dados de marcações
+    def __init__(
+        self,
+        master: tk.Tk,
+        planilhas: Planilhas,
+        file_path: str,
+        app: Any,
+        db_name: str = "db_marcacao.db",
+    ):
+        """Inicializa o sistema de marcações."""
         # Configuração do logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
-        
+
         # Verifica se já existe um handler para evitar duplicação de logs
         if not self.logger.handlers:
             # Handler para arquivo
-            fh = logging.FileHandler('database_operations.log')
+            fh = logging.FileHandler("database_operations.log")
             fh.setLevel(logging.INFO)
-            
+
             # Handler para console
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
-            
+
             # Formato do log
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             fh.setFormatter(formatter)
             ch.setFormatter(formatter)
-            
+
             # Adiciona os handlers ao logger
             self.logger.addHandler(fh)
             self.logger.addHandler(ch)
@@ -156,7 +177,7 @@ class DataBaseMarcacao:
         self.master = master
         self.create_db()
         self.funcoes_botoes = FuncoesBotoes(self.master, planilhas, file_path, app)
-        
+
         # UI Components
         self.window: Optional[Toplevel] = None
         self.marcacoes_window: Optional[Toplevel] = None
@@ -165,7 +186,7 @@ class DataBaseMarcacao:
         self.search_window: Optional[Toplevel] = None
         self.search_var: Optional[tk.StringVar] = None
         self.table_frame: Optional[Frame] = None
-        
+
         # Form fields
         self.name_entry: Optional[tk.Entry] = None
         self.renach_entry: Optional[tk.Entry] = None
@@ -176,8 +197,7 @@ class DataBaseMarcacao:
         # Verifica marcações expiradas na inicialização
         self.check_expired_appointments()
 
-    """Cria e atualiza a estrutura do banco de dados"""
-
+    # Cria e atualiza estrutura do banco
     def create_db(self) -> None:
         """Cria e atualiza a estrutura do banco de dados"""
         try:
@@ -263,76 +283,30 @@ class DataBaseMarcacao:
         except sqlite3.Error as e:
             logger.error(f"Erro ao criar/atualizar banco de dados de marcações: {e}")
             raise
-    
-        """Verifica e atualiza o status de marcações expiradas"""
-    
-    """Verifica e atualiza o status de marcações expiradas"""
-    def check_expired_appointments(self) -> None:
-        """Verifica e atualiza o status de marcações expiradas"""
-        try:
-            with DatabaseConnection(self.db_name) as conn:
-                cursor = conn.cursor()
-                today = datetime.now().date().strftime("%Y-%m-%d")
-                
-                # Busca marcações pendentes com data anterior a hoje
-                cursor.execute("""
-                    SELECT renach, data_agendamento, historico_comparecimento 
-                    FROM marcacoes 
-                    WHERE status_comparecimento = 'pending' 
-                    AND data_agendamento < ?
-                """, (today,))
-                
-                expired_appointments = cursor.fetchall()
-                
-                for renach, data_agendamento, historico_atual in expired_appointments:
-                    try:
-                        historico = json.loads(historico_atual) if historico_atual else []
-                    except json.JSONDecodeError:
-                        logger.warning(f"Histórico inválido para RENACH {renach}, iniciando novo")
-                        historico = []
-                    
-                    # Adiciona entrada ao histórico
-                    historico.append({
-                        "data": data_agendamento,
-                        "status": "missed",
-                        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "observacao": "Status atualizado automaticamente - Data expirada"
-                    })
-                    
-                    # Atualiza o status da marcação
-                    cursor.execute("""
-                        UPDATE marcacoes 
-                        SET status_comparecimento = 'missed',
-                            historico_comparecimento = ?
-                        WHERE renach = ?
-                    """, (json.dumps(historico), renach))
-                    
-                    logger.info(f"Marcação expirada atualizada para RENACH {renach}: {data_agendamento}")
-                
-                conn.commit()
-                
-        except sqlite3.Error as e:
-            logger.error(f"Erro ao verificar marcações expiradas: {e}")
-            raise
 
-    """Realiza a migração do banco de dados para a estrutura mais recente"""
+        """Verifica e atualiza o status de marcações expiradas"""
+
+    # Realiza migração do banco de dados
     def migrate_database(self) -> None:
         """Realiza a migração do banco de dados para a estrutura mais recente"""
         try:
             with DatabaseConnection(self.db_name) as conn:
                 cursor = conn.cursor()
-                
+
                 # Primeiro fazemos backup da tabela atual
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS marcacoes_backup AS 
                     SELECT * FROM marcacoes
-                """)
-                
+                """
+                )
+
                 # Removemos a tabela antiga
                 cursor.execute("DROP TABLE IF EXISTS marcacoes")
-                
+
                 # Criamos a nova tabela com a estrutura correta
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE marcacoes (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         nome TEXT NOT NULL,
@@ -345,11 +319,13 @@ class DataBaseMarcacao:
                         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """)
-                
+                """
+                )
+
                 # Tentamos migrar os dados antigos
                 try:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO marcacoes (
                             nome, renach, telefone, data_agendamento, 
                             observacao, status_comparecimento, historico_comparecimento
@@ -358,29 +334,100 @@ class DataBaseMarcacao:
                             nome, renach, telefone, data_agendamento,
                             observacao, status_comparecimento, historico_comparecimento
                         FROM marcacoes_backup
-                    """)
+                    """
+                    )
                 except sqlite3.Error as e:
                     logger.error(f"Erro ao migrar dados antigos: {e}")
-                
+
                 # Criamos o trigger para atualização de timestamp
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TRIGGER IF NOT EXISTS update_marcacoes_timestamp 
                     AFTER UPDATE ON marcacoes
                     BEGIN
                         UPDATE marcacoes SET atualizado_em = CURRENT_TIMESTAMP 
                         WHERE id = NEW.id;
                     END;
-                """)
-                
+                """
+                )
+
                 conn.commit()
                 logger.info("Migração do banco de dados concluída com sucesso")
-                
+
         except sqlite3.Error as e:
             logger.error(f"Erro durante a migração do banco: {e}")
             raise
-    
-    """Formata o número de telefone no padrão (XX) XXXXX-XXXX ou (XX) XXXX-XXXX."""
 
+    """
+    SEÇÃO 2: MANIPULAÇÃO DE DADOS
+    """
+
+    # Verifica marcações expiradas
+    def check_expired_appointments(self) -> None:
+        """Verifica e atualiza o status de marcações expiradas"""
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                today = datetime.now().date().strftime("%Y-%m-%d")
+
+                # Busca marcações pendentes com data anterior a hoje
+                cursor.execute(
+                    """
+                    SELECT renach, data_agendamento, historico_comparecimento 
+                    FROM marcacoes 
+                    WHERE status_comparecimento = 'pending' 
+                    AND data_agendamento < ?
+                """,
+                    (today,),
+                )
+
+                expired_appointments = cursor.fetchall()
+
+                for renach, data_agendamento, historico_atual in expired_appointments:
+                    try:
+                        historico = (
+                            json.loads(historico_atual) if historico_atual else []
+                        )
+                    except json.JSONDecodeError:
+                        logger.warning(
+                            f"Histórico inválido para RENACH {renach}, iniciando novo"
+                        )
+                        historico = []
+
+                    # Adiciona entrada ao histórico
+                    historico.append(
+                        {
+                            "data": data_agendamento,
+                            "status": "missed",
+                            "atualizado_em": datetime.now().strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            ),
+                            "observacao": "Status atualizado automaticamente - Data expirada",
+                        }
+                    )
+
+                    # Atualiza o status da marcação
+                    cursor.execute(
+                        """
+                        UPDATE marcacoes 
+                        SET status_comparecimento = 'missed',
+                            historico_comparecimento = ?
+                        WHERE renach = ?
+                    """,
+                        (json.dumps(historico), renach),
+                    )
+
+                    logger.info(
+                        f"Marcação expirada atualizada para RENACH {renach}: {data_agendamento}"
+                    )
+
+                conn.commit()
+
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao verificar marcações expiradas: {e}")
+            raise
+
+    # Formata número de telefone
     @staticmethod
     def format_phone(phone: str) -> str:
         """Formata número de telefone para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX"""
@@ -391,8 +438,7 @@ class DataBaseMarcacao:
             return f"({phone[:2]}) {phone[2:6]}-{phone[6:]}"
         return phone
 
-    """Valida os campos obrigatórios do formulário."""
-
+    # Valida campos do formulário
     def validate_fields(self) -> bool:
         """Valida os campos obrigatórios do formulário"""
         if not all([self.name_entry, self.renach_entry]):
@@ -415,8 +461,7 @@ class DataBaseMarcacao:
 
         return True
 
-    """Limpa todos os campos do formulário."""
-
+    # Limpa campos do formulário
     def clear_fields(self) -> None:
         """Limpa todos os campos do formulário"""
         if all(
@@ -435,72 +480,18 @@ class DataBaseMarcacao:
         else:
             logger.warning("Tentativa de limpar campos não inicializados")
 
-    """Processa o envio do formulário de paciente."""
+    """
+    SEÇÃO 3: INTERFACE DE USUÁRIO
+    """
 
-    def submit_patient(self) -> None:
-        """Processa o envio do formulário de paciente"""
-        if not self.validate_fields():
-            return
-
-        try:
-            with DatabaseConnection(self.db_name) as conn:
-                cursor = conn.cursor()
-
-                nome = self.name_entry.get().strip().upper()
-                renach = self.renach_entry.get().strip()
-                telefone = self.format_phone(self.phone_entry.get().strip())
-                data_agendamento = self.appointment_entry.get_date().strftime(
-                    "%Y-%m-%d"
-                )
-                observacao = self.observation_text.get("1.0", tk.END).strip()
-
-                # Verifica existência do RENACH
-                cursor.execute("SELECT id FROM marcacoes WHERE renach = ?", (renach,))
-
-                if cursor.fetchone():
-                    if messagebox.askyesno(
-                        "Paciente Existente",
-                        "Este RENACH já está cadastrado. Deseja atualizar a data da consulta?",
-                    ):
-                        cursor.execute(
-                            """
-                            UPDATE marcacoes 
-                            SET data_agendamento = ?, 
-                                observacao = ?
-                            WHERE renach = ?
-                        """,
-                            (data_agendamento, observacao, renach),
-                        )
-                        logger.info(f"Marcação atualizada para RENACH: {renach}")
-                        messagebox.showinfo("Sucesso", "Data da consulta atualizada!")
-                else:
-                    cursor.execute(
-                        """
-                        INSERT INTO marcacoes (
-                            nome, renach, telefone, data_agendamento, observacao
-                        ) VALUES (?, ?, ?, ?, ?)
-                    """,
-                        (nome, renach, telefone, data_agendamento, observacao),
-                    )
-                    logger.info(f"Nova marcação criada para RENACH: {renach}")
-                    messagebox.showinfo("Sucesso", "Paciente cadastrado com sucesso!")
-
-                conn.commit()
-                self.clear_fields()
-
-        except sqlite3.Error as e:
-            logger.error(f"Erro ao submeter paciente: {e}")
-            messagebox.showerror("Erro", "Erro ao processar operação. Verifique o log.")
-
-    """Cria a interface para adicionar/atualizar paciente."""
-
+    # Interface principal de adição
     def add_user(self):
         """Cria a interface para adicionar/atualizar paciente."""
         self.window = tk.Toplevel(self.master)
         self.window.title("Gerenciar Paciente")
-        self.window.geometry("400x500")
-        self.window.minsize(width=400, height=500)
-        self.window.maxsize(width=400, height=500)
+        self.window.geometry("800x500")
+        self.window.minsize(width=500, height=500)
+        self.window.maxsize(width=500, height=500)
 
         # Configuração visual
         cor_fundo = self.master.cget("bg")
@@ -584,8 +575,7 @@ class DataBaseMarcacao:
 
         self.funcoes_botoes.center(self.window)
 
-    """Cria a interface para visualização e gestão das marcações."""
-
+    # Interface de histórico
     def view_marcacoes(self):
         """Cria a interface para visualização e gestão das marcações."""
         # Verifica marcações expiradas antes de mostrar a interface
@@ -714,216 +704,7 @@ class DataBaseMarcacao:
         # Centraliza a janela
         self.funcoes_botoes.center(self.marcacoes_window)
 
-    """Filtra as marcações com base no termo de busca."""
-
-    def filter_marcacoes(self, *args):
-        """Filtra as marcações com base no termo de busca."""
-        search_term = self.search_var.get().strip()
-        if search_term:
-            self.update_patient_list()
-        else:
-            self.update_patient_list(None)
-
-    """Obtém os pacientes por nome ou renach, independentemente da data."""
-
-    def get_patients_by_name_or_renach(self, search_term: str, selected_date: Optional[str] = None) -> List[Tuple]:
-        """Busca pacientes por nome ou RENACH"""
-        try:
-            with DatabaseConnection(self.db_name) as conn:
-                cursor = conn.cursor()
-                search_term = search_term.lower() if search_term else ""
-
-                query = """
-                    SELECT nome, telefone, renach, 
-                        COALESCE(status_comparecimento, 'pending') as status_comparecimento, 
-                        observacao, data_agendamento
-                    FROM marcacoes 
-                    WHERE (LOWER(nome) LIKE ? OR LOWER(renach) LIKE ?)
-                """
-                params = [f"%{search_term}%", f"%{search_term}%"]
-
-                if selected_date and not search_term:
-                    query += " AND data_agendamento = ?"
-                    params.append(selected_date)
-
-                query += " ORDER BY nome"
-                
-                cursor.execute(query, params)
-                return cursor.fetchall()
-                
-        except sqlite3.Error as e:
-            self.logger.error(f"Erro ao buscar pacientes: {e}")
-            return []
-
-    """Atualiza a lista de pacientes com status de comparecimento."""
-
-    def update_patient_list(self, event=None):
-        """Atualiza a lista de pacientes com status de comparecimento."""
-        # Verifica marcações expiradas antes de atualizar a lista
-        self.check_expired_appointments()
-        
-        search_term = self.search_var.get().strip()
-        selected_date = self.date_entry.get_date().strftime("%Y-%m-%d")
-        patients = self.get_patients_by_name_or_renach(search_term, selected_date)
-
-        # Limpa a tabela anterior
-        for widget in self.results_frame.winfo_children():
-            widget.destroy()
-
-        # Adiciona cabeçalho atualizado
-        headers = [
-            "Nome",
-            "Telefone",
-            "RENACH",
-            "Status",
-            "Observações",
-            "Data",
-            "Ações",
-        ]
-        for j, header in enumerate(headers):
-            header_cell = tk.Label(
-                self.results_frame,
-                text=header,
-                font=("Arial", 12, "bold"),
-                bg=self.master.cget("bg"),
-                fg="#ECF0F1",
-                width=20,
-                anchor="w",
-            )
-            header_cell.grid(row=0, column=j, padx=5, pady=2, sticky="ew")
-
-        if not patients:
-            tk.Label(
-                self.results_frame,
-                text="Nenhum paciente encontrado.",
-                font=("Arial", 11),
-                bg=self.master.cget("bg"),
-                fg="#ECF0F1",
-                pady=20,
-            ).grid(row=1, column=0, columnspan=len(headers))
-            return
-
-        # Popula a tabela com os dados atualizados
-        for i, patient in enumerate(patients, start=1):
-            for j, info in enumerate(patient):
-                # Ajusta o texto do status
-                if j == 3:  # Coluna de status
-                    status_text = {
-                        "attended": "Compareceu",
-                        "missed": "Não Compareceu",
-                        "pending": "Pendente",
-                    }.get(info, "Pendente")
-
-                    # Cores diferentes para cada status
-                    status_colors = {
-                        "attended": "#2ecc71",
-                        "missed": "#e74c3c",
-                        "pending": "#f1c40f",
-                    }
-                    bg_color = status_colors.get(info, "#f1c40f")
-                elif j == 5:  # Coluna de data
-                    date_text = info if info else ""
-                    if date_text:
-                        date_text = datetime.strptime(date_text, "%Y-%m-%d").strftime(
-                            "%d/%m/%Y"
-                        )
-                    bg_color = self.master.cget("bg")
-                else:
-                    date_text = info if info else ""
-                    bg_color = self.master.cget("bg")
-
-                cell = tk.Label(
-                    self.results_frame,
-                    text=date_text if j == 5 else status_text if j == 3 else info,
-                    font=("Arial", 11),
-                    bg=bg_color,
-                    fg="#ECF0F1" if j != 3 else "#000000",
-                    width=25 if j in [0, 4] else 15,
-                    anchor="w",
-                    wraplength=300 if j == 4 else None,
-                )
-                cell.grid(row=i, column=j, padx=5, pady=2, sticky="ew")
-
-            # Frame para botões de ação
-            action_frame = tk.Frame(self.results_frame, bg=self.master.cget("bg"))
-            action_frame.grid(row=i, column=len(headers) - 1, padx=5, pady=2)
-
-            # Botões de ação
-            def create_edit_callback(p):
-                return lambda: self.edit_marcacao(p)
-
-            def create_delete_callback(p):
-                return lambda: self.delete_marcacao(p)
-
-            tk.Button(
-                action_frame,
-                text="Editar",
-                command=create_edit_callback(patient),
-                width=8,
-            ).pack(side="left", padx=2)
-
-            tk.Button(
-                action_frame,
-                text="Excluir",
-                command=create_delete_callback(patient),
-                width=8,
-            ).pack(side="left", padx=2)
-
-            # Botões de status
-            tk.Button(
-                action_frame,
-                text="✓",
-                command=lambda p=patient: self.update_attendance_status(
-                    p[2], "attended"
-                ),
-                bg="#2ecc71",
-                fg="white",
-                width=3,
-            ).pack(side="left", padx=2)
-
-            tk.Button(
-                action_frame,
-                text="✗",
-                command=lambda p=patient: self.update_attendance_status(p[2], "missed"),
-                bg="#e74c3c",
-                fg="white",
-                width=3,
-            ).pack(side="left", padx=2)
-
-            tk.Button(
-                action_frame,
-                text="⟲",
-                command=lambda p=patient: self.update_attendance_status(
-                    p[2], "pending"
-                ),
-                bg="#f1c40f",
-                fg="white",
-                width=3,
-            ).pack(side="left", padx=2)
-
-        # Estatísticas
-        stats_frame = tk.Frame(self.results_frame, bg=self.master.cget("bg"))
-        stats_frame.grid(
-            row=len(patients) + 1, column=0, columnspan=len(headers), pady=10
-        )
-
-        # Contagem de status
-        attended_count = sum(1 for p in patients if p[3] == "attended")
-        missed_count = sum(1 for p in patients if p[3] == "missed")
-        pending_count = sum(1 for p in patients if p[3] == "pending")
-
-        stats_text = f"Total: {len(patients)} | Compareceram: {attended_count} | Não Compareceram: {missed_count} | Pendentes: {pending_count}"
-        tk.Label(
-            stats_frame,
-            text=stats_text,
-            font=("Arial", 10),
-            bg=self.master.cget("bg"),
-            fg="#ECF0F1",
-        ).pack()
-        """Abre janela para edição de marcação."""
-
-    """Abre janela para edição de marcação."""
-
+    # Abre janela de edição com formulário para alterar dados do paciente
     def edit_marcacao(self, patient):
         """Abre janela para edição de marcação."""
         edit_window = tk.Toplevel(self.marcacoes_window)
@@ -1090,31 +871,7 @@ class DataBaseMarcacao:
         # Centraliza a janela
         self.funcoes_botoes.center(edit_window)
 
-    """Remove uma marcação do banco de dados."""
-
-    def delete_marcacao(self, patient):
-        """Remove uma marcação do banco de dados."""
-        if messagebox.askyesno(
-            "Confirmar Exclusão",
-            f"Deseja realmente excluir a marcação de {patient[0]}?",
-        ):
-            try:
-                conn = sqlite3.connect(self.db_name)
-                cursor = conn.cursor()
-
-                cursor.execute("DELETE FROM patients WHERE renach = ?", (patient[2],))
-                conn.commit()
-
-                messagebox.showinfo("Sucesso", "Marcação excluída com sucesso!")
-                self.update_patient_list()
-
-            except sqlite3.Error as e:
-                messagebox.showerror("Erro", f"Erro ao excluir marcação: {str(e)}")
-            finally:
-                conn.close()
-
-    """Interface para visualizar histórico completo de pacientes."""
-
+    # Abre janela com histórico completo e busca de pacientes
     def view_patient_history(self):
         """Interface para visualizar histórico completo de pacientes."""
         history_window = tk.Toplevel(self.master)
@@ -1264,8 +1021,89 @@ class DataBaseMarcacao:
         # Centraliza a janela
         self.funcoes_botoes.center(history_window)
 
-    """Atualiza o status de comparecimento do paciente."""
+    """
+    SEÇÃO 4: OPERAÇÕES COM PACIENTES
+    """
 
+    # Processa envio de formulário
+    def submit_patient(self) -> None:
+        """Processa o envio do formulário de paciente"""
+        if not self.validate_fields():
+            return
+
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+
+                nome = self.name_entry.get().strip().upper()
+                renach = self.renach_entry.get().strip()
+                telefone = self.format_phone(self.phone_entry.get().strip())
+                data_agendamento = self.appointment_entry.get_date().strftime(
+                    "%Y-%m-%d"
+                )
+                observacao = self.observation_text.get("1.0", tk.END).strip()
+
+                # Verifica existência do RENACH
+                cursor.execute("SELECT id FROM marcacoes WHERE renach = ?", (renach,))
+
+                if cursor.fetchone():
+                    if messagebox.askyesno(
+                        "Paciente Existente",
+                        "Este RENACH já está cadastrado. Deseja atualizar a data da consulta?",
+                    ):
+                        cursor.execute(
+                            """
+                            UPDATE marcacoes 
+                            SET data_agendamento = ?, 
+                                observacao = ?
+                            WHERE renach = ?
+                        """,
+                            (data_agendamento, observacao, renach),
+                        )
+                        logger.info(f"Marcação atualizada para RENACH: {renach}")
+                        messagebox.showinfo("Sucesso", "Data da consulta atualizada!")
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO marcacoes (
+                            nome, renach, telefone, data_agendamento, observacao
+                        ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                        (nome, renach, telefone, data_agendamento, observacao),
+                    )
+                    logger.info(f"Nova marcação criada para RENACH: {renach}")
+                    messagebox.showinfo("Sucesso", "Paciente cadastrado com sucesso!")
+
+                conn.commit()
+                self.clear_fields()
+
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao submeter paciente: {e}")
+            messagebox.showerror("Erro", "Erro ao processar operação. Verifique o log.")
+
+    # Remove marcação
+    def delete_marcacao(self, patient):
+        """Remove uma marcação do banco de dados."""
+        if messagebox.askyesno(
+            "Confirmar Exclusão",
+            f"Deseja realmente excluir a marcação de {patient[0]}?",
+        ):
+            try:
+                conn = sqlite3.connect(self.db_name)
+                cursor = conn.cursor()
+
+                cursor.execute("DELETE FROM patients WHERE renach = ?", (patient[2],))
+                conn.commit()
+
+                messagebox.showinfo("Sucesso", "Marcação excluída com sucesso!")
+                self.update_patient_list()
+
+            except sqlite3.Error as e:
+                messagebox.showerror("Erro", f"Erro ao excluir marcação: {str(e)}")
+            finally:
+                conn.close()
+
+    # Atualiza status
     def update_attendance_status(self, renach: str, status: str) -> None:
         """Atualiza o status de comparecimento do paciente"""
         try:
@@ -1278,10 +1116,10 @@ class DataBaseMarcacao:
                     FROM marcacoes 
                     WHERE renach = ?
                     """,
-                    (renach,)
+                    (renach,),
                 )
                 result = cursor.fetchone()
-                
+
                 if not result:
                     logger.warning(f"RENACH não encontrado: {renach}")
                     return
@@ -1291,14 +1129,18 @@ class DataBaseMarcacao:
                 try:
                     historico = json.loads(historico_atual) if historico_atual else []
                 except json.JSONDecodeError:
-                    logger.warning(f"Histórico inválido para RENACH {renach}, iniciando novo")
+                    logger.warning(
+                        f"Histórico inválido para RENACH {renach}, iniciando novo"
+                    )
                     historico = []
 
-                historico.append({
-                    "data": data_agendamento,
-                    "status": status,
-                    "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                })
+                historico.append(
+                    {
+                        "data": data_agendamento,
+                        "status": status,
+                        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    }
+                )
 
                 cursor.execute(
                     """
@@ -1306,8 +1148,8 @@ class DataBaseMarcacao:
                     SET status_comparecimento = ?, 
                         historico_comparecimento = ?
                     WHERE renach = ?
-                    """, 
-                    (status, json.dumps(historico), renach)
+                    """,
+                    (status, json.dumps(historico), renach),
                 )
 
                 conn.commit()
@@ -1317,3 +1159,213 @@ class DataBaseMarcacao:
         except sqlite3.Error as e:
             logger.error(f"Erro ao atualizar status: {e}")
             messagebox.showerror("Erro", "Erro ao atualizar status. Verifique o log.")
+
+    """
+    SEÇÃO 5: BUSCA E FILTROS
+    """
+
+    # Filtra marcações
+    def filter_marcacoes(self, *args):
+        """Filtra as marcações com base no termo de busca."""
+        search_term = self.search_var.get().strip()
+        if search_term:
+            self.update_patient_list()
+        else:
+            self.update_patient_list(None)
+
+    # Busca pacientes
+    def get_patients_by_name_or_renach(
+        self, search_term: str, selected_date: Optional[str] = None
+    ) -> List[Tuple]:
+        """Busca pacientes por nome ou RENACH"""
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                search_term = search_term.lower() if search_term else ""
+
+                query = """
+                    SELECT nome, telefone, renach, 
+                        COALESCE(status_comparecimento, 'pending') as status_comparecimento, 
+                        observacao, data_agendamento
+                    FROM marcacoes 
+                    WHERE (LOWER(nome) LIKE ? OR LOWER(renach) LIKE ?)
+                """
+                params = [f"%{search_term}%", f"%{search_term}%"]
+
+                if selected_date and not search_term:
+                    query += " AND data_agendamento = ?"
+                    params.append(selected_date)
+
+                query += " ORDER BY nome"
+
+                cursor.execute(query, params)
+                return cursor.fetchall()
+
+        except sqlite3.Error as e:
+            self.logger.error(f"Erro ao buscar pacientes: {e}")
+            return []
+
+    # Atualiza lista de pacientes
+    def update_patient_list(self, event=None):
+        """Atualiza a lista de pacientes com status de comparecimento."""
+        # Verifica marcações expiradas antes de atualizar a lista
+        self.check_expired_appointments()
+
+        search_term = self.search_var.get().strip()
+        selected_date = self.date_entry.get_date().strftime("%Y-%m-%d")
+        patients = self.get_patients_by_name_or_renach(search_term, selected_date)
+
+        # Limpa a tabela anterior
+        for widget in self.results_frame.winfo_children():
+            widget.destroy()
+
+        # Adiciona cabeçalho atualizado
+        headers = [
+            "Nome",
+            "Telefone",
+            "RENACH",
+            "Status",
+            "Observações",
+            "Data",
+            "Ações",
+        ]
+        for j, header in enumerate(headers):
+            header_cell = tk.Label(
+                self.results_frame,
+                text=header,
+                font=("Arial", 12, "bold"),
+                bg=self.master.cget("bg"),
+                fg="#ECF0F1",
+                width=20,
+                anchor="w",
+            )
+            header_cell.grid(row=0, column=j, padx=5, pady=2, sticky="ew")
+
+        if not patients:
+            tk.Label(
+                self.results_frame,
+                text="Nenhum paciente encontrado.",
+                font=("Arial", 11),
+                bg=self.master.cget("bg"),
+                fg="#ECF0F1",
+                pady=20,
+            ).grid(row=1, column=0, columnspan=len(headers))
+            return
+
+        # Popula a tabela com os dados atualizados
+        for i, patient in enumerate(patients, start=1):
+            for j, info in enumerate(patient):
+                # Ajusta o texto do status
+                if j == 3:  # Coluna de status
+                    status_text = {
+                        "attended": "Compareceu",
+                        "missed": "Não Compareceu",
+                        "pending": "Pendente",
+                    }.get(info, "Pendente")
+
+                    # Cores diferentes para cada status
+                    status_colors = {
+                        "attended": "#2ecc71",
+                        "missed": "#e74c3c",
+                        "pending": "#f1c40f",
+                    }
+                    bg_color = status_colors.get(info, "#f1c40f")
+                elif j == 5:  # Coluna de data
+                    date_text = info if info else ""
+                    if date_text:
+                        date_text = datetime.strptime(date_text, "%Y-%m-%d").strftime(
+                            "%d/%m/%Y"
+                        )
+                    bg_color = self.master.cget("bg")
+                else:
+                    date_text = info if info else ""
+                    bg_color = self.master.cget("bg")
+
+                cell = tk.Label(
+                    self.results_frame,
+                    text=date_text if j == 5 else status_text if j == 3 else info,
+                    font=("Arial", 11),
+                    bg=bg_color,
+                    fg="#ECF0F1" if j != 3 else "#000000",
+                    width=25 if j in [0, 4] else 15,
+                    anchor="w",
+                    wraplength=300 if j == 4 else None,
+                )
+                cell.grid(row=i, column=j, padx=5, pady=2, sticky="ew")
+
+            # Frame para botões de ação
+            action_frame = tk.Frame(self.results_frame, bg=self.master.cget("bg"))
+            action_frame.grid(row=i, column=len(headers) - 1, padx=5, pady=2)
+
+            # Botões de ação
+            def create_edit_callback(p):
+                return lambda: self.edit_marcacao(p)
+
+            def create_delete_callback(p):
+                return lambda: self.delete_marcacao(p)
+
+            tk.Button(
+                action_frame,
+                text="Editar",
+                command=create_edit_callback(patient),
+                width=8,
+            ).pack(side="left", padx=2)
+
+            tk.Button(
+                action_frame,
+                text="Excluir",
+                command=create_delete_callback(patient),
+                width=8,
+            ).pack(side="left", padx=2)
+
+            # Botões de status
+            tk.Button(
+                action_frame,
+                text="✓",
+                command=lambda p=patient: self.update_attendance_status(
+                    p[2], "attended"
+                ),
+                bg="#2ecc71",
+                fg="white",
+                width=3,
+            ).pack(side="left", padx=2)
+
+            tk.Button(
+                action_frame,
+                text="✗",
+                command=lambda p=patient: self.update_attendance_status(p[2], "missed"),
+                bg="#e74c3c",
+                fg="white",
+                width=3,
+            ).pack(side="left", padx=2)
+
+            tk.Button(
+                action_frame,
+                text="⟲",
+                command=lambda p=patient: self.update_attendance_status(
+                    p[2], "pending"
+                ),
+                bg="#f1c40f",
+                fg="white",
+                width=3,
+            ).pack(side="left", padx=2)
+
+        # Estatísticas
+        stats_frame = tk.Frame(self.results_frame, bg=self.master.cget("bg"))
+        stats_frame.grid(
+            row=len(patients) + 1, column=0, columnspan=len(headers), pady=10
+        )
+
+        # Contagem de status
+        attended_count = sum(1 for p in patients if p[3] == "attended")
+        missed_count = sum(1 for p in patients if p[3] == "missed")
+        pending_count = sum(1 for p in patients if p[3] == "pending")
+
+        stats_text = f"Total: {len(patients)} | Compareceram: {attended_count} | Não Compareceram: {missed_count} | Pendentes: {pending_count}"
+        tk.Label(
+            stats_frame,
+            text=stats_text,
+            font=("Arial", 10),
+            bg=self.master.cget("bg"),
+            fg="#ECF0F1",
+        ).pack()
