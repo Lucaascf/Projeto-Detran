@@ -936,24 +936,27 @@ class FuncoesBotoes:
 
     # Código de exibição de informações...
     def exibir_informacao(self):
-        """Exibe informações dos pacientes."""
+        """Exibe informações dos pacientes usando o PatientInfoDisplay."""
         try:
-            # Cria uma instância do PatientInfoDisplay
+            # Cria uma instância do PatientInfoDisplay passando os parâmetros necessários
             display = PatientInfoDisplay(
-                master=self.master, planilhas=self.planilhas, logger=self.logger
+                master=self.master,          # Janela principal
+                planilhas=self.planilhas,    # Objeto que gerencia as planilhas
+                logger=self.logger           # Logger para registro de eventos
             )
-
+            
             # Chama o método display para mostrar as informações
             display.display()
-
+            
             return True
+            
         except Exception as e:
             self.logger.error(f"Erro ao exibir informações: {str(e)}")
             messagebox.showerror(
-                "Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}"
+                "Erro", 
+                f"Ocorreu um erro ao exibir as informações: {str(e)}"
             )
             return False
-
     """
     SEÇÃO 5: MANIPULAÇÃO DE PLANILHAS
     """
@@ -2568,7 +2571,6 @@ class GerenciadorPlanilhas:
             messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
 
 
-
 @dataclass
 class PatientData:
     """Estrutura de dados imutável para informações do paciente."""
@@ -2579,32 +2581,53 @@ class PatientData:
     search_text: str
 
 class PatientInfoDisplay:
-    """Classe especializada para exibição de informações de pacientes."""
+    """Classe otimizada para exibição de informações de pacientes."""
     
     def __init__(self, master: tk.Tk, planilhas, logger=None):
         self.master = master
         self.planilhas = planilhas
         self.logger = logger or logging.getLogger(__name__)
         
-        # Cache e estado
+        # Sistema de cache melhorado com TTL
         self.data_cache = {
             'medico': [],
             'psi': [],
+            'last_update': None,
             'last_filters': {},
-            'timer': None
+            'timer': None,
+            'ttl': 300  # 5 minutos de TTL para o cache
         }
         
-        # Configurações de UI
-        self.colors = {
-            'background': master.cget("bg"),
-            'text': "#ECF0F1",
-            'header': "#2C3E50",
-            'highlight': "#34495E",
-            'separator': "#7f8c8d"
+        # Temas e estilos modernos
+        self.theme = {
+            'background': '#1a1a1a',
+            'secondary_bg': '#2d2d2d',
+            'text': '#ffffff',
+            'accent': '#3498db',
+            'header': '#2c3e50',
+            'highlight': '#34495e',
+            'separator': '#7f8c8d',
+            'hover': '#3e4d5c',
+            'error': '#e74c3c'
         }
         
-        # Referências de UI
+        # Configurações de UI responsiva
+        self.ui_config = {
+            'min_width': 800,
+            'min_height': 600,
+            'padding': 10,
+            'animation_duration': 200
+        }
+        
+        # Referências de UI com estado
         self.ui_refs = {}
+        
+        # Estado de ordenação
+        self.sort_state = {
+            'column': None,
+            'reverse': False
+        }
+
 
     @lru_cache(maxsize=1000)
     def _process_payment(self, value: str) -> str:
@@ -2620,71 +2643,86 @@ class PatientInfoDisplay:
             return str(value).strip()
 
     def _load_data(self) -> bool:
-        """Carrega e processa os dados da planilha."""
-        try:
-            # Usa o método correto para obter o workbook
-            self.planilhas.reload_workbook()  # Recarrega o workbook
-            wb = self.planilhas.wb  # Acessa o workbook através do atributo wb
-            
-            if not wb:
-                return False
-
+            """Carrega e processa os dados da planilha com cache inteligente."""
             try:
-                ws = wb[self.planilhas.sheet_name] if hasattr(self.planilhas, "sheet_name") else wb.active
-            except:
+                current_time = time.time()
+                
+                # Verifica se o cache ainda é válido
+                if (self.data_cache['last_update'] and 
+                    current_time - self.data_cache['last_update'] < self.data_cache['ttl']):
+                    return True
+                    
+                self.planilhas.reload_workbook()
+                wb = self.planilhas.wb
+                
+                if not wb:
+                    return False
+
                 ws = wb.active
+                if not ws:
+                    messagebox.showerror("Erro", "Planilha inválida")
+                    return False
+
+                # Processamento em lote otimizado
+                med_data = []
+                psi_data = []
                 
-            if not ws:
-                messagebox.showerror("Erro", "Planilha inválida")
-                wb.close()
+                # Pré-aloca as listas para melhor performance
+                max_rows = ws.max_row
+                med_data = []
+                psi_data = []
+                
+                # Processa em chunks para melhor performance
+                chunk_size = 100
+                for start_row in range(3, max_rows + 1, chunk_size):
+                    end_row = min(start_row + chunk_size, max_rows + 1)
+                    
+                    rows = list(ws.iter_rows(min_row=start_row, max_row=end_row))
+                    
+                    for row in rows:
+                        # Processamento de médicos
+                        if row[1].value:
+                            nome = str(row[1].value).strip().upper()
+                            if not any(x in nome.lower() for x in ["soma", "médico", "psicólogo", "total"]):
+                                med_data.append(PatientData(
+                                    nome=nome,
+                                    renach=str(row[2].value or "").strip(),
+                                    pagamento=self._process_payment(row[5].value),
+                                    tipo="Médico",
+                                    search_text=f"{nome.lower()} {str(row[2].value or '').lower()}"
+                                ))
+                        
+                        # Processamento de psicólogos
+                        if len(row) > 7 and row[7].value:
+                            nome = str(row[7].value).strip().upper()
+                            if not any(x in nome.lower() for x in ["soma", "médico", "psicólogo", "total"]):
+                                psi_data.append(PatientData(
+                                    nome=nome,
+                                    renach=str(row[8].value or "").strip(),
+                                    pagamento=self._process_payment(row[11].value),
+                                    tipo="Psicólogo",
+                                    search_text=f"{nome.lower()} {str(row[8].value or '').lower()}"
+                                ))
+
+                # Atualiza o cache
+                self.data_cache.update({
+                    'medico': med_data,
+                    'psi': psi_data,
+                    'last_update': current_time
+                })
+
+                return bool(med_data or psi_data)
+
+            except Exception as e:
+                self.logger.error(f"Erro ao carregar dados: {e}")
                 return False
-
-            def process_row(row_data: tuple, tipo: str) -> Optional[PatientData]:
-                nome, renach, pagamento = row_data
-                if not nome or not isinstance(nome, str):
-                    return None
-                
-                nome_proc = nome.strip().upper()
-                if any(x in nome_proc.lower() for x in ["soma", "médico", "psicólogo", "total"]):
-                    return None
-                
-                renach_proc = str(renach).strip() if renach else ""
-                pagamento_proc = self._process_payment(pagamento)
-                
-                return PatientData(
-                    nome=nome_proc,
-                    renach=renach_proc,
-                    pagamento=pagamento_proc,
-                    tipo=tipo,
-                    search_text=f"{nome_proc.lower()} {renach_proc.lower()}"
-                )
-
-            # Processamento em lote
-            med_data = []
-            psi_data = []
             
-            for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
-                if med := process_row((row[1].value, row[2].value, row[5].value), "Médico"):
-                    med_data.append(med)
-                if len(row) > 7:
-                    if psi := process_row((row[7].value, row[8].value, row[11].value), "Psicólogo"):
-                        psi_data.append(psi)
-
-            self.data_cache['medico'] = med_data
-            self.data_cache['psi'] = psi_data
-
-            return bool(med_data or psi_data)
-
-        except Exception as e:
-            self.logger.error(f"Erro ao carregar dados: {e}")
-            return False
-
     def _create_ui(self) -> Tuple[tk.Toplevel, Dict]:
         """Cria e retorna a interface do usuário."""
         window = tk.Toplevel(self.master)
         window.title("Informações dos Pacientes")
         window.geometry("1200x800")
-        window.configure(bg=self.colors['background'])
+        window.configure(bg=self.theme['background'])
         
         # Frames principais
         frames = self._create_frames(window)
@@ -2698,8 +2736,8 @@ class PatientInfoDisplay:
         # Barra de status
         stats_label = tk.Label(
             frames['stats'],
-            bg=self.colors['background'],
-            fg=self.colors['text'],
+            bg=self.theme['background'],
+            fg=self.theme['text'],
             font=("Arial", 10, "bold")
         )
         stats_label.pack(pady=5)
@@ -2713,14 +2751,14 @@ class PatientInfoDisplay:
         }
         
         return window, self.ui_refs
-
+    
     def _create_frames(self, window: tk.Toplevel) -> Dict[str, tk.Frame]:
         """Cria e retorna os frames principais."""
         frames = {
-            'main': tk.Frame(window, bg=self.colors['background']),
-            'control': tk.Frame(window, bg=self.colors['background']),
-            'table': tk.Frame(window),
-            'stats': tk.Frame(window, bg=self.colors['background'])
+            'main': tk.Frame(window, bg=self.theme['background']),
+            'control': tk.Frame(window, bg=self.theme['background']),
+            'table': tk.Frame(window, bg=self.theme['background']),
+            'stats': tk.Frame(window, bg=self.theme['background'])
         }
         
         frames['main'].pack(fill="both", expand=True, padx=20, pady=10)
@@ -2729,7 +2767,7 @@ class PatientInfoDisplay:
         frames['stats'].pack(in_=frames['main'], fill="x", pady=10)
         
         return frames
-
+    
     def _create_filters(self, parent: tk.Frame) -> Dict[str, tk.Variable]:
         """Cria e retorna os controles de filtro."""
         filters = {
@@ -2738,7 +2776,7 @@ class PatientInfoDisplay:
             'payment': tk.StringVar()
         }
         
-        filter_frame = tk.Frame(parent, bg=self.colors['background'])
+        filter_frame = tk.Frame(parent, bg=self.theme['background'])
         filter_frame.pack(fill="x", padx=5)
         
         # Tipo de atendimento
@@ -2750,9 +2788,9 @@ class PatientInfoDisplay:
                 text=text,
                 variable=filters['type'],
                 value=value,
-                bg=self.colors['background'],
-                fg=self.colors['text'],
-                selectcolor=self.colors['header'],
+                bg=self.theme['background'],
+                fg=self.theme['text'],
+                selectcolor=self.theme['header'],
                 command=lambda: self._delayed_filter()
             ).pack(side="left", padx=5)
         
@@ -2776,29 +2814,82 @@ class PatientInfoDisplay:
             var.trace("w", lambda *args: self._delayed_filter())
         
         return filters
-
+    
     def _create_filter_section(self, parent: tk.Frame, title: str) -> tk.LabelFrame:
         """Cria uma seção de filtro com título."""
         frame = tk.LabelFrame(
             parent,
             text=title,
-            bg=self.colors['background'],
-            fg=self.colors['text'],
+            bg=self.theme['background'],
+            fg=self.theme['text'],
             font=("Arial", 10)
         )
         frame.pack(side="left", padx=5, pady=5)
         return frame
-
+    
     def _create_table(self, parent: tk.Frame) -> Dict:
-        """Cria e retorna a estrutura da tabela."""
-        canvas = tk.Canvas(parent, bg=self.colors['background'])
-        scrollbar = tk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        table_frame = tk.Frame(canvas, bg=self.colors['background'])
+        """Cria uma tabela moderna e responsiva."""
+        # Frame principal com bordas arredondadas
+        table_container = tk.Frame(
+            parent,
+            bg=self.theme['background'],
+            highlightbackground=self.theme['accent'],
+            highlightthickness=1
+        )
+        table_container.pack(fill="both", expand=True, padx=5, pady=5)
         
-        canvas.create_window((0, 0), window=table_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        # Canvas com scrollbar suave
+        canvas = tk.Canvas(
+            table_container,
+            bg=self.theme['background'],
+            highlightthickness=0
+        )
         
-        # Cabeçalhos
+        scrollbar = ttk.Scrollbar(
+            table_container,
+            orient="vertical",
+            command=canvas.yview
+        )
+        
+        table_frame = tk.Frame(
+            canvas,
+            bg=self.theme['background']
+        )
+        
+        # Configuração do scroll
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            
+        def _bound_to_mousewheel(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            canvas.bind_all("<Button-4>", _on_mousewheel)
+            canvas.bind_all("<Button-5>", _on_mousewheel)
+            
+        def _unbound_to_mousewheel(event):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+            
+        def _on_mousewheel(event):
+            # Windows
+            if event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+            else:
+                # Tratamento do evento para Windows
+                if event.delta > 0:
+                    canvas.yview_scroll(-1, "units")
+                else:
+                    canvas.yview_scroll(1, "units")
+                    
+        table_frame.bind('<Configure>', _on_frame_configure)
+        
+        # Vincula os eventos de scroll
+        canvas.bind('<Enter>', _bound_to_mousewheel)
+        canvas.bind('<Leave>', _unbound_to_mousewheel)
+        
+        # Cabeçalhos clicáveis para ordenação
         headers = [
             ("Nº", 5),
             ("Nome", 30),
@@ -2808,49 +2899,74 @@ class PatientInfoDisplay:
         ]
         
         for col, (header, width) in enumerate(headers):
-            tk.Label(
+            header_frame = tk.Frame(
                 table_frame,
+                bg=self.theme['header']
+            )
+            header_frame.grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
+            
+            label = tk.Label(
+                header_frame,
                 text=header,
-                bg=self.colors['header'],
-                fg=self.colors['text'],
+                bg=self.theme['header'],
+                fg=self.theme['text'],
                 font=("Arial", 11, "bold"),
-                width=width,
                 padx=10,
                 pady=8
-            ).grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
+            )
+            label.pack(fill="both", expand=True)
+            
+            # Adiciona funcionalidade de ordenação
+            label.bind('<Button-1>', lambda e, col=col: self._sort_table(col))
+            label.bind('<Enter>', lambda e, widget=label: self._on_header_hover(widget, True))
+            label.bind('<Leave>', lambda e, widget=label: self._on_header_hover(widget, False))
         
+        # Configuração do canvas e scrollbar
+        canvas.create_window((0, 0), window=table_frame, anchor="nw", tags=("table",))
+        
+        def _on_canvas_configure(event):
+            canvas.itemconfig("table", width=event.width)
+        
+        canvas.bind('<Configure>', _on_canvas_configure)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Layout responsivo - alterada a ordem de empacotamento
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # Configurar scroll
-        def _on_mousewheel(event):
-            if sys.platform.startswith('win'):
-                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-            elif sys.platform == 'darwin':
-                canvas.yview_scroll(int(-1*event.delta), "units")
-            else:
-                if event.num == 4:
-                    canvas.yview_scroll(-1, "units")
-                elif event.num == 5:
-                    canvas.yview_scroll(1, "units")
-        
-        # Bind para Windows/macOS
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
-        # Bind para Linux
-        canvas.bind_all("<Button-4>", _on_mousewheel)
-        canvas.bind_all("<Button-5>", _on_mousewheel)
-        
-        # Ajustar scrollregion quando o frame mudar de tamanho
-        def _configure_canvas(event):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-        
-        table_frame.bind('<Configure>', _configure_canvas)
+        # Configurações de grid
+        for i in range(5):
+            table_frame.grid_columnconfigure(i, weight=1)
         
         return {
+            'container': table_container,
             'frame': table_frame,
             'canvas': canvas,
             'scrollbar': scrollbar
         }
+    
+    def _smooth_scroll(self, scrollbar):
+            """Implementa scrolling suave."""
+            def scroll(*args):
+                scrollbar.set(*args)
+                self.ui_refs['table']['canvas'].yview_moveto(args[0])
+            return scroll
+
+    def _sort_table(self, column: int):
+        """Ordena a tabela pela coluna clicada."""
+        if self.sort_state['column'] == column:
+            self.sort_state['reverse'] = not self.sort_state['reverse']
+        else:
+            self.sort_state['column'] = column
+            self.sort_state['reverse'] = False
+        
+        self._apply_filters()
+
+    def _on_header_hover(self, widget: tk.Label, entering: bool):
+        """Efeito hover nos cabeçalhos."""
+        widget.configure(
+            bg=self.theme['hover'] if entering else self.theme['header']
+        )
 
     def _update_table(self, data: List[PatientData]) -> None:
         """Atualiza a tabela com os dados filtrados."""
@@ -2868,7 +2984,7 @@ class PatientInfoDisplay:
         row = 1
         # Processa médicos
         for idx, patient in enumerate(medicos, 1):
-            bg_color = self.colors['highlight'] if idx % 2 == 0 else self.colors['background']
+            bg_color = self.theme['highlight'] if idx % 2 == 0 else self.theme['background']
             
             cells = [
                 (str(idx), "center", 5),
@@ -2883,7 +2999,7 @@ class PatientInfoDisplay:
                     table['frame'],
                     text=text,
                     bg=bg_color,
-                    fg=self.colors['text'],
+                    fg=self.theme['text'],
                     font=("Arial", 10),
                     anchor=anchor,
                     width=width,
@@ -2898,7 +3014,7 @@ class PatientInfoDisplay:
             separator = tk.Frame(
                 table['frame'],
                 height=2,
-                bg=self.colors['separator']
+                bg=self.theme['separator']
             )
             separator.grid(
                 row=row,
@@ -2911,7 +3027,7 @@ class PatientInfoDisplay:
 
         # Processa psicólogos
         for idx, patient in enumerate(psicologos, 1):
-            bg_color = self.colors['highlight'] if row % 2 == 0 else self.colors['background']
+            bg_color = self.theme['highlight'] if row % 2 == 0 else self.theme['background']
             
             cells = [
                 (str(idx), "center", 5),
@@ -2926,7 +3042,7 @@ class PatientInfoDisplay:
                     table['frame'],
                     text=text,
                     bg=bg_color,
-                    fg=self.colors['text'],
+                    fg=self.theme['text'],
                     font=("Arial", 10),
                     anchor=anchor,
                     width=width,
@@ -2939,7 +3055,7 @@ class PatientInfoDisplay:
         # Atualiza scroll region
         table['frame'].update_idletasks()
         table['canvas'].configure(scrollregion=table['canvas'].bbox("all"))
-
+        
     def _update_stats(self, filtered_data: List[PatientData]) -> None:
         """Atualiza as estatísticas."""
         med_count = sum(1 for p in filtered_data if p.tipo == "Médico")
@@ -2950,92 +3066,107 @@ class PatientInfoDisplay:
         self.ui_refs['stats'].config(text=stats)
 
     def _filter_data(self) -> List[PatientData]:
-        """Filtra os dados com base nos critérios atuais."""
-        filters = self.ui_refs['filters']
-        current_filter = filters['type'].get()
-        search_term = filters['search'].get().lower()
-        payment_term = filters['payment'].get().lower()
-        
-        def matches_criteria(patient: PatientData) -> bool:
-            if search_term and search_term not in patient.search_text:
-                return False
-            if payment_term and payment_term not in patient.pagamento.lower():
-                return False
-            return True
-        
-        filtered = []
-        # Primeiro adiciona médicos
-        if current_filter in ["todos", "medico"]:
-            medicos = [p for p in self.data_cache['medico'] if matches_criteria(p)]
-            filtered.extend(medicos)
-        
-        # Depois adiciona psicólogos
-        if current_filter in ["todos", "psi"]:
-            psicologos = [p for p in self.data_cache['psi'] if matches_criteria(p)]
-            filtered.extend(psicologos)
-        
-        return filtered
-        
-        filtered = []
-        # Primeiro adiciona médicos
-        if current_filter in ["todos", "medico"]:
-            medicos = sorted(
-                [p for p in self.data_cache['medico'] if matches_criteria(p)],
-                key=lambda x: x.nome.lower()
-            )
-            filtered.extend(medicos)
-        
-        # Depois adiciona psicólogos
-        if current_filter in ["todos", "psi"]:
-            psicologos = sorted(
-                [p for p in self.data_cache['psi'] if matches_criteria(p)],
-                key=lambda x: x.nome.lower()
-            )
-            filtered.extend(psicologos)
-        
-        return filtered
-
+            """Sistema de filtragem otimizado com cache de resultados."""
+            filters = self.ui_refs['filters']
+            current_filters = {
+                'type': filters['type'].get(),
+                'search': filters['search'].get().lower(),
+                'payment': filters['payment'].get().lower()
+            }
+            
+            # Verifica se os filtros mudaram
+            if current_filters == self.data_cache['last_filters']:
+                return self.data_cache.get('last_result', [])
+            
+            def matches_criteria(patient: PatientData) -> bool:
+                if current_filters['search'] and current_filters['search'] not in patient.search_text:
+                    return False
+                if current_filters['payment'] and current_filters['payment'] not in patient.pagamento.lower():
+                    return False
+                return True
+            
+            filtered = []
+            if current_filters['type'] in ["todos", "medico"]:
+                filtered.extend([p for p in self.data_cache['medico'] if matches_criteria(p)])
+            
+            if current_filters['type'] in ["todos", "psi"]:
+                filtered.extend([p for p in self.data_cache['psi'] if matches_criteria(p)])
+            
+            # Aplica ordenação
+            if self.sort_state['column'] is not None:
+                key_funcs = [
+                    lambda x: int(x.nome.split()[0]) if x.nome.split()[0].isdigit() else 0,
+                    lambda x: x.nome.lower(),
+                    lambda x: x.renach,
+                    lambda x: x.pagamento,
+                    lambda x: x.tipo
+                ]
+                
+                filtered.sort(
+                    key=key_funcs[self.sort_state['column']],
+                    reverse=self.sort_state['reverse']
+                )
+            
+            # Atualiza cache
+            self.data_cache['last_filters'] = current_filters.copy()
+            self.data_cache['last_result'] = filtered
+            
+            return filtered
+    
     def _delayed_filter(self) -> None:
-        """Implementa filtragem com delay para melhor performance."""
-        if self.data_cache['timer']:
-            self.master.after_cancel(self.data_cache['timer'])
-        self.data_cache['timer'] = self.master.after(300, self._apply_filters)
+            """Implementa filtragem com delay para melhor performance."""
+            if self.data_cache['timer']:
+                self.master.after_cancel(self.data_cache['timer'])
+            self.data_cache['timer'] = self.master.after(300, self._apply_filters)
 
     def _apply_filters(self) -> None:
-        """Aplica os filtros e atualiza a interface."""
-        filtered_data = self._filter_data()
-        self._update_table(filtered_data)
-        self._update_stats(filtered_data)
+        """Aplica filtros com animação suave."""
+        if self.data_cache['timer']:
+            self.master.after_cancel(self.data_cache['timer'])
+        
+        def animate():
+            table = self.ui_refs['table']['frame']
+            table.tk_setPalette(background=self.theme['background'])
+            
+            filtered_data = self._filter_data()
+            self._update_table(filtered_data)
+            self._update_stats(filtered_data)
+            
+            table.tk_setPalette(background=self.theme['background'])
+        
+        self.data_cache['timer'] = self.master.after(150, animate)
 
     def display(self) -> None:
-        """Método principal para exibir as informações dos pacientes."""
+        """Exibe a interface principal com tratamento de erros aprimorado."""
         try:
             if not self._load_data():
+                messagebox.showerror("Erro", "Não foi possível carregar os dados")
                 return
             
             window, _ = self._create_ui()
             self._apply_filters()
             
-            # Centralizar janela
+            # Centralização e dimensionamento responsivo
             window.update_idletasks()
-            width = window.winfo_width()
-            height = window.winfo_height()
+            width = max(window.winfo_width(), self.ui_config['min_width'])
+            height = max(window.winfo_height(), self.ui_config['min_height'])
             x = (window.winfo_screenwidth() // 2) - (width // 2)
             y = (window.winfo_screenheight() // 2) - (height // 2)
             window.geometry(f"{width}x{height}+{x}+{y}")
             
-            # Cleanup
+            # Configuração de redimensionamento
+            window.minsize(self.ui_config['min_width'], self.ui_config['min_height'])
+            
             def on_closing():
                 if self.data_cache['timer']:
                     self.master.after_cancel(self.data_cache['timer'])
-                # Remover os bindings do scroll
-                window.unbind_all("<MouseWheel>")
-                window.unbind_all("<Button-4>")
-                window.unbind_all("<Button-5>")
                 window.destroy()
             
             window.protocol("WM_DELETE_WINDOW", on_closing)
             
         except Exception as e:
-            self.logger.error(f"Erro ao exibir informações: {e}")
-            messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
+            self.logger.error(f"Erro ao exibir interface: {e}")
+            messagebox.showerror(
+                "Erro",
+                f"Ocorreu um erro ao exibir a interface: {str(e)}\nPor favor, contate o suporte."
+            )
