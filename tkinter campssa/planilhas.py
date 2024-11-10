@@ -343,8 +343,7 @@ class Planilhas:
                     pacientes_medicos.setdefault(renach_medico, []).append(row[0].row)
                 except ValueError:
                     print(
-                        f"RENACH inválido na linha {
-                          row[0].row}: {row[2].value}"
+                        f"RENACH inválido na linha {row[0].row}: {row[2].value}"
                     )
 
             # Pacientes psicólogos
@@ -356,8 +355,7 @@ class Planilhas:
                     )
                 except ValueError:
                     print(
-                        f"RENACH inválido na linha {
-                          row[0].row}: {row[8].value}"
+                        f"RENACH inválido na linha {row[0].row}: {row[8].value}"
                     )
 
         layout = [

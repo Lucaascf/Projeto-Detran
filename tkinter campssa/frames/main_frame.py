@@ -364,7 +364,7 @@ class MainFrame(Frame):
         self.funcoes_botoes.processar_notas_fiscais()
 
     def resultados_consulta(self):
-        self.funcoes_botoes.exibir_resultado()
+        self.funcoes_botoes.mostrar_valores_atendimentos()
 
     def relatorio_wpp(self):
         self.funcoes_botoes.enviar_whatsapp()

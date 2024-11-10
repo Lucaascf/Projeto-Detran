@@ -1960,6 +1960,77 @@ class FuncoesBotoes:
             logging.info("Processo finalizado")
             return cpfs
 
+    def mostrar_valores_atendimentos(self):
+        # Carrega os dados da planilha
+        wb = self.get_active_workbook()
+        ws = wb.active
+
+        # Inicializa o total de pagamentos acumulados para cada método
+        total_medico = {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0}
+        total_psicologo = {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0}
+
+        # Valores fixos para consulta
+        VALOR_MEDICO = 148.65
+        VALOR_PSICOLOGO = 192.61
+
+        # Itera sobre as linhas da planilha para calcular os valores
+        for row in range(3, ws.max_row + 1):
+            pagamento_medico = ws[f"F{row}"].value
+            pagamento_psicologo = ws[f"L{row}"].value
+
+            # Processa os valores de pagamento para médico
+            if pagamento_medico:
+                if pagamento_medico in ["D", "C", "E", "P"]:
+                    metodo = self._traduzir_metodo(pagamento_medico)
+                    total_medico[metodo] += VALOR_MEDICO
+                else:
+                    # Para formatos como "D:100,65|C:48,00"
+                    for parte in pagamento_medico.split("|"):
+                        metodo, valor = parte.split(":")
+                        total_medico[self._traduzir_metodo(metodo.strip())] += float(valor.replace(",", "."))
+
+            # Processa os valores de pagamento para psicólogo
+            if pagamento_psicologo:
+                if pagamento_psicologo in ["D", "C", "E", "P"]:
+                    metodo = self._traduzir_metodo(pagamento_psicologo)
+                    total_psicologo[metodo] += VALOR_PSICOLOGO
+                else:
+                    # Para formatos como "D:100,65|C:48,00"
+                    for parte in pagamento_psicologo.split("|"):
+                        metodo, valor = parte.split(":")
+                        total_psicologo[self._traduzir_metodo(metodo.strip())] += float(valor.replace(",", "."))
+
+        # Criação da janela para exibir os valores
+        janela_valores = tk.Toplevel(self.master)
+        janela_valores.title("Valores dos Atendimentos")
+        janela_valores.geometry("400x400")
+        janela_valores.configure(bg="#2C3E50")
+
+        # Exibindo valores acumulados para médico
+        tk.Label(janela_valores, text="Valores - Médico:", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 20, "bold")).pack(pady=5)
+        for metodo, valor in total_medico.items():
+            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
+
+        # Espaço entre seções
+        tk.Label(janela_valores, text="", bg="#2C3E50").pack()
+
+        # Exibindo valores acumulados para psicólogo
+        tk.Label(janela_valores, text="Valores - Psicólogo:", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 20, "bold")).pack(pady=5)
+        for metodo, valor in total_psicologo.items():
+            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
+
+        # Centraliza a janela
+        self.center(janela_valores)
+
+    def _traduzir_metodo(self, codigo):
+        """Converte os códigos de pagamento em textos legíveis."""
+        return {
+            "D": "Débito",
+            "C": "Crédito",
+            "E": "Espécie",
+            "P": "PIX"
+        }.get(codigo, "Desconhecido")
+
     """
     SEÇÃO 8: NAVEGAÇÃO DE INTERFACE
     """
