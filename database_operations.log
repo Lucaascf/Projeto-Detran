@@ -23,3 +23,66 @@
 2024-11-07 22:12:43,814 - INFO - Campos do formulário limpos
 2024-11-08 00:41:53,770 - INFO - Marcação expirada atualizada para RENACH 434255345: 2024-11-07
 2024-11-08 00:41:53,770 - INFO - Marcação expirada atualizada para RENACH 09: 2024-11-07
+2024-11-09 17:42:41,115 - INFO - Status atualizado para RENACH 22: missed
+2024-11-10 21:06:10,321 - INFO - Status atualizado para RENACH 33: pending
+2024-11-10 21:06:10,323 - INFO - Marcação expirada atualizada para RENACH 33: 2024-11-07
+2024-11-10 21:06:55,462 - INFO - Status atualizado para RENACH 2: pending
+2024-11-10 21:06:55,465 - INFO - Marcação expirada atualizada para RENACH 2: 2024-11-07
+2024-11-10 21:06:58,494 - INFO - Status atualizado para RENACH 2: attended
+2024-11-10 21:13:43,717 - INFO - Status atualizado para RENACH 1221: missed
+2024-11-10 21:20:37,481 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:20:52,698 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:20:59,339 - INFO - Nova marcação criada para RENACH: 123
+2024-11-10 21:21:00,062 - INFO - Campos do formulário limpos
+2024-11-10 21:21:38,011 - INFO - Status atualizado para RENACH 123: attended
+2024-11-10 21:21:53,048 - INFO - Status atualizado para RENACH 123: pending
+2024-11-10 21:28:10,229 - INFO - Nova marcação criada para RENACH: 2
+2024-11-10 21:28:10,950 - INFO - Campos do formulário limpos
+2024-11-10 21:40:49,252 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:41:04,393 - INFO - Nova marcação criada para RENACH: 12
+2024-11-10 21:41:05,165 - INFO - Campos do formulário limpos
+2024-11-10 21:41:41,033 - INFO - Nova marcação criada para RENACH: 5
+2024-11-10 21:41:42,153 - INFO - Campos do formulário limpos
+2024-11-10 21:42:04,467 - INFO - Status atualizado para RENACH 5: missed
+2024-11-10 21:42:38,065 - INFO - Status atualizado para RENACH 5: pending
+2024-11-10 21:42:51,953 - INFO - Status atualizado para RENACH 5: attended
+2024-11-10 21:46:00,809 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:50:34,274 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:51:03,706 - WARNING - Tentativa de submissão com campos obrigatórios vazios
+2024-11-10 21:51:06,993 - INFO - Nova marcação criada para RENACH: 11
+2024-11-10 21:51:07,763 - INFO - Campos do formulário limpos
+2024-11-10 21:51:33,026 - INFO - Nova marcação criada para RENACH: 2
+2024-11-10 21:51:33,795 - INFO - Campos do formulário limpos
+2024-11-10 21:52:17,386 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:55:39,461 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:56:23,698 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 21:56:33,781 - INFO - Nova marcação criada para RENACH: 123
+2024-11-10 21:56:34,475 - INFO - Campos do formulário limpos
+2024-11-10 21:56:41,316 - INFO - Nova marcação criada para RENACH: 88
+2024-11-10 21:56:41,999 - INFO - Campos do formulário limpos
+2024-11-10 22:04:54,161 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 22:05:14,001 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 22:05:22,902 - INFO - Nova marcação criada para RENACH: 222
+2024-11-10 22:05:23,715 - INFO - Campos do formulário limpos
+2024-11-10 22:05:31,709 - INFO - Nova marcação criada para RENACH: 55
+2024-11-10 22:05:32,479 - INFO - Campos do formulário limpos
+2024-11-10 22:07:41,332 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-10 22:08:00,688 - INFO - Status atualizado para RENACH 222: attended
+2024-11-12 08:54:36,453 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-12 08:54:36,453 - INFO - Marcação expirada atualizada para RENACH 55: 2024-11-10
+2024-11-12 08:56:09,071 - INFO - Status atualizado para RENACH 55: attended
+2024-11-12 09:00:35,599 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-12 09:01:28,042 - INFO - Status atualizado para RENACH 222: pending
+2024-11-12 09:01:28,045 - INFO - Marcação expirada atualizada para RENACH 222: 2024-11-10
+2024-11-12 09:01:32,116 - INFO - Status atualizado para RENACH 222: pending
+2024-11-12 09:01:32,119 - INFO - Marcação expirada atualizada para RENACH 222: 2024-11-10
+2024-11-12 09:01:33,351 - INFO - Status atualizado para RENACH 222: missed
+2024-11-12 09:01:34,085 - INFO - Status atualizado para RENACH 222: attended
+2024-11-12 09:01:34,814 - INFO - Status atualizado para RENACH 222: pending
+2024-11-12 09:01:34,816 - INFO - Marcação expirada atualizada para RENACH 222: 2024-11-10
+2024-11-12 09:04:22,115 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-12 09:05:35,962 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-12 09:10:00,877 - INFO - Banco de dados criado/atualizado com sucesso
+2024-11-12 09:11:01,903 - INFO - Status atualizado para RENACH 55: pending
+2024-11-12 09:11:01,906 - INFO - Marcação expirada atualizada para RENACH 55: 2024-11-10
+2024-11-12 09:11:03,554 - INFO - Status atualizado para RENACH 55: missed

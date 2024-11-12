@@ -243,48 +243,35 @@ class DataBaseMarcacao:
                     """
                     )
 
-                    conn.commit()
-                    logger.info("Tabela de marcações criada com sucesso")
-                else:
-                    # Verificar e atualizar estrutura da tabela existente
-                    cursor.execute("PRAGMA table_info(marcacoes)")
-                    columns = {column[1] for column in cursor.fetchall()}
+                # Criação da tabela de alterações (nova)
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS marcacoes_changes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        renach TEXT NOT NULL,
+                        tipo TEXT NOT NULL,
+                        valor_anterior TEXT,
+                        valor_novo TEXT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        changes TEXT NOT NULL
+                    )
+                """
+)
 
-                    # Mapeamento de colunas antigas para novas
-                    needed_columns = {
-                        "nome": "TEXT NOT NULL",
-                        "telefone": "TEXT",
-                        "renach": "TEXT NOT NULL UNIQUE",
-                        "data_agendamento": "TEXT NOT NULL",
-                        "observacao": "TEXT",
-                        "status_comparecimento": 'TEXT DEFAULT "pending"',
-                        "historico_comparecimento": 'TEXT DEFAULT "[]"',
-                        "criado_em": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-                        "atualizado_em": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-                    }
+                # Índice para melhorar performance de busca (novo)
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_marcacoes_changes_renach 
+                    ON marcacoes_changes(renach)
+                """
+                )
 
-                    # Adicionar colunas faltantes
-                    for col_name, col_type in needed_columns.items():
-                        if col_name not in columns:
-                            try:
-                                cursor.execute(
-                                    f"ALTER TABLE marcacoes ADD COLUMN {col_name} {col_type}"
-                                )
-                                logger.info(
-                                    f"Coluna {col_name} adicionada à tabela marcacoes"
-                                )
-                            except sqlite3.Error as e:
-                                logger.error(
-                                    f"Erro ao adicionar coluna {col_name}: {e}"
-                                )
-
-                    conn.commit()
+                conn.commit()
+                logger.info("Banco de dados criado/atualizado com sucesso")
 
         except sqlite3.Error as e:
-            logger.error(f"Erro ao criar/atualizar banco de dados de marcações: {e}")
+            logger.error(f"Erro ao criar/atualizar banco de dados: {e}")
             raise
-
-        """Verifica e atualiza o status de marcações expiradas"""
 
     # Realiza migração do banco de dados
     def migrate_database(self) -> None:
@@ -655,7 +642,7 @@ class DataBaseMarcacao:
         tk.Button(
             control_frame,
             text="Ver Histórico",
-            command=self.view_patient_history,
+            command=self.view_detailed_history,
             bg="#3498db",
             fg="white",
             font=("Arial", 10),
@@ -1081,6 +1068,228 @@ class DataBaseMarcacao:
             logger.error(f"Erro ao submeter paciente: {e}")
             messagebox.showerror("Erro", "Erro ao processar operação. Verifique o log.")
 
+    # Exibe o histórico detalhado de alterações de um paciente, ordenado cronologicamente
+    def view_detailed_history(self, renach=None):
+        """Exibe o histórico detalhado de alterações de um paciente, ordenado cronologicamente."""
+        history_window = tk.Toplevel(self.master)
+        history_window.title("Histórico do Paciente")
+        history_window.geometry("1200x700")
+        
+        # Configurações visuais
+        cor_fundo = self.master.cget("bg")
+        cor_texto = "#ECF0F1"
+        
+        # Container principal
+        container = tk.Frame(history_window, bg=cor_fundo, padx=20, pady=10)
+        container.pack(fill="both", expand=True)
+        
+        # Cabeçalho com busca
+        header_frame = tk.Frame(container, bg=cor_fundo)
+        header_frame.pack(fill="x", pady=(0, 20))
+        
+        tk.Label(
+            header_frame,
+            text="Histórico de Alterações",
+            font=("Arial", 16, "bold"),
+            bg=cor_fundo,
+            fg=cor_texto
+        ).pack(side="left")
+        
+        # Campo de busca
+        search_frame = tk.Frame(header_frame, bg=cor_fundo)
+        search_frame.pack(side="right")
+        
+        tk.Label(
+            search_frame,
+            text="Buscar:",
+            font=("Arial", 12),
+            bg=cor_fundo,
+            fg=cor_texto
+        ).pack(side="left", padx=(0, 10))
+        
+        search_var = tk.StringVar(value=renach if renach else "")
+        search_entry = tk.Entry(
+            search_frame,
+            textvariable=search_var,
+            width=30,
+            font=("Arial", 11)
+        )
+        search_entry.pack(side="left")
+        
+        # Tabela com scrollbar
+        table_container = tk.Frame(container, bg=cor_fundo)
+        table_container.pack(fill="both", expand=True)
+        
+        scrollbar = ttk.Scrollbar(table_container)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Configuração das colunas da tabela
+        columns = [
+            ("data_hora", "Data/Hora", 150),
+            ("tipo_alteracao", "Tipo de Alteração", 150),
+            ("renach", "RENACH", 100),
+            ("nome", "Nome", 200),
+            ("valor_anterior", "Valor Anterior", 150),
+            ("valor_novo", "Novo Valor", 150),
+            ("data_agendamento", "Agendamento", 100),
+        ]
+        
+        tree = ttk.Treeview(
+            table_container,
+            columns=[col[0] for col in columns],
+            show="headings",
+            yscrollcommand=scrollbar.set
+        )
+        
+        # Configuração visual das colunas
+        for col_id, heading, width in columns:
+            tree.heading(col_id, text=heading)
+            tree.column(col_id, width=width)
+        
+        tree.pack(fill="both", expand=True)
+        scrollbar.config(command=tree.yview)
+        
+        def carregar_historico(search_term=None):
+            """Carrega o histórico do paciente ordenado cronologicamente."""
+            tree.delete(*tree.get_children())
+            
+            if not search_term:
+                return
+                
+            try:
+                with DatabaseConnection(self.db_name) as conn:
+                    cursor = conn.cursor()
+                    
+                    # Lista para armazenar todos os eventos
+                    todos_eventos = []
+                    
+                    # Busca dados do paciente
+                    cursor.execute("""
+                        SELECT nome, renach, historico_comparecimento, 
+                            data_agendamento, status_comparecimento, 
+                            criado_em
+                        FROM marcacoes 
+                        WHERE nome LIKE ? OR renach LIKE ?
+                    """, (f"%{search_term}%", f"%{search_term}%"))
+                    
+                    registros = cursor.fetchall()
+                    
+                    if not registros:
+                        messagebox.showinfo("Aviso", "Nenhum registro encontrado.")
+                        return
+                    
+                    for registro in registros:
+                        nome, renach, historico_json, data_agend, status, criado_em = registro
+                        data_agend_fmt = datetime.strptime(data_agend, "%Y-%m-%d").strftime("%d/%m/%Y")
+                        
+                        # Adiciona registro inicial
+                        timestamp_inicial = datetime.strptime(criado_em, "%Y-%m-%d %H:%M:%S")
+                        todos_eventos.append({
+                            'timestamp': timestamp_inicial,
+                            'data_hora': timestamp_inicial.strftime("%d/%m/%Y %H:%M"),
+                            'tipo': "Cadastro Inicial",
+                            'renach': renach,
+                            'nome': nome,
+                            'anterior': "-",
+                            'novo': f"Agendamento: {data_agend_fmt}",
+                            'agendamento': data_agend_fmt
+                        })
+                        
+                        # Busca alterações
+                        cursor.execute("""
+                            SELECT tipo, valor_anterior, valor_novo, timestamp
+                            FROM marcacoes_changes
+                            WHERE renach = ?
+                        """, (renach,))
+                        
+                        for alteracao in cursor.fetchall():
+                            tipo, anterior, novo, timestamp = alteracao
+                            timestamp_alteracao = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+                            
+                            # Traduz status se necessário
+                            if tipo == "Alteração de Status":
+                                status_dict = {
+                                    'attended': 'Compareceu',
+                                    'missed': 'Não Compareceu',
+                                    'pending': 'Pendente'
+                                }
+                                anterior = status_dict.get(anterior, anterior)
+                                novo = status_dict.get(novo, novo)
+                            
+                            todos_eventos.append({
+                                'timestamp': timestamp_alteracao,
+                                'data_hora': timestamp_alteracao.strftime("%d/%m/%Y %H:%M"),
+                                'tipo': tipo,
+                                'renach': renach,
+                                'nome': nome,
+                                'anterior': anterior,
+                                'novo': novo,
+                                'agendamento': data_agend_fmt
+                            })
+                        
+                        # Processa histórico de comparecimento
+                        if historico_json:
+                            try:
+                                historico = json.loads(historico_json)
+                                for entrada in historico:
+                                    if isinstance(entrada, dict):
+                                        status = entrada.get('status', '')
+                                        atualizado_em = entrada.get('atualizado_em', '')
+                                        timestamp_hist = datetime.strptime(atualizado_em, "%Y-%m-%d %H:%M:%S")
+                                        
+                                        status_traduzido = {
+                                            'attended': 'Compareceu',
+                                            'missed': 'Não Compareceu',
+                                            'pending': 'Pendente'
+                                        }.get(status, status)
+                                        
+                                        todos_eventos.append({
+                                            'timestamp': timestamp_hist,
+                                            'data_hora': timestamp_hist.strftime("%d/%m/%Y %H:%M"),
+                                            'tipo': "Atualização de Status",
+                                            'renach': renach,
+                                            'nome': nome,
+                                            'anterior': "-",
+                                            'novo': status_traduzido,
+                                            'agendamento': data_agend_fmt
+                                        })
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Erro ao processar histórico: {e}")
+                    
+                    # Ordena todos os eventos por timestamp (mais recente primeiro)
+                    todos_eventos.sort(key=lambda x: x['timestamp'], reverse=True)
+                    
+                    # Insere eventos ordenados na tabela
+                    for evento in todos_eventos:
+                        tree.insert("", "end", values=(
+                            evento['data_hora'],
+                            evento['tipo'],
+                            evento['renach'],
+                            evento['nome'],
+                            evento['anterior'],
+                            evento['novo'],
+                            evento['agendamento']
+                        ))
+                                
+            except sqlite3.Error as e:
+                logger.error(f"Erro na consulta: {e}")
+                messagebox.showerror("Erro", "Erro ao carregar histórico")
+        
+        # Configura busca com delay
+        def delayed_search(*args):
+            if hasattr(delayed_search, 'timer_id'):
+                history_window.after_cancel(delayed_search.timer_id)
+            delayed_search.timer_id = history_window.after(300, lambda: carregar_historico(search_var.get().strip()))
+        
+        search_var.trace('w', delayed_search)
+        
+        # Carrega histórico inicial se RENACH fornecido
+        if renach:
+            carregar_historico(renach)
+        
+        # Centraliza a janela
+        self.funcoes_botoes.center(history_window)
+
     # Remove marcação
     def delete_marcacao(self, patient):
         """Remove uma marcação do banco de dados."""
@@ -1110,37 +1319,57 @@ class DataBaseMarcacao:
             with DatabaseConnection(self.db_name) as conn:
                 cursor = conn.cursor()
 
+                # Primeiro pega o status atual antes de atualizar
                 cursor.execute(
-                    """
-                    SELECT historico_comparecimento, data_agendamento 
-                    FROM marcacoes 
-                    WHERE renach = ?
-                    """,
-                    (renach,),
+                    "SELECT status_comparecimento, data_agendamento FROM marcacoes WHERE renach = ?",
+                    (renach,)
                 )
                 result = cursor.fetchone()
-
                 if not result:
                     logger.warning(f"RENACH não encontrado: {renach}")
                     return
 
-                historico_atual, data_agendamento = result
+                status_anterior, data_agendamento = result
 
+                # Tradução dos status para registro
+                status_traduzido = {
+                    'attended': 'Compareceu',
+                    'missed': 'Não Compareceu',
+                    'pending': 'Pendente'
+                }
+
+                # Cria o registro de alteração
+                registro_alteracao = {
+                    'tipo': 'Alteração de Status',
+                    'valor_anterior': status_traduzido.get(status_anterior, status_anterior),
+                    'valor_novo': status_traduzido.get(status, status),
+                    'data_evento': data_agendamento,
+                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+
+                # Insere o registro de alteração
+                cursor.execute(
+                    """
+                    INSERT INTO marcacoes_changes (renach, tipo, valor_anterior, valor_novo, timestamp, changes)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (renach, registro_alteracao['tipo'], registro_alteracao['valor_anterior'],
+                    registro_alteracao['valor_novo'], registro_alteracao['timestamp'],
+                    json.dumps(registro_alteracao))
+                )
+
+                # Atualiza o status e o histórico
+                historico_atual = result[0] if len(result) > 2 else '[]'
                 try:
                     historico = json.loads(historico_atual) if historico_atual else []
                 except json.JSONDecodeError:
-                    logger.warning(
-                        f"Histórico inválido para RENACH {renach}, iniciando novo"
-                    )
                     historico = []
 
-                historico.append(
-                    {
-                        "data": data_agendamento,
-                        "status": status,
-                        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    }
-                )
+                historico.append({
+                    'data': data_agendamento,
+                    'status': status,
+                    'atualizado_em': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
 
                 cursor.execute(
                     """
@@ -1149,7 +1378,7 @@ class DataBaseMarcacao:
                         historico_comparecimento = ?
                     WHERE renach = ?
                     """,
-                    (status, json.dumps(historico), renach),
+                    (status, json.dumps(historico), renach)
                 )
 
                 conn.commit()
