@@ -369,7 +369,7 @@ class FuncoesBotoes:
     # Código de verificação de pagamentos...
     def verificar_soma_pagamentos(self):
         """Verifica se a soma dos valores de pagamento está correta."""
-
+        
         def convert_to_float(value):
             """Converte string de valor monetário para float."""
             if not value:
@@ -389,39 +389,34 @@ class FuncoesBotoes:
             if valor_consulta is None:
                 return False
 
-            # Obtém valores dos campos de pagamento
-            valor_dinheiro = convert_to_float(self.dinheiro_entry.get())
-            valor_cartao = convert_to_float(self.cartao_entry.get())
-            valor_pix = convert_to_float(self.pix_entry.get())
-
-            if any(v is None for v in [valor_dinheiro, valor_cartao, valor_pix]):
-                return False
+            # Obtém e soma todos os valores de entrada
+            total = 0
+            for key, entry in self.valor_entries.items():
+                if self.payment_vars[key].get():  # Se a forma de pagamento está selecionada
+                    valor = convert_to_float(entry.get())
+                    if valor is None:
+                        return False
+                    total += valor
 
             # Verifica quantas formas de pagamento foram selecionadas
             formas_selecionadas = sum(var.get() for var in self.payment_vars.values())
 
             if formas_selecionadas > 1:
-                # Múltiplas formas de pagamento selecionadas
-                soma_pagamentos = valor_dinheiro + valor_cartao + valor_pix
-
                 # Usa uma pequena margem de erro para comparações de ponto flutuante
-                if abs(soma_pagamentos - valor_consulta) > 0.01:
+                if abs(total - valor_consulta) > 0.01:
                     messagebox.showerror(
                         "Erro",
-                        f"A soma dos valores de pagamento (R$ {soma_pagamentos:.2f}) "
-                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})",
+                        f"A soma dos valores de pagamento (R$ {total:.2f}) "
+                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})"
                     )
                     return False
-            else:
-                # Apenas uma forma de pagamento selecionada
-                valor_pagamento = valor_dinheiro + valor_cartao + valor_pix
-
-                # Verifica se há algum valor e se está correto
-                if valor_pagamento > 0 and abs(valor_pagamento - valor_consulta) > 0.01:
+            elif formas_selecionadas == 1:
+                # Se for apenas uma forma de pagamento, verifica se o valor está correto
+                if total > 0 and abs(total - valor_consulta) > 0.01:
                     messagebox.showerror(
                         "Erro",
-                        f"O valor do pagamento (R$ {valor_pagamento:.2f}) "
-                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})",
+                        f"O valor do pagamento (R$ {total:.2f}) "
+                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})"
                     )
                     return False
 
@@ -667,68 +662,70 @@ class FuncoesBotoes:
                 messagebox.showerror(
                     "Erro", "Selecione pelo menos uma forma de pagamento."
                 )
-                return
+                return False
+
+            # Valores máximos por tipo de atendimento
+            valores_maximos = {
+                "medico": 148.65,
+                "psicologo": 192.61,
+                "ambos": 341.26
+            }
+            valor_esperado = valores_maximos[tipo_escolha]
+
+            def converter_valor(valor_str):
+                """Converte string de valor para float."""
+                if not valor_str:
+                    return 0.0
+                try:
+                    return float(valor_str.replace(",", ".").replace("R$", "").strip())
+                except ValueError:
+                    raise ValueError(f"Valor inválido: {valor_str}")
 
             # Processar pagamentos
             pagamentos = []
             soma_valores = 0
             num_formas_selecionadas = sum(formas_selecionadas.values())
 
-            # Se apenas uma forma de pagamento está selecionada
-            if num_formas_selecionadas == 1:
-                forma_selecionada = next(
-                    forma for forma, sel in formas_selecionadas.items() if sel
-                )
-                valor_entrada = self.valor_entries[forma_selecionada].get().strip()
-
-                if valor_entrada:  # Se um valor foi especificado
-                    try:
-                        valor_float = float(valor_entrada.replace(",", "."))
-                        valor_formatado = f"{valor_float:.2f}".replace(".", ",")
-                        pagamentos.append(f"{forma_selecionada}:{valor_formatado}")
-                    except ValueError:
-                        messagebox.showerror(
-                            "Erro", "O valor informado não é um número válido"
-                        )
-                        return
-                else:  # Se não houver valor, adiciona apenas a forma de pagamento
-                    pagamentos.append(forma_selecionada)
-
-            else:  # Múltiplas formas de pagamento
-                for codigo, selecionado in formas_selecionadas.items():
-                    if selecionado:
-                        valor = self.valor_entries[codigo].get().strip()
-
-                        if valor:  # Se um valor foi especificado
-                            try:
-                                valor_float = float(valor.replace(",", "."))
-                                valor_formatado = f"{valor_float:.2f}".replace(".", ",")
-                                pagamentos.append(f"{codigo}:{valor_formatado}")
-                                soma_valores += valor_float
-                            except ValueError:
+            # Processa todos os pagamentos selecionados
+            for codigo, selecionado in formas_selecionadas.items():
+                if selecionado:
+                    valor_str = self.valor_entries[codigo].get().strip()
+                    
+                    if num_formas_selecionadas == 1:
+                        # Se for única forma de pagamento
+                        if not valor_str:
+                            valor = valor_esperado
+                        else:
+                            valor = converter_valor(valor_str)
+                            if abs(valor - valor_esperado) > 0.01:
                                 messagebox.showerror(
                                     "Erro",
-                                    f"O valor informado para {codigo} não é um número válido"
+                                    f"O valor deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})"
                                 )
-                                return
-                        else:  # Se não houver valor, adiciona apenas a forma de pagamento
-                            pagamentos.append(codigo)
+                                return False
+                        pagamentos.append(f"{codigo}:{valor:.2f}".replace(".", ","))
+                        soma_valores = valor
+                    else:
+                        # Múltiplas formas de pagamento
+                        if not valor_str:
+                            messagebox.showerror(
+                                "Erro",
+                                f"Informe o valor para todas as formas de pagamento selecionadas"
+                            )
+                            return False
+                        
+                        valor = converter_valor(valor_str)
+                        pagamentos.append(f"{codigo}:{valor:.2f}".replace(".", ","))
+                        soma_valores += valor
 
-                # Verifica a soma apenas se todos os pagamentos têm valores
-                if all(":" in pag for pag in pagamentos):
-                    valores_maximos = {
-                        "medico": 148.65,
-                        "psicologo": 192.61,
-                        "ambos": 341.26
-                    }
-                    valor_maximo = valores_maximos[tipo_escolha]
-
-                    if abs(soma_valores - valor_maximo) > 0.01:
-                        messagebox.showerror(
-                            "Erro",
-                            f"A soma dos valores ({soma_valores:.2f}) deve ser igual ao valor da consulta ({valor_maximo:.2f})"
-                        )
-                        return
+            # Verifica a soma total para múltiplos pagamentos
+            if num_formas_selecionadas > 1:
+                if abs(soma_valores - valor_esperado) > 0.01:
+                    messagebox.showerror(
+                        "Erro",
+                        f"A soma dos valores (R$ {soma_valores:.2f}) deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})"
+                    )
+                    return False
 
             # Tenta salvar na planilha
             self.logger.info(
@@ -739,25 +736,20 @@ class FuncoesBotoes:
 
             ws = self.planilhas.get_active_sheet()
 
-            # Encontrar próxima linha vazia começando da linha 3
             def encontrar_proxima_linha(coluna_letra):
-                # Verifica se a linha 3 está vazia
                 if not ws[f"{coluna_letra}3"].value:
                     return 3
-                # Se não estiver, procura a próxima linha vazia
                 for row in range(3, ws.max_row + 2):
                     if not ws[f"{coluna_letra}{row}"].value:
                         return row
                 return ws.max_row + 1
 
             alteracoes_feitas = False
-
-            # String de pagamento formatada
             info_pagamento = " | ".join(pagamentos)
 
             # Salvar dados conforme o tipo de atendimento
             if tipo_escolha in ["medico", "ambos"]:
-                nova_linha = encontrar_proxima_linha("B")  # Procura linha vazia começando da coluna B
+                nova_linha = encontrar_proxima_linha("B")
                 ws[f"B{nova_linha}"] = nome
                 ws[f"C{nova_linha}"] = renach
                 ws[f"F{nova_linha}"] = info_pagamento
@@ -765,7 +757,7 @@ class FuncoesBotoes:
                 self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
 
             if tipo_escolha in ["psicologo", "ambos"]:
-                nova_linha = encontrar_proxima_linha("H")  # Procura linha vazia começando da coluna H
+                nova_linha = encontrar_proxima_linha("H")
                 ws[f"H{nova_linha}"] = nome
                 ws[f"I{nova_linha}"] = renach
                 ws[f"L{nova_linha}"] = info_pagamento
@@ -791,7 +783,7 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao salvar informações: {str(e)}")
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
             return False
-    
+        
     # Código de exclusão...
     def excluir(self):
         """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
