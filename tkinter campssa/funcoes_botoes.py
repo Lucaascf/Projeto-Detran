@@ -632,7 +632,7 @@ class FuncoesBotoes:
             if not nome or not renach or not escolha:
                 messagebox.showerror(
                     "Erro",
-                    "Por favor, preencha todos os campos obrigatórios (nome, RENACH e tipo de atendimento).",
+                    "Por favor, preencha todos os campos obrigatórios (nome, RENACH e tipo de atendimento)."
                 )
                 return False
 
@@ -640,7 +640,7 @@ class FuncoesBotoes:
             tipo_escolha = {
                 "medico": "medico",
                 "psicologo": "psicologo",
-                "ambos": "ambos",
+                "ambos": "ambos"
             }.get(escolha)
 
             if not tipo_escolha:
@@ -708,7 +708,7 @@ class FuncoesBotoes:
                             except ValueError:
                                 messagebox.showerror(
                                     "Erro",
-                                    f"O valor informado para {codigo} não é um número válido",
+                                    f"O valor informado para {codigo} não é um número válido"
                                 )
                                 return
                         else:  # Se não houver valor, adiciona apenas a forma de pagamento
@@ -719,14 +719,14 @@ class FuncoesBotoes:
                     valores_maximos = {
                         "medico": 148.65,
                         "psicologo": 192.61,
-                        "ambos": 341.26,
+                        "ambos": 341.26
                     }
                     valor_maximo = valores_maximos[tipo_escolha]
 
                     if abs(soma_valores - valor_maximo) > 0.01:
                         messagebox.showerror(
                             "Erro",
-                            f"A soma dos valores ({soma_valores:.2f}) deve ser igual ao valor da consulta ({valor_maximo:.2f})",
+                            f"A soma dos valores ({soma_valores:.2f}) deve ser igual ao valor da consulta ({valor_maximo:.2f})"
                         )
                         return
 
@@ -739,8 +739,12 @@ class FuncoesBotoes:
 
             ws = self.planilhas.get_active_sheet()
 
-            # Encontrar próxima linha vazia
+            # Encontrar próxima linha vazia começando da linha 3
             def encontrar_proxima_linha(coluna_letra):
+                # Verifica se a linha 3 está vazia
+                if not ws[f"{coluna_letra}3"].value:
+                    return 3
+                # Se não estiver, procura a próxima linha vazia
                 for row in range(3, ws.max_row + 2):
                     if not ws[f"{coluna_letra}{row}"].value:
                         return row
@@ -753,7 +757,7 @@ class FuncoesBotoes:
 
             # Salvar dados conforme o tipo de atendimento
             if tipo_escolha in ["medico", "ambos"]:
-                nova_linha = encontrar_proxima_linha("B")
+                nova_linha = encontrar_proxima_linha("B")  # Procura linha vazia começando da coluna B
                 ws[f"B{nova_linha}"] = nome
                 ws[f"C{nova_linha}"] = renach
                 ws[f"F{nova_linha}"] = info_pagamento
@@ -761,7 +765,7 @@ class FuncoesBotoes:
                 self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
 
             if tipo_escolha in ["psicologo", "ambos"]:
-                nova_linha = encontrar_proxima_linha("H")
+                nova_linha = encontrar_proxima_linha("H")  # Procura linha vazia começando da coluna H
                 ws[f"H{nova_linha}"] = nome
                 ws[f"I{nova_linha}"] = renach
                 ws[f"L{nova_linha}"] = info_pagamento
@@ -773,9 +777,7 @@ class FuncoesBotoes:
                 self.logger.info("Planilha salva com sucesso")
 
                 # Após salvar na planilha, salva no banco
-                if self._adicionar_paciente_ao_banco(
-                    nome, renach, pagamentos, tipo_escolha
-                ):
+                if self._adicionar_paciente_ao_banco(nome, renach, pagamentos, tipo_escolha):
                     messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
                     self.adicionar_window.destroy()
                     return True
@@ -789,7 +791,7 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao salvar informações: {str(e)}")
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
             return False
-
+    
     # Código de exclusão...
     def excluir(self):
         """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
@@ -3052,7 +3054,7 @@ class PatientInfoDisplay:
         medicos = [p for p in data if p.tipo == "Médico"]
         psicologos = [p for p in data if p.tipo == "Psicólogo"]
         
-        row = 1
+        row = 2
         # Processa médicos
         for idx, patient in enumerate(medicos, 1):
             bg_color = self.theme['highlight'] if idx % 2 == 0 else self.theme['background']
