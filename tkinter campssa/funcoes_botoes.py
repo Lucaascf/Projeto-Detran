@@ -290,9 +290,13 @@ class FuncoesBotoes:
 
         # Função para atualizar o valor da consulta
         def atualizar_valor_consulta(*args):
-            valores = {"medico": "148,65", "psicologo": "192,61", "ambos": "341,26"}
-            valor = valores.get(self.radio_var.get(), "0,00")
-            self.valor_consulta_label.config(text=f"Valor da consulta: R$ {valor}")
+            tipo_consulta = self.radio_var.get()
+            try:
+                valor = PaymentProcessor.calculate_service_value(tipo_consulta)
+                valor_formatado = PaymentProcessor.format_currency(valor)
+                self.valor_consulta_label.config(text=f"Valor da consulta: {valor_formatado}")
+            except ValueError:
+                self.valor_consulta_label.config(text="Valor da consulta: R$ 0,00")
 
         # Associar a função ao radio_var
         self.radio_var.trace("w", atualizar_valor_consulta)
@@ -380,96 +384,78 @@ class FuncoesBotoes:
         return None
 
     # Código de verificação de pagamentos...
-    def verificar_soma_pagamentos(self):
+    def verificar_soma_pagamentos(self) -> bool:
         """Verifica se a soma dos valores de pagamento está correta."""
+        return self.validar_pagamentos() is not None
 
-        def convert_to_float(value):
-            """Converte string de valor monetário para float."""
-            if not value:
-                return 0.0
-            # Remove R$ e espaços, substitui vírgula por ponto
-            clean_value = value.replace("R$", "").replace(" ", "").replace(",", ".")
-            try:
-                return float(clean_value)
-            except ValueError:
-                messagebox.showerror("Erro", f"Valor inválido: {value}")
+    def validar_pagamentos(self) -> Optional[Tuple[List[str], float]]:
+        """Valida todos os pagamentos e retorna a lista de pagamentos e valor esperado se válido."""
+        try:
+            # Obtém o tipo de consulta selecionado
+            tipo_consulta = self.radio_var.get()
+            if not tipo_consulta:
+                messagebox.showerror("Erro", "Selecione o tipo de atendimento")
                 return None
 
-        try:
-            # Obtém o valor da consulta
-            valor_consulta_str = self.valor_consulta_label.cget("text").split("R$ ")[1]
-            valor_consulta = convert_to_float(valor_consulta_str)
-            if valor_consulta is None:
-                return False
+            # Obtém valor esperado usando PaymentProcessor
+            try:
+                valor_esperado = PaymentProcessor.calculate_service_value(tipo_consulta)
+            except ValueError as e:
+                messagebox.showerror("Erro", str(e))
+                return None
 
-            # Obtém e soma todos os valores de entrada
-            total = 0
-            for key, entry in self.valor_entries.items():
-                if self.payment_vars[
-                    key
-                ].get():  # Se a forma de pagamento está selecionada
-                    valor = convert_to_float(entry.get())
-                    if valor is None:
-                        return False
-                    total += valor
+            # Verificar formas de pagamento selecionadas
+            formas_selecionadas = {
+                forma: var.get() for forma, var in self.payment_vars.items()
+            }
 
-            # Verifica quantas formas de pagamento foram selecionadas
-            formas_selecionadas = sum(var.get() for var in self.payment_vars.values())
+            if not any(formas_selecionadas.values()):
+                messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
+                return None
 
-            if formas_selecionadas > 1:
-                # Usa uma pequena margem de erro para comparações de ponto flutuante
-                if abs(total - valor_consulta) > 0.01:
-                    messagebox.showerror(
-                        "Erro",
-                        f"A soma dos valores de pagamento (R$ {total:.2f}) "
-                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})",
-                    )
-                    return False
-            elif formas_selecionadas == 1:
-                # Se for apenas uma forma de pagamento, verifica se o valor está correto
-                if total > 0 and abs(total - valor_consulta) > 0.01:
-                    messagebox.showerror(
-                        "Erro",
-                        f"O valor do pagamento (R$ {total:.2f}) "
-                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})",
-                    )
-                    return False
+            # Processar pagamentos
+            pagamentos = {}
+            num_formas_selecionadas = sum(formas_selecionadas.values())
 
-            return True
+            for codigo, selecionado in formas_selecionadas.items():
+                if selecionado:
+                    valor_str = self.valor_entries[codigo].get().strip()
+
+                    if num_formas_selecionadas == 1:
+                        # Se for única forma de pagamento, usa o valor total
+                        pagamentos[codigo] = PaymentProcessor.format_currency(valor_esperado)
+                    else:
+                        # Múltiplas formas de pagamento
+                        if not valor_str:
+                            messagebox.showerror(
+                                "Erro",
+                                "Informe o valor para todas as formas de pagamento selecionadas"
+                            )
+                            return None
+                        pagamentos[codigo] = valor_str
+
+            # Valida o total dos pagamentos
+            if num_formas_selecionadas > 1:
+                try:
+                    if not PaymentProcessor.validate_payment_total(pagamentos, valor_esperado):
+                        messagebox.showerror(
+                            "Erro",
+                            f"A soma dos valores deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})"
+                        )
+                        return None
+                except ValueError as e:
+                    messagebox.showerror("Erro", str(e))
+                    return None
+
+            # Processa e formata os métodos de pagamento
+            formatted_payments = PaymentProcessor.process_payment_methods(pagamentos)
+            return formatted_payments, valor_esperado
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao verificar valores: {str(e)}")
-            return False
-
-    # Código de contagem de pagamentos...
-    def contar_pagamento(self, col_inicial, col_final):
-        """Conta o número de pessoas e a quantidade de pagamentos."""
-        n_pessoa = 0
-        cont_pag = {"D": 0, "C": 0, "E": 0, "P": 0}
-
-        # Usa a sheet ativa correta
-        wb = self.get_active_workbook()
-        ws = wb.active
-
-        # Verifica se há conteúdo nas células antes de contar
-        for row in ws.iter_rows(
-            min_row=3, max_row=ws.max_row, min_col=col_inicial, max_col=col_final
-        ):
-            nome = row[0].value
-            if isinstance(nome, str) and nome.strip():
-                n_pessoa += 1
-
-                # Verifica a forma de pagamento
-                pag = row[4].value
-                if isinstance(pag, str):
-                    # Extrai apenas o código do pagamento (D, C, E ou P)
-                    # considerando que pode ter valor após o código
-                    codigo_pag = pag.split(":")[0].strip()
-                    if codigo_pag in cont_pag:
-                        cont_pag[codigo_pag] += 1
-
-        return n_pessoa, cont_pag
-
+            self.logger.error(f"Erro na validação de pagamentos: {e}")
+            messagebox.showerror("Erro", "Erro ao validar pagamentos")
+            return None
+        
     # Adiciona ou atualiza informações do paciente no banco de dados
     def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
         """
@@ -607,6 +593,78 @@ class FuncoesBotoes:
             messagebox.showerror("Erro", f"Erro inesperado: {e}")
             return False
 
+    def _calcular_valores_atendimentos(self) -> Dict[str, Dict[str, float]]:
+        """Calcula valores totais por tipo de atendimento e método de pagamento."""
+        try:
+            # Carrega os dados da planilha
+            wb = self.get_active_workbook()
+            ws = wb.active
+
+            totais = {
+                "medico": {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0, "total": 0, "pacientes": 0},
+                "psicologo": {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0, "total": 0, "pacientes": 0}
+            }
+
+            # Processa pagamentos médicos (colunas B-F)
+            self._processar_pagamentos_por_tipo(
+                ws, 
+                tipo="medico",
+                col_nome="B", 
+                col_pagamento="F",
+                totais=totais
+            )
+
+            # Processa pagamentos psicólogo (colunas H-L)
+            self._processar_pagamentos_por_tipo(
+                ws, 
+                tipo="psicologo",
+                col_nome="H", 
+                col_pagamento="L",
+                totais=totais
+            )
+
+            return totais
+
+        except Exception as e:
+            self.logger.error(f"Erro ao calcular valores: {str(e)}")
+            return None
+
+    def _processar_pagamentos_por_tipo(self, ws, tipo: str, col_nome: str, col_pagamento: str, 
+                                     totais: Dict[str, Dict[str, float]]) -> None:
+        """Processa pagamentos para um tipo específico de atendimento."""
+        for row in range(3, ws.max_row + 1):
+            nome = ws[f"{col_nome}{row}"].value
+            if not nome or not isinstance(nome, str):
+                continue
+                
+            nome = nome.strip()
+            if any(x in nome.lower() for x in ["soma", "médico", "psicólogo", "total"]):
+                continue
+
+            pagamento = ws[f"{col_pagamento}{row}"].value
+            if not pagamento:
+                continue
+
+            totais[tipo]["pacientes"] += 1
+            valor_consulta = PaymentProcessor.calculate_service_value(tipo)
+            totais[tipo]["total"] += valor_consulta
+
+            # Processa o pagamento
+            if pagamento in PaymentProcessor.PAYMENT_TYPES:
+                metodo = PaymentProcessor.PAYMENT_TYPES[pagamento]
+                totais[tipo][metodo] += valor_consulta
+            else:
+                # Para formatos como "D:100,65|C:48,00"
+                for parte in pagamento.split("|"):
+                    metodo, valor = parte.split(":")
+                    try:
+                        valor_float = PaymentProcessor.convert_currency_value(valor)
+                        metodo_traduzido = PaymentProcessor.PAYMENT_TYPES[metodo.strip()]
+                        totais[tipo][metodo_traduzido] += valor_float
+                    except (ValueError, KeyError) as e:
+                        self.logger.error(f"Erro ao processar pagamento: {e}")
+                        continue
+    
     """
     SEÇÃO 4: OPERAÇÕES COM PACIENTES
     """
@@ -632,13 +690,14 @@ class FuncoesBotoes:
 
     # Código de salvamento de informações...
     def salvar_informacao(self):
-        """Salva os dados no banco de dados e na planilha."""
+        """Valida dados e coordena o salvamento no banco e na planilha."""
         try:
             # Obter dados dos campos
             nome = self.nome_entry.get().strip().upper()
             renach = self.renach_entry.get().strip()
             escolha = self.radio_var.get()
 
+            # -- Validações básicas --
             if not nome or not renach or not escolha:
                 messagebox.showerror(
                     "Erro",
@@ -655,137 +714,46 @@ class FuncoesBotoes:
 
             if not tipo_escolha:
                 messagebox.showerror("Erro", "Selecione o tipo de atendimento.")
-                return
-
-            # Validar dados básicos
-            if not nome or not renach:
-                messagebox.showerror(
-                    "Erro", "Por favor, preencha os campos de nome e RENACH."
-                )
-                return
+                return False
 
             if not renach.isdigit():
                 messagebox.showerror("Erro", "O RENACH deve ser um número inteiro.")
-                return
-
-            # Verificar formas de pagamento selecionadas
-            formas_selecionadas = {
-                forma: var.get() for forma, var in self.payment_vars.items()
-            }
-
-            if not any(formas_selecionadas.values()):
-                messagebox.showerror(
-                    "Erro", "Selecione pelo menos uma forma de pagamento."
-                )
                 return False
 
-            # Valores máximos por tipo de atendimento
-            valores_maximos = {"medico": 148.65, "psicologo": 192.61, "ambos": 341.26}
-            valor_esperado = valores_maximos[tipo_escolha]
+            # -- Validação de pagamentos --
+            resultado_validacao = self.validar_pagamentos()
+            if resultado_validacao is None:
+                return False
 
-            def converter_valor(valor_str):
-                """Converte string de valor para float."""
-                if not valor_str:
-                    return 0.0
-                try:
-                    return float(valor_str.replace(",", ".").replace("R$", "").strip())
-                except ValueError:
-                    raise ValueError(f"Valor inválido: {valor_str}")
+            pagamentos, valor_esperado = resultado_validacao
 
-            # Processar pagamentos
-            pagamentos = []
-            soma_valores = 0
-            num_formas_selecionadas = sum(formas_selecionadas.values())
+            # -- Salvamento --
+            try:
+                # Tenta salvar na planilha primeiro
+                if self.salvar_na_planilha(nome, renach, pagamentos, tipo_escolha):
+                    # Se sucesso na planilha, salva no banco
+                    if self._adicionar_paciente_ao_banco(
+                        nome, renach, pagamentos, tipo_escolha
+                    ):
+                        messagebox.showinfo(
+                            "Sucesso", "Informações salvas com sucesso!"
+                        )
+                        self.adicionar_window.destroy()
+                        return True
 
-            # Processa todos os pagamentos selecionados
-            for codigo, selecionado in formas_selecionadas.items():
-                if selecionado:
-                    valor_str = self.valor_entries[codigo].get().strip()
-
-                    if num_formas_selecionadas == 1:
-                        # Se for única forma de pagamento, usa o valor total independente do que foi digitado
-                        valor = valor_esperado
-                        pagamentos.append(f"{codigo}:{valor:.2f}".replace(".", ","))
-                        soma_valores = valor
-                    else:
-                        # Múltiplas formas de pagamento
-                        if not valor_str:
-                            messagebox.showerror(
-                                "Erro",
-                                f"Informe o valor para todas as formas de pagamento selecionadas",
-                            )
-                            return False
-
-                        valor = converter_valor(valor_str)
-                        pagamentos.append(f"{codigo}:{valor:.2f}".replace(".", ","))
-                        soma_valores += valor
-
-            # Verifica a soma total apenas para múltiplos pagamentos
-            if num_formas_selecionadas > 1:
-                if soma_valores != valor_esperado:  # Checagem exata para múltiplos pagamentos
-                    messagebox.showerror(
-                        "Erro",
-                        f"A soma dos valores (R$ {soma_valores:.2f}) deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})",
-                    )
-                    return False
-
-            # Tenta salvar na planilha
-            self.logger.info(
-                f"Tentando salvar na planilha: nome={nome}, renach={renach}, tipo={tipo_escolha}"
-            )
-            if not self.planilhas.wb:
-                self.planilhas.reload_workbook()
-
-            ws = self.planilhas.get_active_sheet()
-
-            def encontrar_proxima_linha(coluna_letra):
-                if not ws[f"{coluna_letra}3"].value:
-                    return 3
-                for row in range(3, ws.max_row + 2):
-                    if not ws[f"{coluna_letra}{row}"].value:
-                        return row
-                return ws.max_row + 1
-
-            alteracoes_feitas = False
-            info_pagamento = " | ".join(pagamentos)
-
-            # Salvar dados conforme o tipo de atendimento
-            if tipo_escolha in ["medico", "ambos"]:
-                nova_linha = encontrar_proxima_linha("B")
-                ws[f"B{nova_linha}"] = nome
-                ws[f"C{nova_linha}"] = renach
-                ws[f"F{nova_linha}"] = info_pagamento
-                alteracoes_feitas = True
-                self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
-
-            if tipo_escolha in ["psicologo", "ambos"]:
-                nova_linha = encontrar_proxima_linha("H")
-                ws[f"H{nova_linha}"] = nome
-                ws[f"I{nova_linha}"] = renach
-                ws[f"L{nova_linha}"] = info_pagamento
-                alteracoes_feitas = True
-                self.logger.info(f"Dados psicológicos salvos na linha {nova_linha}")
-
-            if alteracoes_feitas:
-                self.planilhas.wb.save(self.planilhas.file_path)
-                self.logger.info("Planilha salva com sucesso")
-
-                # Após salvar na planilha, salva no banco
-                if self._adicionar_paciente_ao_banco(
-                    nome, renach, pagamentos, tipo_escolha
-                ):
-                    messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
-                    self.adicionar_window.destroy()
-                    return True
-            else:
                 messagebox.showerror(
                     "Erro", "Não foi possível salvar as informações na planilha"
                 )
                 return False
 
+            except Exception as e:
+                self.logger.error(f"Erro ao salvar dados: {str(e)}")
+                messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
+                return False
+
         except Exception as e:
-            self.logger.error(f"Erro ao salvar informações: {str(e)}")
-            messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
+            self.logger.error(f"Erro ao processar informações: {str(e)}")
+            messagebox.showerror("Erro", f"Erro ao processar informações: {str(e)}")
             return False
 
     # Código de exclusão...
@@ -1208,34 +1176,29 @@ class FuncoesBotoes:
             return False
 
     # Código de salvamento na planilha...
-    def salvar_na_planilha(self, nome, renach, pagamentos, escolha):
+    def salvar_na_planilha(self, nome, renach, pagamentos, tipo_escolha):
         """Salva os dados na planilha."""
         try:
-            # Garantir que temos o objeto planilhas
-            if not self.planilhas:
-                raise Exception("Objeto planilhas não inicializado")
+            if not self.planilhas.wb:
+                self.planilhas.reload_workbook()
 
-            # Recarregar workbook e obter sheet ativa
-            self.planilhas.reload_workbook()
             ws = self.planilhas.get_active_sheet()
-
             if not ws:
                 raise Exception("Não foi possível acessar a planilha ativa")
 
-            # Formatar string de pagamento
             info_pagamento = " | ".join(pagamentos)
+            alteracoes_feitas = False
 
-            # Encontrar próximas linhas vazias para médico e psicólogo
             def encontrar_proxima_linha(coluna_letra):
+                if not ws[f"{coluna_letra}3"].value:
+                    return 3
                 for row in range(3, ws.max_row + 2):
                     if not ws[f"{coluna_letra}{row}"].value:
                         return row
                 return ws.max_row + 1
 
-            alteracoes_feitas = False
-
-            # Salvar dados do médico
-            if escolha in ["medico", "ambos"]:
+            # Salvar dados conforme o tipo de atendimento
+            if tipo_escolha in ["medico", "ambos"]:
                 nova_linha = encontrar_proxima_linha("B")
                 ws[f"B{nova_linha}"] = nome
                 ws[f"C{nova_linha}"] = renach
@@ -1243,8 +1206,7 @@ class FuncoesBotoes:
                 alteracoes_feitas = True
                 self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
 
-            # Salvar dados do psicólogo
-            if escolha in ["psicologo", "ambos"]:
+            if tipo_escolha in ["psicologo", "ambos"]:
                 nova_linha = encontrar_proxima_linha("H")
                 ws[f"H{nova_linha}"] = nome
                 ws[f"I{nova_linha}"] = renach
@@ -1253,11 +1215,11 @@ class FuncoesBotoes:
                 self.logger.info(f"Dados psicológicos salvos na linha {nova_linha}")
 
             if alteracoes_feitas:
-                self.planilhas.wb.save(self.file_path)
+                self.planilhas.wb.save(self.planilhas.file_path)
                 self.logger.info("Planilha salva com sucesso")
                 return True
-            else:
-                raise Exception("Nenhuma alteração foi realizada na planilha")
+
+            return False
 
         except Exception as e:
             self.logger.error(f"Erro ao salvar na planilha: {str(e)}")
@@ -1625,25 +1587,27 @@ class FuncoesBotoes:
 
     # Código de exibição de totais...
     def valores_totais(self):
-        """Exibe os valores totais em uma janela Tkinter."""
-        # Recarrega o workbook para garantir dados atualizados
-        self.planilhas.reload_workbook()
-
-        # Obtém as contagens
-        n_medico, pag_medico = self.planilhas.contar_medico()
-        n_psicologo, pag_psicologo = self.planilhas.contar_psi()
+        """Exibe os valores totais e resumo financeiro."""
+        totais = self._calcular_valores_atendimentos()
+        if not totais:
+            messagebox.showerror("Erro", "Não foi possível calcular os valores")
+            return
 
         # Valores fixos
-        VALOR_CONSULTA_MEDICO = 148.65
-        VALOR_PAGAR_MEDICO = 49.00
-        VALOR_CONSULTA_PSI = 192.61
-        VALOR_PAGAR_PSI = 63.50
+        VALORES = {
+            "medico": {"consulta": 148.65, "profissional": 49.00},
+            "psicologo": {"consulta": 192.61, "profissional": 63.50}
+        }
 
         # Cálculos
-        total_medico = n_medico * VALOR_CONSULTA_MEDICO
-        total_psicologo = n_psicologo * VALOR_CONSULTA_PSI
-        valor_medico = n_medico * VALOR_PAGAR_MEDICO
-        valor_psicologo = n_psicologo * VALOR_PAGAR_PSI
+        dados_exibicao = {}
+        for tipo in ["medico", "psicologo"]:
+            n_pacientes = totais[tipo]["pacientes"]
+            dados_exibicao[tipo] = {
+                "pacientes": n_pacientes,
+                "total": totais[tipo]["total"],
+                "valor_pagar": n_pacientes * VALORES[tipo]["profissional"]
+            }
 
         # Criação da janela
         janela_contas = tk.Toplevel(self.master)
@@ -1651,75 +1615,34 @@ class FuncoesBotoes:
         janela_contas.geometry("300x400")
         janela_contas.configure(bg="#2C3E50")
 
-        # Médico
-        tk.Label(
-            janela_contas,
-            text="Contas Médico:",
-            font=("Arial", 16, "bold"),
-            bg="#2C3E50",
-            fg="#ECF0F1",
-        ).pack(pady=(15, 5))
+        # Função auxiliar para criar seção
+        def criar_secao(titulo, dados):
+            tk.Label(
+                janela_contas,
+                text=titulo,
+                font=("Arial", 16, "bold"),
+                bg="#2C3E50",
+                fg="#ECF0F1",
+            ).pack(pady=(15, 5))
 
-        tk.Label(
-            janela_contas,
-            text=f"Número de pacientes: {n_medico}",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 12),
-        ).pack(pady=2)
+            for label, valor in [
+                ("Número de pacientes", dados["pacientes"]),
+                ("Valor Total", f"R$ {dados['total']:.2f}"),
+                ("Valor a Pagar", f"R$ {dados['valor_pagar']:.2f}")
+            ]:
+                tk.Label(
+                    janela_contas,
+                    text=f"{label}: {valor}",
+                    bg="#2C3E50",
+                    fg="#ECF0F1",
+                    font=("Arial", 12),
+                ).pack(pady=2)
 
-        tk.Label(
-            janela_contas,
-            text=f"Valor Total: R$ {total_medico:.2f}",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 12),
-        ).pack(pady=2)
+            tk.Label(janela_contas, text="", bg="#2C3E50").pack(pady=10)
 
-        tk.Label(
-            janela_contas,
-            text=f"Valor a Pagar: R$ {valor_medico:.2f}",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 12),
-        ).pack(pady=2)
-
-        tk.Label(janela_contas, text="", bg="#2C3E50").pack(pady=10)
-
-        # Psicólogo
-        tk.Label(
-            janela_contas,
-            text="Contas Psicólogo:",
-            font=("Arial", 16, "bold"),
-            bg="#2C3E50",
-            fg="#ECF0F1",
-        ).pack(pady=5)
-
-        tk.Label(
-            janela_contas,
-            text=f"Número de pacientes: {n_psicologo}",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 12),
-        ).pack(pady=2)
-
-        tk.Label(
-            janela_contas,
-            text=f"Valor Total: R$ {total_psicologo:.2f}",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 12),
-        ).pack(pady=2)
-
-        tk.Label(
-            janela_contas,
-            text=f"Valor a Pagar: R$ {valor_psicologo:.2f}",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 12),
-        ).pack(pady=2)
-
-        tk.Label(janela_contas, text="", bg="#2C3E50").pack(pady=10)
+        # Criar seções
+        criar_secao("Contas Médico:", dados_exibicao["medico"])
+        criar_secao("Contas Psicólogo:", dados_exibicao["psicologo"])
 
         # Resumo Geral
         tk.Label(
@@ -1730,9 +1653,12 @@ class FuncoesBotoes:
             fg="#ECF0F1",
         ).pack(pady=5)
 
+        total_geral = sum(dados["total"] for dados in dados_exibicao.values())
+        total_pagar = sum(dados["valor_pagar"] for dados in dados_exibicao.values())
+
         tk.Label(
             janela_contas,
-            text=f"Total Geral: R$ {(total_medico + total_psicologo):.2f}",
+            text=f"Total Geral: R$ {total_geral:.2f}",
             bg="#2C3E50",
             fg="#ECF0F1",
             font=("Arial", 12),
@@ -1740,7 +1666,7 @@ class FuncoesBotoes:
 
         tk.Label(
             janela_contas,
-            text=f"Total a Pagar: R$ {(valor_medico + valor_psicologo):.2f}",
+            text=f"Total a Pagar: R$ {total_pagar:.2f}",
             bg="#2C3E50",
             fg="#ECF0F1",
             font=("Arial", 12),
@@ -1959,93 +1885,60 @@ class FuncoesBotoes:
             return cpfs
 
     def mostrar_valores_atendimentos(self):
-        # Carrega os dados da planilha
-        wb = self.get_active_workbook()
-        ws = wb.active
+        """Mostra janela com valores detalhados por tipo de atendimento e forma de pagamento."""
+        totais = self._calcular_valores_atendimentos()
+        if not totais:
+            messagebox.showerror("Erro", "Não foi possível calcular os valores")
+            return
 
-        # Inicializa o total de pagamentos acumulados para cada método
-        total_medico = {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0}
-        total_psicologo = {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0}
-
-        # Valores fixos para consulta
-        VALOR_MEDICO = 148.65
-        VALOR_PSICOLOGO = 192.61
-
-        # Itera sobre as linhas da planilha para calcular os valores
-        for row in range(3, ws.max_row + 1):
-            pagamento_medico = ws[f"F{row}"].value
-            pagamento_psicologo = ws[f"L{row}"].value
-
-            # Processa os valores de pagamento para médico
-            if pagamento_medico:
-                if pagamento_medico in ["D", "C", "E", "P"]:
-                    metodo = self._traduzir_metodo(pagamento_medico)
-                    total_medico[metodo] += VALOR_MEDICO
-                else:
-                    # Para formatos como "D:100,65|C:48,00"
-                    for parte in pagamento_medico.split("|"):
-                        metodo, valor = parte.split(":")
-                        total_medico[self._traduzir_metodo(metodo.strip())] += float(
-                            valor.replace(",", ".")
-                        )
-
-            # Processa os valores de pagamento para psicólogo
-            if pagamento_psicologo:
-                if pagamento_psicologo in ["D", "C", "E", "P"]:
-                    metodo = self._traduzir_metodo(pagamento_psicologo)
-                    total_psicologo[metodo] += VALOR_PSICOLOGO
-                else:
-                    # Para formatos como "D:100,65|C:48,00"
-                    for parte in pagamento_psicologo.split("|"):
-                        metodo, valor = parte.split(":")
-                        total_psicologo[self._traduzir_metodo(metodo.strip())] += float(
-                            valor.replace(",", ".")
-                        )
-
-        # Criação da janela para exibir os valores
+        # Criação da janela
         janela_valores = tk.Toplevel(self.master)
         janela_valores.title("Valores dos Atendimentos")
-        janela_valores.geometry("400x400")
+        janela_valores.geometry("400x500")
         janela_valores.configure(bg="#2C3E50")
 
-        # Exibindo valores acumulados para médico
-        tk.Label(
-            janela_valores,
-            text="Valores - Médico:",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 20, "bold"),
-        ).pack(pady=5)
-        for metodo, valor in total_medico.items():
+        # Mostra valores para cada tipo
+        for tipo in ["medico", "psicologo"]:
+            titulo = "Médico" if tipo == "medico" else "Psicólogo"
+            
             tk.Label(
                 janela_valores,
-                text=f"{metodo}: R$ {valor:.2f}",
+                text=f"Valores - {titulo}:",
+                bg="#2C3E50",
+                fg="#ECF0F1",
+                font=("Arial", 20, "bold"),
+            ).pack(pady=5)
+
+            # Valores por método de pagamento
+            for metodo in ["Débito", "Crédito", "Espécie", "PIX"]:
+                tk.Label(
+                    janela_valores,
+                    text=f"{metodo}: R$ {totais[tipo][metodo]:.2f}",
+                    bg="#2C3E50",
+                    fg="#ECF0F1",
+                    font=("Arial", 12, "bold"),
+                ).pack()
+
+            # Total e número de pacientes
+            tk.Label(
+                janela_valores,
+                text=f"Total: R$ {totais[tipo]['total']:.2f}",
+                bg="#2C3E50",
+                fg="#ECF0F1",
+                font=("Arial", 12, "bold"),
+            ).pack()
+            
+            tk.Label(
+                janela_valores,
+                text=f"Pacientes: {totais[tipo]['pacientes']}",
                 bg="#2C3E50",
                 fg="#ECF0F1",
                 font=("Arial", 12, "bold"),
             ).pack()
 
-        # Espaço entre seções
-        tk.Label(janela_valores, text="", bg="#2C3E50").pack()
+            # Espaço entre seções
+            tk.Label(janela_valores, text="", bg="#2C3E50").pack(pady=10)
 
-        # Exibindo valores acumulados para psicólogo
-        tk.Label(
-            janela_valores,
-            text="Valores - Psicólogo:",
-            bg="#2C3E50",
-            fg="#ECF0F1",
-            font=("Arial", 20, "bold"),
-        ).pack(pady=5)
-        for metodo, valor in total_psicologo.items():
-            tk.Label(
-                janela_valores,
-                text=f"{metodo}: R$ {valor:.2f}",
-                bg="#2C3E50",
-                fg="#ECF0F1",
-                font=("Arial", 12, "bold"),
-            ).pack()
-
-        # Centraliza a janela
         self.center(janela_valores)
 
     def _traduzir_metodo(self, codigo):
@@ -2069,6 +1962,157 @@ class FuncoesBotoes:
         """Alterna de volta para o frame de login."""
         self.criar_conta_frame.hide()
         self.login_frame.show()
+
+
+
+
+
+
+
+class PaymentProcessor:
+    """Classe para processamento centralizado de pagamentos."""
+
+    PAYMENT_TYPES = {
+        "D": "Débito",
+        "C": "Crédito", 
+        "E": "Espécie",
+        "P": "PIX"
+    }
+
+    SERVICE_PRICES = {
+        "medico": {"consulta": 148.65, "profissional": 49.00},
+        "psicologo": {"consulta": 192.61, "profissional": 63.50},
+        "ambos": {"consulta": 341.26, "profissional": 112.50}
+    }
+
+    @staticmethod
+    def convert_currency_value(value_str: str) -> float:
+        """
+        Converte string de valor monetário para float.
+        
+        Args:
+            value_str: String contendo valor monetário (ex: "R$ 148,65" ou "148.65")
+            
+        Returns:
+            float: Valor convertido ou None se inválido
+        """
+        if not value_str:
+            return 0.0
+            
+        try:
+            # Remove R$, espaços e substitui vírgula por ponto
+            clean_value = value_str.replace("R$", "").replace(" ", "").replace(",", ".")
+            return float(clean_value)
+        except ValueError:
+            raise ValueError(f"Valor inválido para conversão: {value_str}")
+
+    @classmethod
+    def format_currency(cls, value: float) -> str:
+        """
+        Formata valor float para string monetária.
+        
+        Args:
+            value: Valor numérico
+            
+        Returns:
+            str: Valor formatado (ex: "R$ 148,65")
+        """
+        return f"R$ {value:.2f}".replace(".", ",")
+
+    @classmethod
+    def calculate_service_value(cls, service_type: str) -> float:
+        """
+        Calcula valor do serviço baseado no tipo.
+        
+        Args:
+            service_type: Tipo de serviço ('medico', 'psicologo' ou 'ambos')
+            
+        Returns:
+            float: Valor total do serviço
+        """
+        if service_type not in cls.SERVICE_PRICES:
+            raise ValueError(f"Tipo de serviço inválido: {service_type}")
+            
+        return cls.SERVICE_PRICES[service_type]['consulta']
+
+    @classmethod
+    def validate_payment_total(cls, payments: dict, expected_total: float) -> bool:
+        """
+        Valida se o total dos pagamentos corresponde exatamente ao valor esperado.
+        
+        Args:
+            payments: Dicionário com valores por forma de pagamento
+            expected_total: Valor total esperado
+            
+        Returns:
+            bool: True se válido, False caso contrário
+        """
+        # Converte e soma todos os valores de pagamento
+        try:
+            total = sum(cls.convert_currency_value(value) for value in payments.values() if value)
+            # Compara os valores exatamente
+            return total == expected_total
+        except ValueError as e:
+            raise ValueError(f"Erro ao validar pagamentos: {str(e)}")
+
+    @classmethod
+    def process_payment_methods(cls, payment_data: dict) -> List[str]:
+        """
+        Processa e formata métodos de pagamento.
+        
+        Args:
+            payment_data: Dicionário com valores por forma de pagamento
+            
+        Returns:
+            List[str]: Lista de strings formatadas de pagamento
+        """
+        result = []
+        for code, value in payment_data.items():
+            if value:
+                formatted_value = cls.format_currency(cls.convert_currency_value(value))
+                result.append(f"{code}:{formatted_value}")
+        return result
+
+    @classmethod
+    def calculate_professional_payment(cls, service_type: str, num_patients: int) -> float:
+        """
+        Calcula pagamento do profissional baseado no tipo de serviço e número de pacientes.
+        
+        Args:
+            service_type: Tipo de serviço ('medico', 'psicologo' ou 'ambos')
+            num_patients: Número de pacientes atendidos
+            
+        Returns:
+            float: Valor total a ser pago ao profissional
+        """
+        if service_type not in cls.SERVICE_PRICES:
+            raise ValueError(f"Tipo de serviço inválido: {service_type}")
+            
+        return cls.SERVICE_PRICES[service_type]['profissional'] * num_patients
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class SistemaContas:
