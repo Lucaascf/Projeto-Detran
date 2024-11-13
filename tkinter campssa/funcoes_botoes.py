@@ -2,7 +2,20 @@ from dataclasses import dataclass
 import sys
 from typing import Dict, List, Optional, Tuple
 import tkinter as tk
-from tkinter import messagebox, filedialog, Frame, Label, Entry, Button, Toplevel, SINGLE, VERTICAL, HORIZONTAL, END, Listbox
+from tkinter import (
+    messagebox,
+    filedialog,
+    Frame,
+    Label,
+    Entry,
+    Button,
+    Toplevel,
+    SINGLE,
+    VERTICAL,
+    HORIZONTAL,
+    END,
+    Listbox,
+)
 from tkinter import ttk
 from functools import lru_cache
 import logging
@@ -369,7 +382,7 @@ class FuncoesBotoes:
     # Código de verificação de pagamentos...
     def verificar_soma_pagamentos(self):
         """Verifica se a soma dos valores de pagamento está correta."""
-        
+
         def convert_to_float(value):
             """Converte string de valor monetário para float."""
             if not value:
@@ -392,7 +405,9 @@ class FuncoesBotoes:
             # Obtém e soma todos os valores de entrada
             total = 0
             for key, entry in self.valor_entries.items():
-                if self.payment_vars[key].get():  # Se a forma de pagamento está selecionada
+                if self.payment_vars[
+                    key
+                ].get():  # Se a forma de pagamento está selecionada
                     valor = convert_to_float(entry.get())
                     if valor is None:
                         return False
@@ -407,7 +422,7 @@ class FuncoesBotoes:
                     messagebox.showerror(
                         "Erro",
                         f"A soma dos valores de pagamento (R$ {total:.2f}) "
-                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})"
+                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})",
                     )
                     return False
             elif formas_selecionadas == 1:
@@ -416,7 +431,7 @@ class FuncoesBotoes:
                     messagebox.showerror(
                         "Erro",
                         f"O valor do pagamento (R$ {total:.2f}) "
-                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})"
+                        f"deve ser igual ao valor da consulta (R$ {valor_consulta:.2f})",
                     )
                     return False
 
@@ -627,7 +642,7 @@ class FuncoesBotoes:
             if not nome or not renach or not escolha:
                 messagebox.showerror(
                     "Erro",
-                    "Por favor, preencha todos os campos obrigatórios (nome, RENACH e tipo de atendimento)."
+                    "Por favor, preencha todos os campos obrigatórios (nome, RENACH e tipo de atendimento).",
                 )
                 return False
 
@@ -635,7 +650,7 @@ class FuncoesBotoes:
             tipo_escolha = {
                 "medico": "medico",
                 "psicologo": "psicologo",
-                "ambos": "ambos"
+                "ambos": "ambos",
             }.get(escolha)
 
             if not tipo_escolha:
@@ -665,11 +680,7 @@ class FuncoesBotoes:
                 return False
 
             # Valores máximos por tipo de atendimento
-            valores_maximos = {
-                "medico": 148.65,
-                "psicologo": 192.61,
-                "ambos": 341.26
-            }
+            valores_maximos = {"medico": 148.65, "psicologo": 192.61, "ambos": 341.26}
             valor_esperado = valores_maximos[tipo_escolha]
 
             def converter_valor(valor_str):
@@ -690,19 +701,10 @@ class FuncoesBotoes:
             for codigo, selecionado in formas_selecionadas.items():
                 if selecionado:
                     valor_str = self.valor_entries[codigo].get().strip()
-                    
+
                     if num_formas_selecionadas == 1:
-                        # Se for única forma de pagamento
-                        if not valor_str:
-                            valor = valor_esperado
-                        else:
-                            valor = converter_valor(valor_str)
-                            if abs(valor - valor_esperado) > 0.01:
-                                messagebox.showerror(
-                                    "Erro",
-                                    f"O valor deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})"
-                                )
-                                return False
+                        # Se for única forma de pagamento, usa o valor total independente do que foi digitado
+                        valor = valor_esperado
                         pagamentos.append(f"{codigo}:{valor:.2f}".replace(".", ","))
                         soma_valores = valor
                     else:
@@ -710,20 +712,20 @@ class FuncoesBotoes:
                         if not valor_str:
                             messagebox.showerror(
                                 "Erro",
-                                f"Informe o valor para todas as formas de pagamento selecionadas"
+                                f"Informe o valor para todas as formas de pagamento selecionadas",
                             )
                             return False
-                        
+
                         valor = converter_valor(valor_str)
                         pagamentos.append(f"{codigo}:{valor:.2f}".replace(".", ","))
                         soma_valores += valor
 
-            # Verifica a soma total para múltiplos pagamentos
+            # Verifica a soma total apenas para múltiplos pagamentos
             if num_formas_selecionadas > 1:
-                if abs(soma_valores - valor_esperado) > 0.01:
+                if soma_valores != valor_esperado:  # Checagem exata para múltiplos pagamentos
                     messagebox.showerror(
                         "Erro",
-                        f"A soma dos valores (R$ {soma_valores:.2f}) deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})"
+                        f"A soma dos valores (R$ {soma_valores:.2f}) deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})",
                     )
                     return False
 
@@ -769,7 +771,9 @@ class FuncoesBotoes:
                 self.logger.info("Planilha salva com sucesso")
 
                 # Após salvar na planilha, salva no banco
-                if self._adicionar_paciente_ao_banco(nome, renach, pagamentos, tipo_escolha):
+                if self._adicionar_paciente_ao_banco(
+                    nome, renach, pagamentos, tipo_escolha
+                ):
                     messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
                     self.adicionar_window.destroy()
                     return True
@@ -783,7 +787,7 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao salvar informações: {str(e)}")
             messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
             return False
-        
+
     # Código de exclusão...
     def excluir(self):
         """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
@@ -934,23 +938,23 @@ class FuncoesBotoes:
         try:
             # Cria uma instância do PatientInfoDisplay passando os parâmetros necessários
             display = PatientInfoDisplay(
-                master=self.master,          # Janela principal
-                planilhas=self.planilhas,    # Objeto que gerencia as planilhas
-                logger=self.logger           # Logger para registro de eventos
+                master=self.master,  # Janela principal
+                planilhas=self.planilhas,  # Objeto que gerencia as planilhas
+                logger=self.logger,  # Logger para registro de eventos
             )
-            
+
             # Chama o método display para mostrar as informações
             display.display()
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Erro ao exibir informações: {str(e)}")
             messagebox.showerror(
-                "Erro", 
-                f"Ocorreu um erro ao exibir as informações: {str(e)}"
+                "Erro", f"Ocorreu um erro ao exibir as informações: {str(e)}"
             )
             return False
+
     """
     SEÇÃO 5: MANIPULAÇÃO DE PLANILHAS
     """
@@ -1981,7 +1985,9 @@ class FuncoesBotoes:
                     # Para formatos como "D:100,65|C:48,00"
                     for parte in pagamento_medico.split("|"):
                         metodo, valor = parte.split(":")
-                        total_medico[self._traduzir_metodo(metodo.strip())] += float(valor.replace(",", "."))
+                        total_medico[self._traduzir_metodo(metodo.strip())] += float(
+                            valor.replace(",", ".")
+                        )
 
             # Processa os valores de pagamento para psicólogo
             if pagamento_psicologo:
@@ -1992,7 +1998,9 @@ class FuncoesBotoes:
                     # Para formatos como "D:100,65|C:48,00"
                     for parte in pagamento_psicologo.split("|"):
                         metodo, valor = parte.split(":")
-                        total_psicologo[self._traduzir_metodo(metodo.strip())] += float(valor.replace(",", "."))
+                        total_psicologo[self._traduzir_metodo(metodo.strip())] += float(
+                            valor.replace(",", ".")
+                        )
 
         # Criação da janela para exibir os valores
         janela_valores = tk.Toplevel(self.master)
@@ -2001,29 +2009,50 @@ class FuncoesBotoes:
         janela_valores.configure(bg="#2C3E50")
 
         # Exibindo valores acumulados para médico
-        tk.Label(janela_valores, text="Valores - Médico:", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 20, "bold")).pack(pady=5)
+        tk.Label(
+            janela_valores,
+            text="Valores - Médico:",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 20, "bold"),
+        ).pack(pady=5)
         for metodo, valor in total_medico.items():
-            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
+            tk.Label(
+                janela_valores,
+                text=f"{metodo}: R$ {valor:.2f}",
+                bg="#2C3E50",
+                fg="#ECF0F1",
+                font=("Arial", 12, "bold"),
+            ).pack()
 
         # Espaço entre seções
         tk.Label(janela_valores, text="", bg="#2C3E50").pack()
 
         # Exibindo valores acumulados para psicólogo
-        tk.Label(janela_valores, text="Valores - Psicólogo:", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 20, "bold")).pack(pady=5)
+        tk.Label(
+            janela_valores,
+            text="Valores - Psicólogo:",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 20, "bold"),
+        ).pack(pady=5)
         for metodo, valor in total_psicologo.items():
-            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
+            tk.Label(
+                janela_valores,
+                text=f"{metodo}: R$ {valor:.2f}",
+                bg="#2C3E50",
+                fg="#ECF0F1",
+                font=("Arial", 12, "bold"),
+            ).pack()
 
         # Centraliza a janela
         self.center(janela_valores)
 
     def _traduzir_metodo(self, codigo):
         """Converte os códigos de pagamento em textos legíveis."""
-        return {
-            "D": "Débito",
-            "C": "Crédito",
-            "E": "Espécie",
-            "P": "PIX"
-        }.get(codigo, "Desconhecido")
+        return {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}.get(
+            codigo, "Desconhecido"
+        )
 
     """
     SEÇÃO 8: NAVEGAÇÃO DE INTERFACE
@@ -2639,60 +2668,58 @@ class GerenciadorPlanilhas:
 @dataclass
 class PatientData:
     """Estrutura de dados imutável para informações do paciente."""
+
     nome: str
     renach: str
     pagamento: str
     tipo: str
     search_text: str
 
+
 class PatientInfoDisplay:
     """Classe otimizada para exibição de informações de pacientes."""
-    
+
     def __init__(self, master: tk.Tk, planilhas, logger=None):
         self.master = master
         self.planilhas = planilhas
         self.logger = logger or logging.getLogger(__name__)
-        
+
         # Sistema de cache melhorado com TTL
         self.data_cache = {
-            'medico': [],
-            'psi': [],
-            'last_update': None,
-            'last_filters': {},
-            'timer': None,
-            'ttl': 300  # 5 minutos de TTL para o cache
-        }
-        
-        # Temas e estilos modernos
-        self.theme = {
-            'background': '#1a1a1a',
-            'secondary_bg': '#2d2d2d',
-            'text': '#ffffff',
-            'accent': '#3498db',
-            'header': '#2c3e50',
-            'highlight': '#34495e',
-            'separator': '#7f8c8d',
-            'hover': '#3e4d5c',
-            'error': '#e74c3c'
-        }
-        
-        # Configurações de UI responsiva
-        self.ui_config = {
-            'min_width': 800,
-            'min_height': 600,
-            'padding': 10,
-            'animation_duration': 200
-        }
-        
-        # Referências de UI com estado
-        self.ui_refs = {}
-        
-        # Estado de ordenação
-        self.sort_state = {
-            'column': None,
-            'reverse': False
+            "medico": [],
+            "psi": [],
+            "last_update": None,
+            "last_filters": {},
+            "timer": None,
+            "ttl": 300,  # 5 minutos de TTL para o cache
         }
 
+        # Temas e estilos modernos
+        self.theme = {
+            "background": "#1a1a1a",
+            "secondary_bg": "#2d2d2d",
+            "text": "#ffffff",
+            "accent": "#3498db",
+            "header": "#2c3e50",
+            "highlight": "#34495e",
+            "separator": "#7f8c8d",
+            "hover": "#3e4d5c",
+            "error": "#e74c3c",
+        }
+
+        # Configurações de UI responsiva
+        self.ui_config = {
+            "min_width": 800,
+            "min_height": 600,
+            "padding": 10,
+            "animation_duration": 200,
+        }
+
+        # Referências de UI com estado
+        self.ui_refs = {}
+
+        # Estado de ordenação
+        self.sort_state = {"column": None, "reverse": False}
 
     @lru_cache(maxsize=1000)
     def _process_payment(self, value: str) -> str:
@@ -2708,142 +2735,153 @@ class PatientInfoDisplay:
             return str(value).strip()
 
     def _load_data(self) -> bool:
-            """Carrega e processa os dados da planilha com cache inteligente."""
-            try:
-                current_time = time.time()
-                
-                # Verifica se o cache ainda é válido
-                if (self.data_cache['last_update'] and 
-                    current_time - self.data_cache['last_update'] < self.data_cache['ttl']):
-                    return True
-                    
-                self.planilhas.reload_workbook()
-                wb = self.planilhas.wb
-                
-                if not wb:
-                    return False
+        """Carrega e processa os dados da planilha com cache inteligente."""
+        try:
+            current_time = time.time()
 
-                ws = wb.active
-                if not ws:
-                    messagebox.showerror("Erro", "Planilha inválida")
-                    return False
+            # Verifica se o cache ainda é válido
+            if (
+                self.data_cache["last_update"]
+                and current_time - self.data_cache["last_update"]
+                < self.data_cache["ttl"]
+            ):
+                return True
 
-                # Processamento em lote otimizado
-                med_data = []
-                psi_data = []
-                
-                # Pré-aloca as listas para melhor performance
-                max_rows = ws.max_row
-                med_data = []
-                psi_data = []
-                
-                # Processa em chunks para melhor performance
-                chunk_size = 100
-                for start_row in range(3, max_rows + 1, chunk_size):
-                    end_row = min(start_row + chunk_size, max_rows + 1)
-                    
-                    rows = list(ws.iter_rows(min_row=start_row, max_row=end_row))
-                    
-                    for row in rows:
-                        # Processamento de médicos
-                        if row[1].value:
-                            nome = str(row[1].value).strip().upper()
-                            if not any(x in nome.lower() for x in ["soma", "médico", "psicólogo", "total"]):
-                                med_data.append(PatientData(
+            self.planilhas.reload_workbook()
+            wb = self.planilhas.wb
+
+            if not wb:
+                return False
+
+            ws = wb.active
+            if not ws:
+                messagebox.showerror("Erro", "Planilha inválida")
+                return False
+
+            # Processamento em lote otimizado
+            med_data = []
+            psi_data = []
+
+            # Pré-aloca as listas para melhor performance
+            max_rows = ws.max_row
+            med_data = []
+            psi_data = []
+
+            # Processa em chunks para melhor performance
+            chunk_size = 100
+            for start_row in range(3, max_rows + 1, chunk_size):
+                end_row = min(start_row + chunk_size, max_rows + 1)
+
+                rows = list(ws.iter_rows(min_row=start_row, max_row=end_row))
+
+                for row in rows:
+                    # Processamento de médicos
+                    if row[1].value:
+                        nome = str(row[1].value).strip().upper()
+                        if not any(
+                            x in nome.lower()
+                            for x in ["soma", "médico", "psicólogo", "total"]
+                        ):
+                            med_data.append(
+                                PatientData(
                                     nome=nome,
                                     renach=str(row[2].value or "").strip(),
                                     pagamento=self._process_payment(row[5].value),
                                     tipo="Médico",
-                                    search_text=f"{nome.lower()} {str(row[2].value or '').lower()}"
-                                ))
-                        
-                        # Processamento de psicólogos
-                        if len(row) > 7 and row[7].value:
-                            nome = str(row[7].value).strip().upper()
-                            if not any(x in nome.lower() for x in ["soma", "médico", "psicólogo", "total"]):
-                                psi_data.append(PatientData(
+                                    search_text=f"{nome.lower()} {str(row[2].value or '').lower()}",
+                                )
+                            )
+
+                    # Processamento de psicólogos
+                    if len(row) > 7 and row[7].value:
+                        nome = str(row[7].value).strip().upper()
+                        if not any(
+                            x in nome.lower()
+                            for x in ["soma", "médico", "psicólogo", "total"]
+                        ):
+                            psi_data.append(
+                                PatientData(
                                     nome=nome,
                                     renach=str(row[8].value or "").strip(),
                                     pagamento=self._process_payment(row[11].value),
                                     tipo="Psicólogo",
-                                    search_text=f"{nome.lower()} {str(row[8].value or '').lower()}"
-                                ))
+                                    search_text=f"{nome.lower()} {str(row[8].value or '').lower()}",
+                                )
+                            )
 
-                # Atualiza o cache
-                self.data_cache.update({
-                    'medico': med_data,
-                    'psi': psi_data,
-                    'last_update': current_time
-                })
+            # Atualiza o cache
+            self.data_cache.update(
+                {"medico": med_data, "psi": psi_data, "last_update": current_time}
+            )
 
-                return bool(med_data or psi_data)
+            return bool(med_data or psi_data)
 
-            except Exception as e:
-                self.logger.error(f"Erro ao carregar dados: {e}")
-                return False
-            
+        except Exception as e:
+            self.logger.error(f"Erro ao carregar dados: {e}")
+            return False
+
     def _create_ui(self) -> Tuple[tk.Toplevel, Dict]:
         """Cria e retorna a interface do usuário."""
         window = tk.Toplevel(self.master)
         window.title("Informações dos Pacientes")
         window.geometry("1200x800")
-        window.configure(bg=self.theme['background'])
-        
+        window.configure(bg=self.theme["background"])
+
         # Frames principais
         frames = self._create_frames(window)
-        
+
         # Controles de filtro
-        filters = self._create_filters(frames['control'])
-        
+        filters = self._create_filters(frames["control"])
+
         # Tabela
-        table = self._create_table(frames['table'])
-        
+        table = self._create_table(frames["table"])
+
         # Barra de status
         stats_label = tk.Label(
-            frames['stats'],
-            bg=self.theme['background'],
-            fg=self.theme['text'],
-            font=("Arial", 10, "bold")
+            frames["stats"],
+            bg=self.theme["background"],
+            fg=self.theme["text"],
+            font=("Arial", 10, "bold"),
         )
         stats_label.pack(pady=5)
-        
+
         self.ui_refs = {
-            'window': window,
-            'frames': frames,
-            'filters': filters,
-            'table': table,
-            'stats': stats_label
+            "window": window,
+            "frames": frames,
+            "filters": filters,
+            "table": table,
+            "stats": stats_label,
         }
-        
+
         return window, self.ui_refs
-    
+
     def _create_frames(self, window: tk.Toplevel) -> Dict[str, tk.Frame]:
         """Cria e retorna os frames principais."""
         frames = {
-            'main': tk.Frame(window, bg=self.theme['background']),
-            'control': tk.Frame(window, bg=self.theme['background']),
-            'table': tk.Frame(window, bg=self.theme['background']),
-            'stats': tk.Frame(window, bg=self.theme['background'])
+            "main": tk.Frame(window, bg=self.theme["background"]),
+            "control": tk.Frame(window, bg=self.theme["background"]),
+            "table": tk.Frame(window, bg=self.theme["background"]),
+            "stats": tk.Frame(window, bg=self.theme["background"]),
         }
-        
-        frames['main'].pack(fill="both", expand=True, padx=20, pady=10)
-        frames['control'].pack(in_=frames['main'], fill="x", pady=(0, 10))
-        frames['table'].pack(in_=frames['main'], fill="both", expand=True)
-        frames['stats'].pack(in_=frames['main'], fill="x", pady=10)
-        
+
+        frames["main"].pack(fill="both", expand=True, padx=20, pady=10)
+        frames["control"].pack(in_=frames["main"], fill="x", pady=(0, 10))
+        frames["table"].pack(in_=frames["main"], fill="both", expand=True)
+        frames["stats"].pack(in_=frames["main"], fill="x", pady=10)
+
         return frames
-    
+
     def _create_filters(self, parent: tk.Frame) -> Dict[str, tk.Variable]:
         """Cria e retorna os controles de filtro."""
         filters = {
-            'type': tk.StringVar(value="todos"),
-            'search': tk.StringVar(),
-            'payment': tk.StringVar()
+            "type": tk.StringVar(value="todos"),
+            "search": tk.StringVar(),
+            "payment": tk.StringVar(),
         }
-        
-        filter_frame = tk.Frame(parent, bg=self.theme['background'])
+
+        filter_frame = tk.Frame(parent, bg=self.theme["background"])
         filter_frame.pack(fill="x", padx=5)
-        
+
         # Tipo de atendimento
         type_frame = self._create_filter_section(filter_frame, "Tipo de Atendimento")
         options = [("todos", "Todos"), ("medico", "Médico"), ("psi", "Psicólogo")]
@@ -2851,90 +2889,83 @@ class PatientInfoDisplay:
             tk.Radiobutton(
                 type_frame,
                 text=text,
-                variable=filters['type'],
+                variable=filters["type"],
                 value=value,
-                bg=self.theme['background'],
-                fg=self.theme['text'],
-                selectcolor=self.theme['header'],
-                command=lambda: self._delayed_filter()
+                bg=self.theme["background"],
+                fg=self.theme["text"],
+                selectcolor=self.theme["header"],
+                command=lambda: self._delayed_filter(),
             ).pack(side="left", padx=5)
-        
+
         # Busca
-        search_frame = self._create_filter_section(filter_frame, "Buscar por Nome/RENACH")
-        tk.Entry(
-            search_frame,
-            textvariable=filters['search'],
-            width=30
-        ).pack(padx=5, pady=2)
-        
+        search_frame = self._create_filter_section(
+            filter_frame, "Buscar por Nome/RENACH"
+        )
+        tk.Entry(search_frame, textvariable=filters["search"], width=30).pack(
+            padx=5, pady=2
+        )
+
         # Pagamento
-        payment_frame = self._create_filter_section(filter_frame, "Filtrar por Forma de Pagamento")
-        tk.Entry(
-            payment_frame,
-            textvariable=filters['payment'],
-            width=20
-        ).pack(padx=5, pady=2)
-        
+        payment_frame = self._create_filter_section(
+            filter_frame, "Filtrar por Forma de Pagamento"
+        )
+        tk.Entry(payment_frame, textvariable=filters["payment"], width=20).pack(
+            padx=5, pady=2
+        )
+
         for var in filters.values():
             var.trace("w", lambda *args: self._delayed_filter())
-        
+
         return filters
-    
+
     def _create_filter_section(self, parent: tk.Frame, title: str) -> tk.LabelFrame:
         """Cria uma seção de filtro com título."""
         frame = tk.LabelFrame(
             parent,
             text=title,
-            bg=self.theme['background'],
-            fg=self.theme['text'],
-            font=("Arial", 10)
+            bg=self.theme["background"],
+            fg=self.theme["text"],
+            font=("Arial", 10),
         )
         frame.pack(side="left", padx=5, pady=5)
         return frame
-    
+
     def _create_table(self, parent: tk.Frame) -> Dict:
         """Cria uma tabela moderna e responsiva."""
         # Frame principal com bordas arredondadas
         table_container = tk.Frame(
             parent,
-            bg=self.theme['background'],
-            highlightbackground=self.theme['accent'],
-            highlightthickness=1
+            bg=self.theme["background"],
+            highlightbackground=self.theme["accent"],
+            highlightthickness=1,
         )
         table_container.pack(fill="both", expand=True, padx=5, pady=5)
-        
+
         # Canvas com scrollbar suave
         canvas = tk.Canvas(
-            table_container,
-            bg=self.theme['background'],
-            highlightthickness=0
+            table_container, bg=self.theme["background"], highlightthickness=0
         )
-        
+
         scrollbar = ttk.Scrollbar(
-            table_container,
-            orient="vertical",
-            command=canvas.yview
+            table_container, orient="vertical", command=canvas.yview
         )
-        
-        table_frame = tk.Frame(
-            canvas,
-            bg=self.theme['background']
-        )
-        
+
+        table_frame = tk.Frame(canvas, bg=self.theme["background"])
+
         # Configuração do scroll
         def _on_frame_configure(event):
             canvas.configure(scrollregion=canvas.bbox("all"))
-            
+
         def _bound_to_mousewheel(event):
             canvas.bind_all("<MouseWheel>", _on_mousewheel)
             canvas.bind_all("<Button-4>", _on_mousewheel)
             canvas.bind_all("<Button-5>", _on_mousewheel)
-            
+
         def _unbound_to_mousewheel(event):
             canvas.unbind_all("<MouseWheel>")
             canvas.unbind_all("<Button-4>")
             canvas.unbind_all("<Button-5>")
-            
+
         def _on_mousewheel(event):
             # Windows
             if event.num == 4:
@@ -2947,259 +2978,262 @@ class PatientInfoDisplay:
                     canvas.yview_scroll(-1, "units")
                 else:
                     canvas.yview_scroll(1, "units")
-                    
-        table_frame.bind('<Configure>', _on_frame_configure)
-        
+
+        table_frame.bind("<Configure>", _on_frame_configure)
+
         # Vincula os eventos de scroll
-        canvas.bind('<Enter>', _bound_to_mousewheel)
-        canvas.bind('<Leave>', _unbound_to_mousewheel)
-        
+        canvas.bind("<Enter>", _bound_to_mousewheel)
+        canvas.bind("<Leave>", _unbound_to_mousewheel)
+
         # Cabeçalhos clicáveis para ordenação
         headers = [
             ("Nº", 5),
             ("Nome", 30),
             ("RENACH", 10),
             ("Forma de Pagamento", 20),
-            ("Tipo", 10)
+            ("Tipo", 10),
         ]
-        
+
         for col, (header, width) in enumerate(headers):
-            header_frame = tk.Frame(
-                table_frame,
-                bg=self.theme['header']
-            )
+            header_frame = tk.Frame(table_frame, bg=self.theme["header"])
             header_frame.grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
-            
+
             label = tk.Label(
                 header_frame,
                 text=header,
-                bg=self.theme['header'],
-                fg=self.theme['text'],
+                bg=self.theme["header"],
+                fg=self.theme["text"],
                 font=("Arial", 11, "bold"),
                 padx=10,
-                pady=8
+                pady=8,
             )
             label.pack(fill="both", expand=True)
-            
+
             # Adiciona funcionalidade de ordenação
-            label.bind('<Button-1>', lambda e, col=col: self._sort_table(col))
-            label.bind('<Enter>', lambda e, widget=label: self._on_header_hover(widget, True))
-            label.bind('<Leave>', lambda e, widget=label: self._on_header_hover(widget, False))
-        
+            label.bind("<Button-1>", lambda e, col=col: self._sort_table(col))
+            label.bind(
+                "<Enter>", lambda e, widget=label: self._on_header_hover(widget, True)
+            )
+            label.bind(
+                "<Leave>", lambda e, widget=label: self._on_header_hover(widget, False)
+            )
+
         # Configuração do canvas e scrollbar
         canvas.create_window((0, 0), window=table_frame, anchor="nw", tags=("table",))
-        
+
         def _on_canvas_configure(event):
             canvas.itemconfig("table", width=event.width)
-        
-        canvas.bind('<Configure>', _on_canvas_configure)
+
+        canvas.bind("<Configure>", _on_canvas_configure)
         canvas.configure(yscrollcommand=scrollbar.set)
-        
+
         # Layout responsivo - alterada a ordem de empacotamento
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        
+
         # Configurações de grid
         for i in range(5):
             table_frame.grid_columnconfigure(i, weight=1)
-        
+
         return {
-            'container': table_container,
-            'frame': table_frame,
-            'canvas': canvas,
-            'scrollbar': scrollbar
+            "container": table_container,
+            "frame": table_frame,
+            "canvas": canvas,
+            "scrollbar": scrollbar,
         }
-    
+
     def _smooth_scroll(self, scrollbar):
-            """Implementa scrolling suave."""
-            def scroll(*args):
-                scrollbar.set(*args)
-                self.ui_refs['table']['canvas'].yview_moveto(args[0])
-            return scroll
+        """Implementa scrolling suave."""
+
+        def scroll(*args):
+            scrollbar.set(*args)
+            self.ui_refs["table"]["canvas"].yview_moveto(args[0])
+
+        return scroll
 
     def _sort_table(self, column: int):
         """Ordena a tabela pela coluna clicada."""
-        if self.sort_state['column'] == column:
-            self.sort_state['reverse'] = not self.sort_state['reverse']
+        if self.sort_state["column"] == column:
+            self.sort_state["reverse"] = not self.sort_state["reverse"]
         else:
-            self.sort_state['column'] = column
-            self.sort_state['reverse'] = False
-        
+            self.sort_state["column"] = column
+            self.sort_state["reverse"] = False
+
         self._apply_filters()
 
     def _on_header_hover(self, widget: tk.Label, entering: bool):
         """Efeito hover nos cabeçalhos."""
-        widget.configure(
-            bg=self.theme['hover'] if entering else self.theme['header']
-        )
+        widget.configure(bg=self.theme["hover"] if entering else self.theme["header"])
 
     def _update_table(self, data: List[PatientData]) -> None:
         """Atualiza a tabela com os dados filtrados."""
-        table = self.ui_refs['table']
-        
+        table = self.ui_refs["table"]
+
         # Limpa tabela preservando cabeçalho
-        for widget in table['frame'].winfo_children():
+        for widget in table["frame"].winfo_children():
             if int(widget.grid_info()["row"]) > 0:
                 widget.destroy()
 
         # Separa os dados por tipo
         medicos = [p for p in data if p.tipo == "Médico"]
         psicologos = [p for p in data if p.tipo == "Psicólogo"]
-        
+
         row = 2
         # Processa médicos
         for idx, patient in enumerate(medicos, 1):
-            bg_color = self.theme['highlight'] if idx % 2 == 0 else self.theme['background']
-            
+            bg_color = (
+                self.theme["highlight"] if idx % 2 == 0 else self.theme["background"]
+            )
+
             cells = [
                 (str(idx), "center", 5),
                 (patient.nome, "w", 30),
                 (patient.renach, "center", 10),
                 (patient.pagamento, "w", 20),
-                (patient.tipo, "center", 10)
+                (patient.tipo, "center", 10),
             ]
-            
+
             for col, (text, anchor, width) in enumerate(cells):
                 tk.Label(
-                    table['frame'],
+                    table["frame"],
                     text=text,
                     bg=bg_color,
-                    fg=self.theme['text'],
+                    fg=self.theme["text"],
                     font=("Arial", 10),
                     anchor=anchor,
                     width=width,
                     padx=10,
-                    pady=5
+                    pady=5,
                 ).grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
-            
+
             row += 1
 
         # Adiciona separador se houver médicos e psicólogos
         if medicos and psicologos:
-            separator = tk.Frame(
-                table['frame'],
-                height=2,
-                bg=self.theme['separator']
-            )
-            separator.grid(
-                row=row,
-                column=0,
-                columnspan=5,
-                sticky="ew",
-                pady=5
-            )
+            separator = tk.Frame(table["frame"], height=2, bg=self.theme["separator"])
+            separator.grid(row=row, column=0, columnspan=5, sticky="ew", pady=5)
             row += 1
 
         # Processa psicólogos
         for idx, patient in enumerate(psicologos, 1):
-            bg_color = self.theme['highlight'] if row % 2 == 0 else self.theme['background']
-            
+            bg_color = (
+                self.theme["highlight"] if row % 2 == 0 else self.theme["background"]
+            )
+
             cells = [
                 (str(idx), "center", 5),
                 (patient.nome, "w", 30),
                 (patient.renach, "center", 10),
                 (patient.pagamento, "w", 20),
-                (patient.tipo, "center", 10)
+                (patient.tipo, "center", 10),
             ]
-            
+
             for col, (text, anchor, width) in enumerate(cells):
                 tk.Label(
-                    table['frame'],
+                    table["frame"],
                     text=text,
                     bg=bg_color,
-                    fg=self.theme['text'],
+                    fg=self.theme["text"],
                     font=("Arial", 10),
                     anchor=anchor,
                     width=width,
                     padx=10,
-                    pady=5
+                    pady=5,
                 ).grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
-            
+
             row += 1
 
         # Atualiza scroll region
-        table['frame'].update_idletasks()
-        table['canvas'].configure(scrollregion=table['canvas'].bbox("all"))
-        
+        table["frame"].update_idletasks()
+        table["canvas"].configure(scrollregion=table["canvas"].bbox("all"))
+
     def _update_stats(self, filtered_data: List[PatientData]) -> None:
         """Atualiza as estatísticas."""
         med_count = sum(1 for p in filtered_data if p.tipo == "Médico")
         psi_count = sum(1 for p in filtered_data if p.tipo == "Psicólogo")
         total = len(filtered_data)
-        
+
         stats = f"Total: {total} | Médico: {med_count} | Psicólogo: {psi_count}"
-        self.ui_refs['stats'].config(text=stats)
+        self.ui_refs["stats"].config(text=stats)
 
     def _filter_data(self) -> List[PatientData]:
-            """Sistema de filtragem otimizado com cache de resultados."""
-            filters = self.ui_refs['filters']
-            current_filters = {
-                'type': filters['type'].get(),
-                'search': filters['search'].get().lower(),
-                'payment': filters['payment'].get().lower()
-            }
-            
-            # Verifica se os filtros mudaram
-            if current_filters == self.data_cache['last_filters']:
-                return self.data_cache.get('last_result', [])
-            
-            def matches_criteria(patient: PatientData) -> bool:
-                if current_filters['search'] and current_filters['search'] not in patient.search_text:
-                    return False
-                if current_filters['payment'] and current_filters['payment'] not in patient.pagamento.lower():
-                    return False
-                return True
-            
-            filtered = []
-            if current_filters['type'] in ["todos", "medico"]:
-                filtered.extend([p for p in self.data_cache['medico'] if matches_criteria(p)])
-            
-            if current_filters['type'] in ["todos", "psi"]:
-                filtered.extend([p for p in self.data_cache['psi'] if matches_criteria(p)])
-            
-            # Aplica ordenação
-            if self.sort_state['column'] is not None:
-                key_funcs = [
-                    lambda x: int(x.nome.split()[0]) if x.nome.split()[0].isdigit() else 0,
-                    lambda x: x.nome.lower(),
-                    lambda x: x.renach,
-                    lambda x: x.pagamento,
-                    lambda x: x.tipo
-                ]
-                
-                filtered.sort(
-                    key=key_funcs[self.sort_state['column']],
-                    reverse=self.sort_state['reverse']
-                )
-            
-            # Atualiza cache
-            self.data_cache['last_filters'] = current_filters.copy()
-            self.data_cache['last_result'] = filtered
-            
-            return filtered
-    
+        """Sistema de filtragem otimizado com cache de resultados."""
+        filters = self.ui_refs["filters"]
+        current_filters = {
+            "type": filters["type"].get(),
+            "search": filters["search"].get().lower(),
+            "payment": filters["payment"].get().lower(),
+        }
+
+        # Verifica se os filtros mudaram
+        if current_filters == self.data_cache["last_filters"]:
+            return self.data_cache.get("last_result", [])
+
+        def matches_criteria(patient: PatientData) -> bool:
+            if (
+                current_filters["search"]
+                and current_filters["search"] not in patient.search_text
+            ):
+                return False
+            if (
+                current_filters["payment"]
+                and current_filters["payment"] not in patient.pagamento.lower()
+            ):
+                return False
+            return True
+
+        filtered = []
+        if current_filters["type"] in ["todos", "medico"]:
+            filtered.extend(
+                [p for p in self.data_cache["medico"] if matches_criteria(p)]
+            )
+
+        if current_filters["type"] in ["todos", "psi"]:
+            filtered.extend([p for p in self.data_cache["psi"] if matches_criteria(p)])
+
+        # Aplica ordenação
+        if self.sort_state["column"] is not None:
+            key_funcs = [
+                lambda x: int(x.nome.split()[0]) if x.nome.split()[0].isdigit() else 0,
+                lambda x: x.nome.lower(),
+                lambda x: x.renach,
+                lambda x: x.pagamento,
+                lambda x: x.tipo,
+            ]
+
+            filtered.sort(
+                key=key_funcs[self.sort_state["column"]],
+                reverse=self.sort_state["reverse"],
+            )
+
+        # Atualiza cache
+        self.data_cache["last_filters"] = current_filters.copy()
+        self.data_cache["last_result"] = filtered
+
+        return filtered
+
     def _delayed_filter(self) -> None:
-            """Implementa filtragem com delay para melhor performance."""
-            if self.data_cache['timer']:
-                self.master.after_cancel(self.data_cache['timer'])
-            self.data_cache['timer'] = self.master.after(300, self._apply_filters)
+        """Implementa filtragem com delay para melhor performance."""
+        if self.data_cache["timer"]:
+            self.master.after_cancel(self.data_cache["timer"])
+        self.data_cache["timer"] = self.master.after(300, self._apply_filters)
 
     def _apply_filters(self) -> None:
         """Aplica filtros com animação suave."""
-        if self.data_cache['timer']:
-            self.master.after_cancel(self.data_cache['timer'])
-        
+        if self.data_cache["timer"]:
+            self.master.after_cancel(self.data_cache["timer"])
+
         def animate():
-            table = self.ui_refs['table']['frame']
-            table.tk_setPalette(background=self.theme['background'])
-            
+            table = self.ui_refs["table"]["frame"]
+            table.tk_setPalette(background=self.theme["background"])
+
             filtered_data = self._filter_data()
             self._update_table(filtered_data)
             self._update_stats(filtered_data)
-            
-            table.tk_setPalette(background=self.theme['background'])
-        
-        self.data_cache['timer'] = self.master.after(150, animate)
+
+            table.tk_setPalette(background=self.theme["background"])
+
+        self.data_cache["timer"] = self.master.after(150, animate)
 
     def display(self) -> None:
         """Exibe a interface principal com tratamento de erros aprimorado."""
@@ -3207,31 +3241,31 @@ class PatientInfoDisplay:
             if not self._load_data():
                 messagebox.showerror("Erro", "Não foi possível carregar os dados")
                 return
-            
+
             window, _ = self._create_ui()
             self._apply_filters()
-            
+
             # Centralização e dimensionamento responsivo
             window.update_idletasks()
-            width = max(window.winfo_width(), self.ui_config['min_width'])
-            height = max(window.winfo_height(), self.ui_config['min_height'])
+            width = max(window.winfo_width(), self.ui_config["min_width"])
+            height = max(window.winfo_height(), self.ui_config["min_height"])
             x = (window.winfo_screenwidth() // 2) - (width // 2)
             y = (window.winfo_screenheight() // 2) - (height // 2)
             window.geometry(f"{width}x{height}+{x}+{y}")
-            
+
             # Configuração de redimensionamento
-            window.minsize(self.ui_config['min_width'], self.ui_config['min_height'])
-            
+            window.minsize(self.ui_config["min_width"], self.ui_config["min_height"])
+
             def on_closing():
-                if self.data_cache['timer']:
-                    self.master.after_cancel(self.data_cache['timer'])
+                if self.data_cache["timer"]:
+                    self.master.after_cancel(self.data_cache["timer"])
                 window.destroy()
-            
+
             window.protocol("WM_DELETE_WINDOW", on_closing)
-            
+
         except Exception as e:
             self.logger.error(f"Erro ao exibir interface: {e}")
             messagebox.showerror(
                 "Erro",
-                f"Ocorreu um erro ao exibir a interface: {str(e)}\nPor favor, contate o suporte."
+                f"Ocorreu um erro ao exibir a interface: {str(e)}\nPor favor, contate o suporte.",
             )
