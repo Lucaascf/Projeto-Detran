@@ -70,13 +70,33 @@ def role_e_click(driver, xpath):
     element.click()
 
 
+"""
+Responsável por gerenciar todas as funcionalidades relacionadas à interface gráfica e operações de 
+uma aplicação de gerenciamento de pacientes para uma clínica médica. Ela lida com cadastro de 
+pacientes, processamento de pagamentos, geração de relatórios, e integração com serviços externos 
+como WhatsApp e email.
+"""
+
+
 class FuncoesBotoes:
     """
     SEÇÃO 1: INICIALIZAÇÃO E CONFIGURAÇÃO
+
+    Esta seção contém métodos relacionados à inicialização da classe e configuração inicial de
+    variáveis e componentes
     """
 
-    # Código de inicialização...
     def __init__(self, master, planilhas, file_path, app, current_user=None):
+        """
+        Inicializa a classe FuncoesBotoes com as configurações básicas.
+
+        Args:
+            master (tk.Tk): Janela principal da aplicação
+            planilhas (PlanilhaManager): Gerenciador de planilhas
+            file_path (str): Caminho do arquivo da planilha
+            app (App): Instância principal da aplicação
+            current_user (str, optional): Usuário atual do sistema
+        """
         self.master = master
         self.planilhas = planilhas
         self.file_path = file_path
@@ -100,7 +120,10 @@ class FuncoesBotoes:
 
     # Código de inicialização de variáveis de pagamento...
     def _init_payment_vars(self):
-        """Inicializa variáveis relacionadas a pagamento."""
+        """
+        Inicializa as variáveis relacionadas ao processamento de pagamentos.
+        Configura StringVars e IntVars para diferentes métodos de pagamento.
+        """
         self.forma_pagamento_var = tk.StringVar(value="")
         self.radio_var = tk.StringVar(value="")
         self.payment_vars = {
@@ -112,22 +135,41 @@ class FuncoesBotoes:
 
     # Código de configuração de usuário...
     def set_current_user(self, user):
-        """Define o usuário atual."""
+        """
+        Define o usuário atual do sistema.
+
+        Args:
+            user (str): Nome do usuário a ser definido como atual
+        """
         self.current_user = user
 
     # Código de configuração de frames...
     def configurar_frames(self, login_frame, criar_conta_frame):
-        """Configura os frames de login e criar conta."""
+        """
+        Configura os frames de login e criação de conta.
+
+        Args:
+            login_frame (tk.Frame): Frame de login
+            criar_conta_frame (tk.Frame): Frame de criação de conta
+        """
         self.login_frame = login_frame
         self.criar_conta_frame = criar_conta_frame
 
     """
     SEÇÃO 2: INTERFACE GRÁFICA E WIDGETS
+
+    Esta seção contém métodos relacionados à criação 
+    e manipulação de elementos da interface gráfica
     """
 
     # Código de centralização...
     def center(self, window):
-        """Centraliza a janela na tela."""
+        """
+        Centraliza uma janela na tela.
+
+        Args:
+            window (tk.Toplevel/tk.Tk): Janela a ser centralizada
+        """
         window.update_idletasks()
         width = window.winfo_width()
         height = window.winfo_height()
@@ -138,7 +180,18 @@ class FuncoesBotoes:
 
     # Código de criação do frame de pagamento...
     def _create_payment_frame(self, parent, cor_fundo, cor_texto, cor_selecionado):
-        """Cria o frame de pagamento com todas as opções."""
+        """
+        Cria o frame de pagamento com todas as opções disponíveis.
+
+        Args:
+            parent (tk.Widget): Widget pai onde o frame será criado
+            cor_fundo (str): Cor de fundo do frame
+            cor_texto (str): Cor do texto
+            cor_selecionado (str): Cor de seleção dos elementos
+
+        Returns:
+            tk.LabelFrame: Frame de pagamento configurado
+        """
         frame_pagamento = tk.LabelFrame(
             parent,
             text="Formas de Pagamento",
@@ -199,7 +252,17 @@ class FuncoesBotoes:
 
     # Código do frame de radio buttons...
     def _create_radio_frame(self, cor_fundo, cor_texto, cor_selecionado):
-        """Cria o frame com os radio buttons."""
+        """
+        Cria o frame com os radio buttons para seleção do tipo de atendimento.
+
+        Args:
+            cor_fundo (str): Cor de fundo do frame
+            cor_texto (str): Cor do texto dos radio buttons
+            cor_selecionado (str): Cor de seleção dos radio buttons
+
+        Returns:
+            tk.Frame: Frame contendo os radio buttons configurados
+        """
         frame_radios = tk.Frame(self.adicionar_window, bg=cor_fundo)
         frame_radios.pack(pady=5)
 
@@ -221,7 +284,15 @@ class FuncoesBotoes:
 
     # Código do frame de botões...
     def _create_button_frame(self, cor_fundo):
-        """Cria o frame com os botões."""
+        """
+        Cria o frame com os botões de ação (Adicionar e Voltar).
+
+        Args:
+            cor_fundo (str): Cor de fundo do frame
+
+        Returns:
+            tk.Frame: Frame contendo os botões configurados
+        """
         frame_botoes = tk.Frame(self.adicionar_window, bg=cor_fundo)
         frame_botoes.pack(pady=20)
 
@@ -246,7 +317,17 @@ class FuncoesBotoes:
 
     # Código de criação de entry...
     def criar_entry(self, frame_nome, var_name, parent):
-        """Cria um frame com label e entry para entradas de texto."""
+        """
+        Cria um frame com label e entry para entradas de texto.
+
+        Args:
+            frame_nome (str): Nome do label associado ao entry
+            var_name (str): Nome da variável que armazenará o entry
+            parent (tk.Widget): Widget pai onde o frame será criado
+
+        Returns:
+            tk.Entry: Widget de entrada criado
+        """
         frame = tk.Frame(parent, bg=parent.cget("bg"))
         frame.pack(pady=2)
 
@@ -265,8 +346,17 @@ class FuncoesBotoes:
 
     # Configura a interface para adição de novo paciente
     def _setup_add_interface(self, cor_fundo, cor_texto, cor_selecionado):
-        """Configura a interface de adição de paciente."""
+        """
+        Configura a interface completa para adição de novo paciente.
 
+        Cria e organiza todos os widgets necessários para a interface de adição,
+        incluindo campos de entrada, botões de rádio e frame de pagamento.
+
+        Args:
+            cor_fundo (str): Cor de fundo da interface
+            cor_texto (str): Cor do texto
+            cor_selecionado (str): Cor dos elementos selecionados
+        """
         # Título
         tk.Label(
             self.adicionar_window,
@@ -376,11 +466,17 @@ class FuncoesBotoes:
 
     """
     SEÇÃO 3: MANIPULAÇÃO DE DADOS
+    Esta seção contém métodos relacionados ao processamento e validação de dados
     """
 
     # Código de obtenção do workbook...
     def get_active_workbook(self):
-        """Obtém o workbook ativo atualizado."""
+        """
+        Obtém o workbook ativo atualizado.
+
+        Returns:
+            openpyxl.Workbook: Workbook ativo ou None se não houver
+        """
         if self.planilhas:
             self.planilhas.reload_workbook()
             return self.planilhas.wb
@@ -388,11 +484,29 @@ class FuncoesBotoes:
 
     # Código de verificação de pagamentos...
     def verificar_soma_pagamentos(self) -> bool:
-        """Verifica se a soma dos valores de pagamento está correta."""
+        """
+        Verifica se a soma dos valores de pagamento está correta.
+
+        Returns:
+            bool: True se a soma estiver correta, False caso contrário
+        """
         return self.validar_pagamentos() is not None
 
+    # Valida os valores e formas de pagamento selecionados
     def validar_pagamentos(self) -> Optional[Tuple[List[str], float]]:
-        """Valida todos os pagamentos e retorna a lista de pagamentos e valor esperado se válido."""
+        """
+        Valida os valores e formas de pagamento selecionados.
+
+        Verifica se os valores informados correspondem ao valor total esperado
+        e se as formas de pagamento foram corretamente selecionadas.
+
+        Returns:
+            Optional[Tuple[List[str], float]]: Tupla contendo lista de pagamentos formatados
+            e valor total esperado se válido, None caso contrário
+
+        Raises:
+            ValueError: Se houver erro na validação dos valores
+        """
         try:
             # Obtém o tipo de consulta selecionado
             tipo_consulta = self.radio_var.get()
@@ -465,8 +579,18 @@ class FuncoesBotoes:
             messagebox.showerror("Erro", "Erro ao validar pagamentos")
             return None
 
+    # Calcula valores totais por tipo de atendimento e método de pagamento
     def _calcular_valores_atendimentos(self) -> Dict[str, Dict[str, float]]:
-        """Calcula valores totais por tipo de atendimento e método de pagamento."""
+        """
+        Calcula valores totais por tipo de atendimento e método de pagamento.
+
+        Processa os dados da planilha e calcula totais para atendimentos médicos
+        e psicológicos, separando por forma de pagamento.
+
+        Returns:
+            Dict[str, Dict[str, float]]: Dicionário com totais calculados por tipo
+            e método de pagamento
+        """
         try:
             # Carrega os dados da planilha
             wb = self.get_active_workbook()
@@ -507,6 +631,7 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao calcular valores: {str(e)}")
             return None
 
+    # Processa os pagamentos de um tipo específico de atendimento e atualiza o dicionário de totais.
     def _processar_pagamentos_por_tipo(
         self,
         ws,
@@ -515,7 +640,27 @@ class FuncoesBotoes:
         col_pagamento: str,
         totais: Dict[str, Dict[str, float]],
     ) -> None:
-        """Processa pagamentos para um tipo específico de atendimento."""
+        """
+        Processa os pagamentos de um tipo específico de atendimento e atualiza o dicionário de totais.
+
+        Analisa cada linha da planilha para o tipo de atendimento especificado,
+        processando os pagamentos e atualizando os totais correspondentes.
+
+        Args:
+            ws: Worksheet ativa da planilha
+            tipo (str): Tipo de atendimento ('medico' ou 'psicologo')
+            col_nome (str): Letra da coluna que contém os nomes
+            col_pagamento (str): Letra da coluna que contém os pagamentos
+            totais (Dict[str, Dict[str, float]]): Dicionário para acumular os totais
+
+        Notes:
+            - Ignora linhas com nomes vazios ou que contenham palavras-chave específicas
+            - Suporta dois formatos de pagamento:
+                1. Código único (ex: 'D' para Débito)
+                2. Múltiplos valores (ex: 'D:100,65|C:48,00')
+            - Atualiza contadores de pacientes e valores totais
+            - Registra erros no logger se houver problemas no processamento
+        """
         for row in range(3, ws.max_row + 1):
             nome = ws[f"{col_nome}{row}"].value
             if not nome or not isinstance(nome, str):
@@ -553,11 +698,15 @@ class FuncoesBotoes:
 
     """
     SEÇÃO 4: OPERAÇÕES COM PACIENTES
+    Esta seção contém métodos relacionados ao gerenciamento de pacientes
     """
 
     # Código de adição de informações...
     def adicionar_informacao(self):
-        """Cria uma nova janela para adicionar informações de pacientes."""
+        """
+        Cria uma nova janela para adicionar informações de pacientes.
+        Configura a interface para entrada de dados do paciente.
+        """
         self.adicionar_window = tk.Toplevel(self.master)
         self.adicionar_window.title("Adicionar Paciente")
         self.adicionar_window.geometry("500x450")
@@ -576,7 +725,12 @@ class FuncoesBotoes:
 
     # Código de salvamento de informações...
     def salvar_informacao(self):
-        """Valida dados e coordena o salvamento no banco e na planilha."""
+        """
+        Valida dados e coordena o salvamento no banco e na planilha.
+
+        Returns:
+            bool: True se o salvamento for bem-sucedido, False caso contrário
+        """
         try:
             # Obter e validar dados dos campos
             nome = self.nome_entry.get().strip().upper()
@@ -620,10 +774,21 @@ class FuncoesBotoes:
             messagebox.showerror("Erro", f"Erro ao processar informações: {str(e)}")
             return False
 
+    # Valida se todos os campos obrigatórios do formulário foram preenchidos
     def _validar_campos_obrigatorios(
         self, nome: str, renach: str, escolha: str
     ) -> bool:
-        """Valida os campos obrigatórios do formulário."""
+        """
+        Valida se todos os campos obrigatórios do formulário foram preenchidos.
+
+        Args:
+            nome (str): Nome do paciente
+            renach (str): Número do RENACH
+            escolha (str): Tipo de atendimento selecionado
+
+        Returns:
+            bool: True se todos os campos estão preenchidos, False caso contrário
+        """
         if not all([nome, renach, escolha]):
             messagebox.showerror(
                 "Erro",
@@ -634,17 +799,51 @@ class FuncoesBotoes:
 
     # Código de exclusão...
     def excluir(self):
-        """Remove informações de pacientes da planilha com base no RENACH fornecido pelo usuário."""
+        """
+        Remove informações de pacientes da planilha com base no RENACH fornecido.
+
+        Cria uma interface gráfica para input do RENACH e gerencia o processo de
+        exclusão do paciente tanto da seção médica quanto psicológica.
+
+        Funcionalidades:
+        - Busca o paciente pelo número RENACH
+        - Remove dados mantendo a integridade da planilha
+        - Move conteúdo subsequente para preencher espaços vazios
+        - Atualiza a planilha após a exclusão
+
+        Raises:
+            Exception: Se houver erro durante o processo de exclusão
+        """
         try:
             wb = self.get_active_workbook()
             ws = wb.active
 
             def realizar_exclusao():
+                """
+                Executa o processo de exclusão do paciente.
+
+                Valida o RENACH informado, localiza o paciente na planilha
+                e coordena o processo de remoção dos dados.
+
+                Raises:
+                    ValueError: Se o RENACH não for um número válido
+                    Exception: Para outros erros durante a exclusão
+                """
                 try:
                     renach = int(renach_entry.get().strip())
 
                     def limpar_linha(row_num, start_col, end_col):
-                        """Limpa os valores de uma linha específica"""
+                        """
+                        Limpa os valores de uma linha específica da planilha.
+
+                        Args:
+                            row_num (int): Número da linha a ser limpa
+                            start_col (int): Coluna inicial
+                            end_col (int): Coluna final
+
+                        Notes:
+                            Verifica células mescladas para evitar erros de formatação
+                        """
                         for col in range(start_col, end_col + 1):
                             cell = ws.cell(row=row_num, column=col)
                             # Verifica se não é uma célula mesclada
@@ -652,7 +851,22 @@ class FuncoesBotoes:
                                 cell.value = None
 
                     def mover_conteudo(start_row, start_col, end_col):
-                        """Move o conteúdo das células para cima"""
+                        """
+                        Move o conteúdo das células para cima após uma exclusão.
+
+                        Realiza a movimentação de dados de forma segura, preservando
+                        a formatação e estrutura da planilha.
+
+                        Args:
+                            start_row (int): Linha inicial para movimentação
+                            start_col (int): Coluna inicial
+                            end_col (int): Coluna final
+
+                        Notes:
+                            - Move dados de baixo para cima para evitar sobreposição
+                            - Trata células mescladas adequadamente
+                            - Limpa a última linha após a movimentação
+                        """
                         max_row = ws.max_row
                         # Move de baixo para cima para evitar sobrescrever dados
                         for row in range(start_row, max_row):
@@ -675,7 +889,18 @@ class FuncoesBotoes:
                         limpar_linha(max_row, start_col, end_col)
 
                     def encontrar_paciente(col_renach):
-                        """Encontra a linha do paciente pelo RENACH"""
+                        """
+                        Encontra a linha do paciente pelo número do RENACH.
+
+                        Args:
+                            col_renach (int): Número da coluna que contém o RENACH
+
+                        Returns:
+                            int or None: Número da linha se encontrado, None caso contrário
+
+                        Notes:
+                            Ignora células mescladas durante a busca
+                        """
                         for row in range(3, ws.max_row + 1):
                             cell = ws.cell(row=row, column=col_renach)
                             if not isinstance(cell, openpyxl.cell.cell.MergedCell):
@@ -768,6 +993,12 @@ class FuncoesBotoes:
             self.center(excluir_window)
 
             def on_closing():
+                """
+                Manipula o fechamento da janela de exclusão.
+
+                Fecha o workbook e destroi a janela de forma segura,
+                garantindo que os recursos sejam liberados corretamente.
+                """
                 wb.close()
                 excluir_window.destroy()
 
@@ -778,7 +1009,15 @@ class FuncoesBotoes:
 
     # Código de exibição de informações...
     def exibir_informacao(self):
-        """Exibe informações dos pacientes usando o PatientInfoDisplay."""
+        """
+        Exibe uma janela com informações detalhadas dos pacientes.
+
+        Utiliza a classe PatientInfoDisplay para mostrar as informações
+        em uma interface gráfica organizada.
+
+        Returns:
+            bool: True se a exibição for bem-sucedida, False caso contrário
+        """
         try:
             # Cria uma instância do PatientInfoDisplay passando os parâmetros necessários
             display = PatientInfoDisplay(
@@ -801,13 +1040,19 @@ class FuncoesBotoes:
 
     """
     SEÇÃO 5: MANIPULAÇÃO DE PLANILHAS
+    Esta seção contém métodos relacionados à manipulação de planilhas Excel
     """
 
     # Código de formatação...
     def formatar_planilha(self):
         """
         Formata a planilha preservando as informações necessárias.
+        Aplica estilos, bordas e alinhamentos padronizados.
+
+        Returns:
+            bool: True se a formatação for bem-sucedida, False caso contrário
         """
+
         try:
             if not self.planilhas:
                 return False
@@ -1053,7 +1298,18 @@ class FuncoesBotoes:
 
     # Código de salvamento na planilha...
     def salvar_na_planilha(self, nome, renach, pagamentos, tipo_escolha):
-        """Salva os dados na planilha."""
+        """
+        Salva as informações do paciente na planilha Excel.
+
+        Args:
+            nome (str): Nome do paciente
+            renach (str): Número do RENACH
+            pagamentos (list): Lista de formas de pagamento
+            tipo_escolha (str): Tipo de atendimento ('medico', 'psicologo' ou 'ambos')
+
+        Returns:
+            bool: True se o salvamento for bem-sucedido, False caso contrário
+        """
         try:
             if not self.planilhas.wb:
                 self.planilhas.reload_workbook()
@@ -1114,7 +1370,20 @@ class FuncoesBotoes:
         font_bold,
         alignment_center,
     ):
-        """Adiciona os totais para uma seção (médico ou psicólogo)"""
+        """
+        Adiciona os totais financeiros em uma seção específica da planilha.
+
+        Args:
+            ws: Worksheet ativa
+            linha_inicio (int): Linha inicial para adicionar os totais
+            col_inicio (int): Coluna inicial
+            valor_consulta (float): Valor da consulta
+            valor_profissional (float): Valor do profissional
+            num_pacientes (int): Número de pacientes
+            borda: Estilo de borda a ser aplicado
+            font_bold: Estilo de fonte em negrito
+            alignment_center: Alinhamento centralizado
+        """
         # Soma
         ws.cell(row=linha_inicio, column=col_inicio + 2, value="Soma")
         soma_cell = ws.cell(
@@ -1154,7 +1423,18 @@ class FuncoesBotoes:
     def _adicionar_resumo_geral(
         self, ws, linha_inicio, num_medico, num_psi, borda, font_bold, alignment_center
     ):
-        """Adiciona o resumo geral na planilha"""
+        """
+        Adiciona um resumo geral financeiro na planilha.
+
+        Args:
+            ws: Worksheet ativa
+            linha_inicio (int): Linha inicial para adicionar o resumo
+            num_medico (int): Número de atendimentos médicos
+            num_psi (int): Número de atendimentos psicológicos
+            borda: Estilo de borda a ser aplicado
+            font_bold: Estilo de fonte em negrito
+            alignment_center: Alinhamento centralizado
+        """
         # Configurações
         valor_medico = 148.65
         valor_psi = 192.61
@@ -1201,11 +1481,19 @@ class FuncoesBotoes:
 
     """
     SEÇÃO 6: COMUNICAÇÃO E INTEGRAÇÃO
+    Esta seção contém métodos relacionados à integração com serviços externos
     """
 
     # Código de envio de WhatsApp...
     def enviar_whatsapp(self):
-        # Janela número ou nome do grupo
+        """
+        Processa o envio de mensagens via WhatsApp Web.
+
+        Automatiza o processo de envio de mensagens com valores de atendimentos
+        médicos e psicológicos para um contato ou grupo especificado.
+
+        Utiliza Selenium WebDriver para automatizar a interação com WhatsApp Web.
+        """
         janela_wpp = tk.Toplevel(self.master)
         janela_wpp.geometry("300x210")
         cor_fundo = self.master.cget("bg")
@@ -1230,7 +1518,17 @@ class FuncoesBotoes:
 
     # Código de processamento de envio...
     def processar_envio_whatsapp(self):
-        # Captura o valor do campo de entrada
+        """
+        Processa o envio de mensagens via WhatsApp Web.
+
+        Utiliza Selenium WebDriver para automatizar o envio de mensagens contendo
+        informações sobre valores de atendimentos médicos e psicológicos.
+        Realiza login automático no WhatsApp Web e envia as mensagens para o
+        contato ou grupo especificado.
+
+        Raises:
+            Exception: Se houver erro na automação ou envio das mensagens
+        """
         group_name = self.wpp_entry.get().strip()
 
         if not group_name:
@@ -1330,7 +1628,13 @@ class FuncoesBotoes:
 
     # Código de envio de email...
     def enviar_email(self):
-        """Configura e exibe interface para envio de email."""
+        """
+        Configura e exibe interface para envio de email.
+
+        Cria uma interface gráfica para coleta de informações necessárias
+        para o envio de email, incluindo destinatário, assunto e opção
+        para anexar arquivo XLSX.
+        """
         janela_email = tk.Toplevel(self.master)
         janela_email.geometry("300x400")
         cor_fundo = self.master.cget("bg")
@@ -1391,7 +1695,13 @@ class FuncoesBotoes:
     # Código de seleção de arquivo...
     def selecionar_xlsx(self, email, senha, destinatario, assunto):
         """
-        Abre diálogo para selecionar arquivo XLSX
+        Abre um diálogo para selecionar um arquivo XLSX para envio por email.
+
+        Args:
+            email (str): Email do remetente
+            senha (str): Senha do email
+            destinatario (str): Email do destinatário
+            assunto (str): Assunto do email
         """
         if not all([email, senha, destinatario, assunto]):
             messagebox.showerror("Erro", "Preencha todos os campos!")
@@ -1408,7 +1718,14 @@ class FuncoesBotoes:
     # Código de envio...
     def enviar(self, email, senha, destinatario, assunto, caminho_xlsx):
         """
-        Envia e-mail com arquivo XLSX anexado
+        Envia um email com um arquivo XLSX anexado.
+
+        Args:
+            email (str): Email do remetente
+            senha (str): Senha do email
+            destinatario (str): Email do destinatário
+            assunto (str): Assunto do email
+            caminho_xlsx (str): Caminho do arquivo XLSX a ser anexado
         """
         smtp_server = "smtp.gmail.com"  # Para Gmail
         smtp_port = 587
@@ -1459,11 +1776,15 @@ class FuncoesBotoes:
 
     """
     SEÇÃO 7: RELATÓRIOS E VISUALIZAÇÃO
+    Esta seção contém métodos relacionados à geração e exibição de relatórios
     """
 
     # Código de exibição de totais...
     def valores_totais(self):
-        """Exibe os valores totais e resumo financeiro."""
+        """
+        Exibe os valores totais e resumo financeiro.
+        Cria uma janela com informações detalhadas sobre valores e quantidades.
+        """
         totais = self._calcular_valores_atendimentos()
         if not totais:
             messagebox.showerror("Erro", "Não foi possível calcular os valores")
@@ -1549,7 +1870,10 @@ class FuncoesBotoes:
 
     # Código de processamento de notas...
     def processar_notas_fiscais(self):
-        """Processa e emite notas fiscais."""
+        """
+        Processa e emite notas fiscais.
+        Automatiza o processo de emissão de notas fiscais no sistema.
+        """
         driver = webdriver.Chrome()
         cpfs = {"medico": [], "psicologo": [], "ambos": []}
 
@@ -1757,8 +2081,15 @@ class FuncoesBotoes:
             logging.info("Processo finalizado")
             return cpfs
 
+    # Exibe uma janela com detalhamento dos valores por tipo de atendimento
     def mostrar_valores_atendimentos(self):
-        """Mostra janela com valores detalhados por tipo de atendimento e forma de pagamento."""
+        """
+        Exibe uma janela com detalhamento dos valores por tipo de atendimento.
+
+        Mostra um resumo detalhado dos valores para atendimentos médicos e
+        psicológicos, incluindo valores por método de pagamento, totais e
+        quantidade de pacientes.
+        """
         totais = self._calcular_valores_atendimentos()
         if not totais:
             messagebox.showerror("Erro", "Não foi possível calcular os valores")
@@ -1814,29 +2145,46 @@ class FuncoesBotoes:
 
         self.center(janela_valores)
 
+    # Converte códigos de método de pagamento em textos legíveis
     def _traduzir_metodo(self, codigo):
-        """Converte os códigos de pagamento em textos legíveis."""
+        """
+        Converte códigos de método de pagamento em textos legíveis.
+
+        Args:
+            codigo (str): Código do método de pagamento ('D', 'C', 'E' ou 'P')
+
+        Returns:
+            str: Nome do método de pagamento por extenso
+        """
         return {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}.get(
             codigo, "Desconhecido"
         )
 
     """
     SEÇÃO 8: NAVEGAÇÃO DE INTERFACE
+    Esta seção contém métodos relacionados à navegação entre diferentes telas
     """
 
     # Código de navegação...
     def mostrar_criar_conta(self):
-        """Alterna para o frame de criar conta."""
+        """
+        Alterna para o frame de criar conta.
+        Oculta o frame de login e exibe o frame de criação de conta.
+        """
         self.login_frame.hide()
         self.criar_conta_frame.show()
 
     # Código de navegação...
     def voltar_para_login(self):
-        """Alterna de volta para o frame de login."""
+        """
+        Alterna de volta para o frame de login.
+        Oculta o frame de criação de conta e exibe o frame de login.
+        """
         self.criar_conta_frame.hide()
         self.login_frame.show()
 
 
+# Gerencia operações de banco de dados relacionadas a pacientes
 class DatabaseManager:
     """Gerencia operações de banco de dados relacionadas a pacientes."""
 
@@ -2000,6 +2348,7 @@ class DatabaseManager:
             return False
 
 
+# Classe para processamento centralizado de pagamentos
 class PaymentProcessor:
     """Classe para processamento centralizado de pagamentos."""
 
@@ -2130,7 +2479,13 @@ class SistemaContas:
 
     # Inicializa o sistema com arquivo e usuário
     def __init__(self, file_path: str, current_user=None):
-        """Inicializa o sistema de contas."""
+        """
+        Inicializa o sistema de contas com configurações básicas.
+
+        Args:
+            file_path (str): Caminho do arquivo Excel para armazenamento
+            current_user (str, optional): Usuário atual do sistema
+        """
         self.file_path = file_path
         self.current_user = current_user
         self.sheet_name = "Contas Fechamento"
@@ -2138,7 +2493,15 @@ class SistemaContas:
 
     # Cria planilha base se não existir
     def criar_sheet_se_nao_existir(self):
-        """Cria a planilha e a aba (sheet) se não existirem."""
+        """
+        Cria a planilha e a aba de contas se não existirem.
+
+        Verifica a existência do arquivo e da aba 'Contas Fechamento'.
+        Se não existirem, cria com as colunas padrão:
+        - DATA
+        - CONTAS
+        - VALOR
+        """
         if os.path.exists(self.file_path):
             wb = load_workbook(self.file_path)
             if self.sheet_name not in wb.sheetnames:
@@ -2158,7 +2521,12 @@ class SistemaContas:
 
     # Abre a janela principal do sistema
     def abrir_janela(self):
-        """Cria uma nova janela para o sistema de contas"""
+        """
+        Cria e exibe a janela principal do sistema.
+
+        Configura uma janela modal com tamanho 500x400 pixels
+        e define propriedades básicas como título e foco.
+        """
         self.window = tk.Toplevel()
         self.window.title("Sistema de Gerenciamento de Contas")
         self.window.geometry("500x400")
@@ -2171,7 +2539,21 @@ class SistemaContas:
 
     # Cria interface com campos e botões
     def criar_interface(self):
-        """Cria a interface gráfica usando grid layout"""
+        """
+        Cria a interface gráfica do sistema utilizando grid layout.
+
+        Componentes:
+        - Campo de data com DateEntry
+        - Campo de descrição
+        - Campo de valor
+        - Botões de Salvar, Limpar e Fechar
+        - Frame para mensagens de status
+
+        Layout:
+        - Utiliza grid para organização dos elementos
+        - Configura expansão apropriada de células
+        - Define estilos e fontes dos componentes
+        """
         # Configurando o frame principal
         main_frame = tk.Frame(self.window, padx=20, pady=20)
         main_frame.grid(row=0, column=0, sticky="nsew")
@@ -2258,7 +2640,23 @@ class SistemaContas:
 
     # Salva dados na planilha agrupados por data
     def salvar_informacoes(self, data_escolhida, info, valor):
-        """Salva as informações na planilha, agrupando por data e colocando informações na mesma célula."""
+        """
+        Salva as informações na planilha, agrupando por data.
+
+        Args:
+            data_escolhida (str): Data no formato DD/MM/AAAA
+            info (str): Descrição da conta
+            valor (str): Valor formatado como moeda
+
+        Returns:
+            bool: True se salvou com sucesso, False caso contrário
+
+        Notes:
+            - Agrupa entradas da mesma data
+            - Mantém ordenação por data
+            - Formata células (alinhamento, largura, etc)
+            - Aplica formato de moeda aos valores
+        """
         try:
             wb = load_workbook(self.file_path)
             ws = wb[self.sheet_name]
@@ -2356,7 +2754,19 @@ class SistemaContas:
 
     # Processa os dados do formulário para salvar
     def capturar_dados(self):
-        """Captura e processa os dados do formulário"""
+        """
+        Captura e processa os dados do formulário para salvamento.
+
+        Fluxo:
+        1. Valida os campos
+        2. Captura data, descrição e valor
+        3. Converte e formata o valor como moeda
+        4. Salva os dados
+        5. Limpa os campos em caso de sucesso
+
+        Raises:
+            ValueError: Se o valor não for numérico válido
+        """
         if self.validar_campos():
             data = self.date_entry.get()
             info = self.info_entry.get()
@@ -2381,7 +2791,16 @@ class SistemaContas:
 
     # Verifica se os campos estão preenchidos corretamente
     def validar_campos(self):
-        """Valida os campos antes de salvar"""
+        """
+        Valida os campos antes de salvar.
+
+        Verificações:
+        - Todos os campos obrigatórios preenchidos
+        - Valor numérico válido
+
+        Returns:
+            bool: True se todos os campos são válidos, False caso contrário
+        """
         info = self.info_entry.get().strip()
         valor = self.valor_entry.get().strip()
         data = self.date_entry.get().strip()
@@ -2399,7 +2818,16 @@ class SistemaContas:
 
     # Limpa todos os campos do formulário
     def limpar_campos(self):
-        """Limpa os campos após salvar"""
+        """
+        Limpa todos os campos do formulário.
+
+        Reseta:
+        - Campo de descrição
+        - Campo de valor
+
+        Note:
+            Campo de data não é limpo para facilitar entradas sequenciais
+        """
         self.info_entry.delete(0, tk.END)
         self.valor_entry.delete(0, tk.END)
 
@@ -2728,6 +3156,7 @@ class PatientData:
     search_text: str
 
 
+# Classe otimizada para exibição de informações de pacientes
 class PatientInfoDisplay:
     """Classe otimizada para exibição de informações de pacientes."""
 
