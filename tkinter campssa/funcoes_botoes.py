@@ -85,6 +85,7 @@ class FuncoesBotoes:
         self.login_frame = None
         self.criar_conta_frame = None
         self.logger = logging.getLogger(__name__)
+        self.db_manager = DatabaseManager("db_marcacao.db", self.logger)
 
         # Variáveis para pagamento
         self._init_payment_vars()
@@ -294,7 +295,9 @@ class FuncoesBotoes:
             try:
                 valor = PaymentProcessor.calculate_service_value(tipo_consulta)
                 valor_formatado = PaymentProcessor.format_currency(valor)
-                self.valor_consulta_label.config(text=f"Valor da consulta: {valor_formatado}")
+                self.valor_consulta_label.config(
+                    text=f"Valor da consulta: {valor_formatado}"
+                )
             except ValueError:
                 self.valor_consulta_label.config(text="Valor da consulta: R$ 0,00")
 
@@ -410,7 +413,9 @@ class FuncoesBotoes:
             }
 
             if not any(formas_selecionadas.values()):
-                messagebox.showerror("Erro", "Selecione pelo menos uma forma de pagamento.")
+                messagebox.showerror(
+                    "Erro", "Selecione pelo menos uma forma de pagamento."
+                )
                 return None
 
             # Processar pagamentos
@@ -423,13 +428,15 @@ class FuncoesBotoes:
 
                     if num_formas_selecionadas == 1:
                         # Se for única forma de pagamento, usa o valor total
-                        pagamentos[codigo] = PaymentProcessor.format_currency(valor_esperado)
+                        pagamentos[codigo] = PaymentProcessor.format_currency(
+                            valor_esperado
+                        )
                     else:
                         # Múltiplas formas de pagamento
                         if not valor_str:
                             messagebox.showerror(
                                 "Erro",
-                                "Informe o valor para todas as formas de pagamento selecionadas"
+                                "Informe o valor para todas as formas de pagamento selecionadas",
                             )
                             return None
                         pagamentos[codigo] = valor_str
@@ -437,10 +444,12 @@ class FuncoesBotoes:
             # Valida o total dos pagamentos
             if num_formas_selecionadas > 1:
                 try:
-                    if not PaymentProcessor.validate_payment_total(pagamentos, valor_esperado):
+                    if not PaymentProcessor.validate_payment_total(
+                        pagamentos, valor_esperado
+                    ):
                         messagebox.showerror(
                             "Erro",
-                            f"A soma dos valores deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})"
+                            f"A soma dos valores deve ser igual ao valor da consulta (R$ {valor_esperado:.2f})",
                         )
                         return None
                 except ValueError as e:
@@ -455,143 +464,6 @@ class FuncoesBotoes:
             self.logger.error(f"Erro na validação de pagamentos: {e}")
             messagebox.showerror("Erro", "Erro ao validar pagamentos")
             return None
-        
-    # Adiciona ou atualiza informações do paciente no banco de dados
-    def _adicionar_paciente_ao_banco(self, nome, renach, pagamentos, escolha):
-        """
-        Adiciona ou atualiza paciente no banco de dados de marcação com status 'Compareceu'.
-        """
-        try:
-            with DatabaseConnection("db_marcacao.db") as conn:
-                cursor = conn.cursor()
-
-                data_atual = datetime.now().strftime("%Y-%m-%d")
-                STATUS_COMPARECEU = (
-                    "attended"  # Usando o mesmo status que é verificado na listagem
-                )
-
-                # Prepara informações de pagamento
-                pagamento_info = (
-                    " | ".join(pagamentos)
-                    if isinstance(pagamentos, list)
-                    else str(pagamentos)
-                )
-                observacao = f"Tipo: {escolha}\nPagamento: {pagamento_info}\nRegistrado em: {data_atual}"
-
-                # Verifica se o paciente existe
-                cursor.execute(
-                    """
-                    SELECT data_agendamento, status_comparecimento 
-                    FROM marcacoes 
-                    WHERE renach = ?
-                    ORDER BY data_agendamento DESC 
-                    LIMIT 1
-                """,
-                    (renach,),
-                )
-
-                resultado = cursor.fetchone()
-
-                if resultado:
-                    # Se o paciente existe, atualiza os dados
-                    data_anterior = resultado[0]
-                    status_anterior = resultado[1]
-
-                    cursor.execute(
-                        """
-                        UPDATE marcacoes 
-                        SET nome = ?,
-                            data_agendamento = ?,
-                            status_comparecimento = ?,
-                            observacao = ?
-                        WHERE renach = ?
-                    """,
-                        (nome, data_atual, STATUS_COMPARECEU, observacao, renach),
-                    )
-
-                    # Atualiza histórico
-                    cursor.execute(
-                        """
-                        SELECT historico_comparecimento 
-                        FROM marcacoes 
-                        WHERE renach = ?
-                    """,
-                        (renach,),
-                    )
-
-                    historico_atual = cursor.fetchone()[0]
-                    try:
-                        historico = (
-                            json.loads(historico_atual) if historico_atual else []
-                        )
-                    except:
-                        historico = []
-
-                    historico.append(
-                        {
-                            "data_anterior": data_anterior,
-                            "data_nova": data_atual,
-                            "status_anterior": status_anterior,
-                            "status_novo": STATUS_COMPARECEU,
-                            "atualizado_em": datetime.now().strftime(
-                                "%Y-%m-%d %H:%M:%S"
-                            ),
-                        }
-                    )
-
-                    cursor.execute(
-                        """
-                        UPDATE marcacoes 
-                        SET historico_comparecimento = ?
-                        WHERE renach = ?
-                    """,
-                        (json.dumps(historico), renach),
-                    )
-
-                    self.logger.info(
-                        f"Atualizado status do paciente {renach} para Compareceu"
-                    )
-                    messagebox.showinfo(
-                        "Sucesso", "Paciente atualizado com status Compareceu!"
-                    )
-
-                else:
-                    # Se o paciente não existe, insere novo registro
-                    cursor.execute(
-                        """
-                        INSERT INTO marcacoes (
-                            nome,
-                            renach,
-                            telefone,
-                            data_agendamento,
-                            status_comparecimento,
-                            observacao,
-                            historico_comparecimento
-                        ) VALUES (?, ?, ?, ?, ?, ?, '[]')
-                    """,
-                        (nome, renach, "", data_atual, STATUS_COMPARECEU, observacao),
-                    )
-
-                    self.logger.info(
-                        f"Novo paciente {renach} adicionado com status Compareceu"
-                    )
-                    messagebox.showinfo(
-                        "Sucesso", "Novo paciente adicionado com status Compareceu!"
-                    )
-
-                conn.commit()
-                return True
-
-        except sqlite3.Error as e:
-            self.logger.error(f"Erro no banco de dados: {e}")
-            messagebox.showerror(
-                "Erro", f"Erro ao processar operação no banco de dados: {e}"
-            )
-            return False
-        except Exception as e:
-            self.logger.error(f"Erro inesperado: {e}")
-            messagebox.showerror("Erro", f"Erro inesperado: {e}")
-            return False
 
     def _calcular_valores_atendimentos(self) -> Dict[str, Dict[str, float]]:
         """Calcula valores totais por tipo de atendimento e método de pagamento."""
@@ -601,26 +473,32 @@ class FuncoesBotoes:
             ws = wb.active
 
             totais = {
-                "medico": {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0, "total": 0, "pacientes": 0},
-                "psicologo": {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0, "total": 0, "pacientes": 0}
+                "medico": {
+                    "Débito": 0,
+                    "Crédito": 0,
+                    "Espécie": 0,
+                    "PIX": 0,
+                    "total": 0,
+                    "pacientes": 0,
+                },
+                "psicologo": {
+                    "Débito": 0,
+                    "Crédito": 0,
+                    "Espécie": 0,
+                    "PIX": 0,
+                    "total": 0,
+                    "pacientes": 0,
+                },
             }
 
             # Processa pagamentos médicos (colunas B-F)
             self._processar_pagamentos_por_tipo(
-                ws, 
-                tipo="medico",
-                col_nome="B", 
-                col_pagamento="F",
-                totais=totais
+                ws, tipo="medico", col_nome="B", col_pagamento="F", totais=totais
             )
 
             # Processa pagamentos psicólogo (colunas H-L)
             self._processar_pagamentos_por_tipo(
-                ws, 
-                tipo="psicologo",
-                col_nome="H", 
-                col_pagamento="L",
-                totais=totais
+                ws, tipo="psicologo", col_nome="H", col_pagamento="L", totais=totais
             )
 
             return totais
@@ -629,14 +507,20 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao calcular valores: {str(e)}")
             return None
 
-    def _processar_pagamentos_por_tipo(self, ws, tipo: str, col_nome: str, col_pagamento: str, 
-                                     totais: Dict[str, Dict[str, float]]) -> None:
+    def _processar_pagamentos_por_tipo(
+        self,
+        ws,
+        tipo: str,
+        col_nome: str,
+        col_pagamento: str,
+        totais: Dict[str, Dict[str, float]],
+    ) -> None:
         """Processa pagamentos para um tipo específico de atendimento."""
         for row in range(3, ws.max_row + 1):
             nome = ws[f"{col_nome}{row}"].value
             if not nome or not isinstance(nome, str):
                 continue
-                
+
             nome = nome.strip()
             if any(x in nome.lower() for x in ["soma", "médico", "psicólogo", "total"]):
                 continue
@@ -659,12 +543,14 @@ class FuncoesBotoes:
                     metodo, valor = parte.split(":")
                     try:
                         valor_float = PaymentProcessor.convert_currency_value(valor)
-                        metodo_traduzido = PaymentProcessor.PAYMENT_TYPES[metodo.strip()]
+                        metodo_traduzido = PaymentProcessor.PAYMENT_TYPES[
+                            metodo.strip()
+                        ]
                         totais[tipo][metodo_traduzido] += valor_float
                     except (ValueError, KeyError) as e:
                         self.logger.error(f"Erro ao processar pagamento: {e}")
                         continue
-    
+
     """
     SEÇÃO 4: OPERAÇÕES COM PACIENTES
     """
@@ -692,58 +578,36 @@ class FuncoesBotoes:
     def salvar_informacao(self):
         """Valida dados e coordena o salvamento no banco e na planilha."""
         try:
-            # Obter dados dos campos
+            # Obter e validar dados dos campos
             nome = self.nome_entry.get().strip().upper()
             renach = self.renach_entry.get().strip()
             escolha = self.radio_var.get()
 
-            # -- Validações básicas --
-            if not nome or not renach or not escolha:
-                messagebox.showerror(
-                    "Erro",
-                    "Por favor, preencha todos os campos obrigatórios (nome, RENACH e tipo de atendimento).",
-                )
-                return False
-
-            # Mapear escolha do radio button
-            tipo_escolha = {
-                "medico": "medico",
-                "psicologo": "psicologo",
-                "ambos": "ambos",
-            }.get(escolha)
-
-            if not tipo_escolha:
-                messagebox.showerror("Erro", "Selecione o tipo de atendimento.")
+            # Validações
+            if not self._validar_campos_obrigatorios(nome, renach, escolha):
                 return False
 
             if not renach.isdigit():
                 messagebox.showerror("Erro", "O RENACH deve ser um número inteiro.")
                 return False
 
-            # -- Validação de pagamentos --
+            # Validar pagamentos
             resultado_validacao = self.validar_pagamentos()
             if resultado_validacao is None:
                 return False
 
             pagamentos, valor_esperado = resultado_validacao
 
-            # -- Salvamento --
+            # Salvar dados
             try:
-                # Tenta salvar na planilha primeiro
-                if self.salvar_na_planilha(nome, renach, pagamentos, tipo_escolha):
-                    # Se sucesso na planilha, salva no banco
-                    if self._adicionar_paciente_ao_banco(
-                        nome, renach, pagamentos, tipo_escolha
+                if self.salvar_na_planilha(nome, renach, pagamentos, escolha):
+                    if self.db_manager.adicionar_paciente(
+                        nome, renach, pagamentos, escolha
                     ):
-                        messagebox.showinfo(
-                            "Sucesso", "Informações salvas com sucesso!"
-                        )
                         self.adicionar_window.destroy()
                         return True
 
-                messagebox.showerror(
-                    "Erro", "Não foi possível salvar as informações na planilha"
-                )
+                messagebox.showerror("Erro", "Não foi possível salvar as informações")
                 return False
 
             except Exception as e:
@@ -755,6 +619,18 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao processar informações: {str(e)}")
             messagebox.showerror("Erro", f"Erro ao processar informações: {str(e)}")
             return False
+
+    def _validar_campos_obrigatorios(
+        self, nome: str, renach: str, escolha: str
+    ) -> bool:
+        """Valida os campos obrigatórios do formulário."""
+        if not all([nome, renach, escolha]):
+            messagebox.showerror(
+                "Erro",
+                "Por favor, preencha todos os campos obrigatórios (nome, RENACH e tipo de atendimento).",
+            )
+            return False
+        return True
 
     # Código de exclusão...
     def excluir(self):
@@ -1594,10 +1470,7 @@ class FuncoesBotoes:
             return
 
         # Valores fixos
-        VALORES = {
-            "medico": {"consulta": 148.65, "profissional": 49.00},
-            "psicologo": {"consulta": 192.61, "profissional": 63.50}
-        }
+        VALORES = PaymentProcessor.SERVICE_PRICES
 
         # Cálculos
         dados_exibicao = {}
@@ -1606,7 +1479,7 @@ class FuncoesBotoes:
             dados_exibicao[tipo] = {
                 "pacientes": n_pacientes,
                 "total": totais[tipo]["total"],
-                "valor_pagar": n_pacientes * VALORES[tipo]["profissional"]
+                "valor_pagar": n_pacientes * VALORES[tipo]["profissional"],
             }
 
         # Criação da janela
@@ -1628,7 +1501,7 @@ class FuncoesBotoes:
             for label, valor in [
                 ("Número de pacientes", dados["pacientes"]),
                 ("Valor Total", f"R$ {dados['total']:.2f}"),
-                ("Valor a Pagar", f"R$ {dados['valor_pagar']:.2f}")
+                ("Valor a Pagar", f"R$ {dados['valor_pagar']:.2f}"),
             ]:
                 tk.Label(
                     janela_contas,
@@ -1900,7 +1773,7 @@ class FuncoesBotoes:
         # Mostra valores para cada tipo
         for tipo in ["medico", "psicologo"]:
             titulo = "Médico" if tipo == "medico" else "Psicólogo"
-            
+
             tk.Label(
                 janela_valores,
                 text=f"Valores - {titulo}:",
@@ -1927,7 +1800,7 @@ class FuncoesBotoes:
                 fg="#ECF0F1",
                 font=("Arial", 12, "bold"),
             ).pack()
-            
+
             tk.Label(
                 janela_valores,
                 text=f"Pacientes: {totais[tipo]['pacientes']}",
@@ -1964,41 +1837,194 @@ class FuncoesBotoes:
         self.login_frame.show()
 
 
+class DatabaseManager:
+    """Gerencia operações de banco de dados relacionadas a pacientes."""
 
+    def __init__(self, db_path: str, logger=None):
+        self.db_path = db_path
+        self.logger = logger or logging.getLogger(__name__)
 
+    def _create_history_entry(
+        self, data_anterior: str, data_nova: str, status_anterior: str, status_novo: str
+    ) -> dict:
+        """Cria uma entrada para o histórico de alterações."""
+        return {
+            "data_anterior": data_anterior,
+            "data_nova": data_nova,
+            "status_anterior": status_anterior,
+            "status_novo": status_novo,
+            "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
 
+    def _prepare_observation(self, tipo: str, pagamentos: List[str], data: str) -> str:
+        """Prepara a string de observação."""
+        pagamento_info = (
+            " | ".join(pagamentos) if isinstance(pagamentos, list) else str(pagamentos)
+        )
+        return f"Tipo: {tipo}\nPagamento: {pagamento_info}\nRegistrado em: {data}"
+
+    def _update_patient(
+        self,
+        cursor: sqlite3.Cursor,
+        nome: str,
+        renach: str,
+        data_atual: str,
+        status: str,
+        observacao: str,
+    ) -> None:
+        """Atualiza os dados de um paciente existente."""
+        cursor.execute(
+            """
+            UPDATE marcacoes 
+            SET nome = ?, data_agendamento = ?, status_comparecimento = ?, observacao = ?
+            WHERE renach = ?
+        """,
+            (nome, data_atual, status, observacao, renach),
+        )
+
+    def _insert_new_patient(
+        self,
+        cursor: sqlite3.Cursor,
+        nome: str,
+        renach: str,
+        data_atual: str,
+        status: str,
+        observacao: str,
+    ) -> None:
+        """Insere um novo paciente no banco de dados."""
+        cursor.execute(
+            """
+            INSERT INTO marcacoes (
+                nome, renach, telefone, data_agendamento, 
+                status_comparecimento, observacao, historico_comparecimento
+            ) VALUES (?, ?, ?, ?, ?, ?, '[]')
+        """,
+            (nome, renach, "", data_atual, status, observacao),
+        )
+
+    def adicionar_paciente(
+        self, nome: str, renach: str, pagamentos: List[str], tipo: str
+    ) -> bool:
+        """
+        Adiciona ou atualiza paciente no banco de dados.
+
+        Args:
+            nome: Nome do paciente
+            renach: Número do RENACH
+            pagamentos: Lista de strings com informações de pagamento
+            tipo: Tipo de atendimento
+
+        Returns:
+            bool: True se operação foi bem sucedida, False caso contrário
+        """
+        try:
+            with DatabaseConnection(self.db_path) as conn:
+                cursor = conn.cursor()
+                data_atual = datetime.now().strftime("%Y-%m-%d")
+                STATUS_COMPARECEU = "attended"
+                observacao = self._prepare_observation(tipo, pagamentos, data_atual)
+
+                # Verifica se paciente existe
+                cursor.execute(
+                    """
+                    SELECT data_agendamento, status_comparecimento, historico_comparecimento
+                    FROM marcacoes 
+                    WHERE renach = ?
+                    ORDER BY data_agendamento DESC 
+                    LIMIT 1
+                """,
+                    (renach,),
+                )
+
+                resultado = cursor.fetchone()
+
+                if resultado:
+                    data_anterior, status_anterior, historico_atual = resultado
+
+                    # Atualiza dados do paciente
+                    self._update_patient(
+                        cursor, nome, renach, data_atual, STATUS_COMPARECEU, observacao
+                    )
+
+                    # Atualiza histórico
+                    try:
+                        historico = (
+                            json.loads(historico_atual) if historico_atual else []
+                        )
+                    except json.JSONDecodeError:
+                        historico = []
+
+                    historico.append(
+                        self._create_history_entry(
+                            data_anterior,
+                            data_atual,
+                            status_anterior,
+                            STATUS_COMPARECEU,
+                        )
+                    )
+
+                    cursor.execute(
+                        """
+                        UPDATE marcacoes 
+                        SET historico_comparecimento = ?
+                        WHERE renach = ?
+                    """,
+                        (json.dumps(historico), renach),
+                    )
+
+                    self.logger.info(f"Atualizado status do paciente {renach}")
+                    mensagem = "Paciente atualizado com status Compareceu!"
+
+                else:
+                    # Insere novo paciente
+                    self._insert_new_patient(
+                        cursor, nome, renach, data_atual, STATUS_COMPARECEU, observacao
+                    )
+
+                    self.logger.info(f"Novo paciente {renach} adicionado")
+                    mensagem = "Novo paciente adicionado com status Compareceu!"
+
+                conn.commit()
+                messagebox.showinfo("Sucesso", mensagem)
+                return True
+
+        except sqlite3.Error as e:
+            self.logger.error(f"Erro no banco de dados: {e}")
+            messagebox.showerror(
+                "Erro", f"Erro ao processar operação no banco de dados: {e}"
+            )
+            return False
+        except Exception as e:
+            self.logger.error(f"Erro inesperado: {e}")
+            messagebox.showerror("Erro", f"Erro inesperado: {e}")
+            return False
 
 
 class PaymentProcessor:
     """Classe para processamento centralizado de pagamentos."""
 
-    PAYMENT_TYPES = {
-        "D": "Débito",
-        "C": "Crédito", 
-        "E": "Espécie",
-        "P": "PIX"
-    }
+    PAYMENT_TYPES = {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}
 
     SERVICE_PRICES = {
         "medico": {"consulta": 148.65, "profissional": 49.00},
         "psicologo": {"consulta": 192.61, "profissional": 63.50},
-        "ambos": {"consulta": 341.26, "profissional": 112.50}
+        "ambos": {"consulta": 341.26, "profissional": 112.50},
     }
 
     @staticmethod
     def convert_currency_value(value_str: str) -> float:
         """
         Converte string de valor monetário para float.
-        
+
         Args:
             value_str: String contendo valor monetário (ex: "R$ 148,65" ou "148.65")
-            
+
         Returns:
             float: Valor convertido ou None se inválido
         """
         if not value_str:
             return 0.0
-            
+
         try:
             # Remove R$, espaços e substitui vírgula por ponto
             clean_value = value_str.replace("R$", "").replace(" ", "").replace(",", ".")
@@ -2010,10 +2036,10 @@ class PaymentProcessor:
     def format_currency(cls, value: float) -> str:
         """
         Formata valor float para string monetária.
-        
+
         Args:
             value: Valor numérico
-            
+
         Returns:
             str: Valor formatado (ex: "R$ 148,65")
         """
@@ -2023,33 +2049,37 @@ class PaymentProcessor:
     def calculate_service_value(cls, service_type: str) -> float:
         """
         Calcula valor do serviço baseado no tipo.
-        
+
         Args:
             service_type: Tipo de serviço ('medico', 'psicologo' ou 'ambos')
-            
+
         Returns:
             float: Valor total do serviço
         """
         if service_type not in cls.SERVICE_PRICES:
             raise ValueError(f"Tipo de serviço inválido: {service_type}")
-            
-        return cls.SERVICE_PRICES[service_type]['consulta']
+
+        return cls.SERVICE_PRICES[service_type]["consulta"]
 
     @classmethod
     def validate_payment_total(cls, payments: dict, expected_total: float) -> bool:
         """
         Valida se o total dos pagamentos corresponde exatamente ao valor esperado.
-        
+
         Args:
             payments: Dicionário com valores por forma de pagamento
             expected_total: Valor total esperado
-            
+
         Returns:
             bool: True se válido, False caso contrário
         """
         # Converte e soma todos os valores de pagamento
         try:
-            total = sum(cls.convert_currency_value(value) for value in payments.values() if value)
+            total = sum(
+                cls.convert_currency_value(value)
+                for value in payments.values()
+                if value
+            )
             # Compara os valores exatamente
             return total == expected_total
         except ValueError as e:
@@ -2059,10 +2089,10 @@ class PaymentProcessor:
     def process_payment_methods(cls, payment_data: dict) -> List[str]:
         """
         Processa e formata métodos de pagamento.
-        
+
         Args:
             payment_data: Dicionário com valores por forma de pagamento
-            
+
         Returns:
             List[str]: Lista de strings formatadas de pagamento
         """
@@ -2074,45 +2104,23 @@ class PaymentProcessor:
         return result
 
     @classmethod
-    def calculate_professional_payment(cls, service_type: str, num_patients: int) -> float:
+    def calculate_professional_payment(
+        cls, service_type: str, num_patients: int
+    ) -> float:
         """
         Calcula pagamento do profissional baseado no tipo de serviço e número de pacientes.
-        
+
         Args:
             service_type: Tipo de serviço ('medico', 'psicologo' ou 'ambos')
             num_patients: Número de pacientes atendidos
-            
+
         Returns:
             float: Valor total a ser pago ao profissional
         """
         if service_type not in cls.SERVICE_PRICES:
             raise ValueError(f"Tipo de serviço inválido: {service_type}")
-            
-        return cls.SERVICE_PRICES[service_type]['profissional'] * num_patients
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return cls.SERVICE_PRICES[service_type]["profissional"] * num_patients
 
 
 class SistemaContas:
