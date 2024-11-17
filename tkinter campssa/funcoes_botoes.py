@@ -1078,29 +1078,31 @@ class FuncoesBotoes:
             dados_psicologos = []
             max_row = ws.max_row + 1
 
-            # Encontrar última linha de dados válidos
-            ultima_linha_dados = 3
+            # Função auxiliar para verificar se é linha de total
+            def is_total_row(valor):
+                if not valor or not isinstance(valor, str):
+                    return False
+                return any(palavra in valor.lower() for palavra in ["soma", "médico", "psicólogo", "total"])
+
+            # Encontrar linhas com "Soma" para determinar onde parar a coleta de dados
+            soma_medicos_row = None
+            soma_psicologos_row = None
+            
+            for row in range(3, max_row):
+                if ws.cell(row=row, column=4).value == "Soma":
+                    soma_medicos_row = row
+                if ws.cell(row=row, column=10).value == "Soma":
+                    soma_psicologos_row = row
+
+            # Coletar dados dos médicos
             for row in range(3, max_row):
                 nome_med = ws.cell(row=row, column=2).value
-                nome_psi = ws.cell(row=row, column=8).value
-
-                if (isinstance(nome_med, str) and nome_med.strip()) or (
-                    isinstance(nome_psi, str) and nome_psi.strip()
-                ):
-                    ultima_linha_dados = row
-
-            # Coletar dados até a última linha válida
-            for row in range(3, ultima_linha_dados + 1):
-                # Dados médicos
-                nome_med = ws.cell(row=row, column=2).value
-                if (
-                    isinstance(nome_med, str)
-                    and nome_med.strip()
-                    and not any(
-                        palavra in str(nome_med).lower()
-                        for palavra in ["soma", "médico", "total"]
-                    )
-                ):
+                # Se encontrou a linha de soma, para de coletar
+                if soma_medicos_row and row >= soma_medicos_row:
+                    break
+                
+                if (isinstance(nome_med, str) and nome_med.strip() and 
+                    not is_total_row(nome_med)):
                     dados_medicos.append(
                         {
                             "nome": nome_med.strip(),
@@ -1116,16 +1118,15 @@ class FuncoesBotoes:
                         }
                     )
 
-                # Dados psicólogos
+            # Coletar dados dos psicólogos
+            for row in range(3, max_row):
                 nome_psi = ws.cell(row=row, column=8).value
-                if (
-                    isinstance(nome_psi, str)
-                    and nome_psi.strip()
-                    and not any(
-                        palavra in str(nome_psi).lower()
-                        for palavra in ["soma", "psicólogo", "total"]
-                    )
-                ):
+                # Se encontrou a linha de soma, para de coletar
+                if soma_psicologos_row and row >= soma_psicologos_row:
+                    break
+                
+                if (isinstance(nome_psi, str) and nome_psi.strip() and 
+                    not is_total_row(nome_psi)):
                     dados_psicologos.append(
                         {
                             "nome": nome_psi.strip(),
@@ -1141,6 +1142,13 @@ class FuncoesBotoes:
                         }
                     )
 
+            # Fazer uma cópia dos intervalos mesclados antes de iterar
+            merged_ranges = list(ws.merged_cells.ranges)
+
+            for merged_range in merged_ranges:
+                print(f"Desmesclando: {merged_range}")
+                ws.unmerge_cells(str(merged_range))  # Desfaz a mesclagem
+
             # Limpar planilha
             for row in range(1, max_row):
                 for col in range(1, 13):
@@ -1152,15 +1160,13 @@ class FuncoesBotoes:
                         cell.alignment = alignment_center
 
             # Configurar cabeçalhos
-            from datetime import datetime
-
             data_atual = datetime.now().strftime("%d/%m/%Y")
             usuario = (
                 self.current_user
                 if hasattr(self, "current_user") and self.current_user
                 else "Usuário"
             )
-
+            
             # Cabeçalhos principais
             ws["A1"] = f"({usuario}) Atendimento Médico {data_atual}"
             ws.merge_cells("A1:F1")
@@ -1197,7 +1203,7 @@ class FuncoesBotoes:
                 ws.cell(row=idx, column=2).alignment = alignment_left
 
                 ws.cell(row=idx, column=3).value = dados["renach"]
-                ws.cell(row=idx, column=4).value = dados["reexames"] or "D"
+                ws.cell(row=idx, column=4).value = dados["reexames"]
 
                 # Valor fixo
                 valor_cell = ws.cell(row=idx, column=5)
@@ -1217,7 +1223,7 @@ class FuncoesBotoes:
                 ws.cell(row=idx, column=8).alignment = alignment_left
 
                 ws.cell(row=idx, column=9).value = dados["renach"]
-                ws.cell(row=idx, column=10).value = dados["reexames"] or "D"
+                ws.cell(row=idx, column=10).value = dados["reexames"]
 
                 # Valor fixo
                 valor_cell = ws.cell(row=idx, column=11)
@@ -1232,17 +1238,17 @@ class FuncoesBotoes:
                 linha_med = len(dados_medicos) + 3
 
                 # Soma
-                ws.cell(row=linha_med, column=4).value = "Soma"
+                ws.cell(row=linha_med, column=4).value = "Soma"  # Adiciona "Soma" na coluna de reexames
                 ws.cell(row=linha_med, column=5).value = len(dados_medicos) * 148.65
                 ws.cell(row=linha_med, column=5).number_format = '"R$"#,##0.00'
 
                 # Médico
-                ws.cell(row=linha_med + 1, column=4).value = "Médico"
+                ws.cell(row=linha_med + 1, column=4).value = "Médico"  # Adiciona "Médico" na coluna de reexames
                 ws.cell(row=linha_med + 1, column=5).value = len(dados_medicos) * 49.00
                 ws.cell(row=linha_med + 1, column=5).number_format = '"R$"#,##0.00'
 
                 # Total
-                ws.cell(row=linha_med + 2, column=4).value = "Total"
+                ws.cell(row=linha_med + 2, column=4).value = "Total"  # Adiciona "Total" na coluna de reexames
                 ws.cell(row=linha_med + 2, column=5).value = (
                     len(dados_medicos) * 148.65
                 ) - (len(dados_medicos) * 49.00)
@@ -1253,19 +1259,19 @@ class FuncoesBotoes:
                 linha_psi = len(dados_psicologos) + 3
 
                 # Soma
-                ws.cell(row=linha_psi, column=10).value = "Soma"
+                ws.cell(row=linha_psi, column=10).value = "Soma"  # Adiciona "Soma" na coluna de reexames
                 ws.cell(row=linha_psi, column=11).value = len(dados_psicologos) * 192.61
                 ws.cell(row=linha_psi, column=11).number_format = '"R$"#,##0.00'
 
                 # Psicólogo
-                ws.cell(row=linha_psi + 1, column=10).value = "Psicólogo"
+                ws.cell(row=linha_psi + 1, column=10).value = "Psicólogo"  # Adiciona "Psicólogo" na coluna de reexames
                 ws.cell(row=linha_psi + 1, column=11).value = (
                     len(dados_psicologos) * 63.50
                 )
                 ws.cell(row=linha_psi + 1, column=11).number_format = '"R$"#,##0.00'
 
                 # Total
-                ws.cell(row=linha_psi + 2, column=10).value = "Total"
+                ws.cell(row=linha_psi + 2, column=10).value = "Total"  # Adiciona "Total" na coluna de reexames
                 ws.cell(row=linha_psi + 2, column=11).value = (
                     len(dados_psicologos) * 192.61
                 ) - (len(dados_psicologos) * 63.50)
@@ -1295,20 +1301,11 @@ class FuncoesBotoes:
         except Exception as e:
             self.logger.error(f"Erro ao formatar planilha: {str(e)}")
             return False
-
+        
     # Código de salvamento na planilha...
     def salvar_na_planilha(self, nome, renach, pagamentos, tipo_escolha):
         """
         Salva as informações do paciente na planilha Excel.
-
-        Args:
-            nome (str): Nome do paciente
-            renach (str): Número do RENACH
-            pagamentos (list): Lista de formas de pagamento
-            tipo_escolha (str): Tipo de atendimento ('medico', 'psicologo' ou 'ambos')
-
-        Returns:
-            bool: True se o salvamento for bem-sucedido, False caso contrário
         """
         try:
             if not self.planilhas.wb:
@@ -1318,31 +1315,56 @@ class FuncoesBotoes:
             if not ws:
                 raise Exception("Não foi possível acessar a planilha ativa")
 
-            info_pagamento = " | ".join(pagamentos)
+            info_pagamento = pagamentos
             alteracoes_feitas = False
 
-            def encontrar_proxima_linha(coluna_letra):
-                if not ws[f"{coluna_letra}3"].value:
-                    return 3
-                for row in range(3, ws.max_row + 2):
-                    if not ws[f"{coluna_letra}{row}"].value:
-                        return row
+            def encontrar_proxima_linha(coluna_inicial, coluna_soma):
+                """
+                Encontra a próxima linha disponível para inserção de dados.
+                Args:
+                    coluna_inicial: Coluna onde os nomes são inseridos (B para médico, H para psicólogo)
+                    coluna_soma: Coluna onde procurar 'Soma' (D para médico, J para psicólogo)
+                Returns:
+                    int: Número da próxima linha disponível
+                """
+                linha_soma = None
+                
+                # Procura a linha do 'Soma'
+                for row in range(3, ws.max_row + 1):
+                    cell_value = ws.cell(row=row, column=coluna_soma).value
+                    if isinstance(cell_value, str) and cell_value.strip().lower() == "soma":
+                        linha_soma = row
+                        break
+                
+                # Se encontrou a linha do 'Soma', retorna a linha anterior a ela
+                if linha_soma is not None:
+                    return linha_soma
+                
+                # Se não encontrou 'Soma', retorna a última linha + 1
                 return ws.max_row + 1
 
             # Salvar dados conforme o tipo de atendimento
             if tipo_escolha in ["medico", "ambos"]:
-                nova_linha = encontrar_proxima_linha("B")
-                ws[f"B{nova_linha}"] = nome
-                ws[f"C{nova_linha}"] = renach
-                ws[f"F{nova_linha}"] = info_pagamento
+                nova_linha = encontrar_proxima_linha('B', 4)  # Coluna B para nomes, D para soma
+                ws.insert_rows(nova_linha)  # Insere uma nova linha antes da linha do 'Soma'
+                ws.cell(row=nova_linha, column=2).value = nome
+                ws.cell(row=nova_linha, column=2).alignment = Alignment(vertical='center')
+                ws.cell(row=nova_linha, column=3).value = renach
+                ws.cell(row=nova_linha, column=5).value = 148.65  # Valor fixo
+                ws.cell(row=nova_linha, column=5).number_format = '"R$"#,##0.00'
+                ws.cell(row=nova_linha, column=6).value = info_pagamento
                 alteracoes_feitas = True
                 self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
 
             if tipo_escolha in ["psicologo", "ambos"]:
-                nova_linha = encontrar_proxima_linha("H")
-                ws[f"H{nova_linha}"] = nome
-                ws[f"I{nova_linha}"] = renach
-                ws[f"L{nova_linha}"] = info_pagamento
+                nova_linha = encontrar_proxima_linha('H', 10)  # Coluna H para nomes, J para soma
+                ws.insert_rows(nova_linha)  # Insere uma nova linha antes da linha do 'Soma'
+                ws.cell(row=nova_linha, column=8).value = nome
+                ws.cell(row=nova_linha, column=8).alignment = Alignment(vertical='center')
+                ws.cell(row=nova_linha, column=9).value = renach
+                ws.cell(row=nova_linha, column=11).value = 192.61  # Valor fixo
+                ws.cell(row=nova_linha, column=11).number_format = '"R$"#,##0.00'
+                ws.cell(row=nova_linha, column=12).value = info_pagamento
                 alteracoes_feitas = True
                 self.logger.info(f"Dados psicológicos salvos na linha {nova_linha}")
 
@@ -1356,7 +1378,7 @@ class FuncoesBotoes:
         except Exception as e:
             self.logger.error(f"Erro ao salvar na planilha: {str(e)}")
             return False
-
+        
     # Código de adição de totais...
     def _adicionar_totais(
         self,
@@ -2370,6 +2392,9 @@ class PaymentProcessor:
 
         Returns:
             float: Valor convertido ou None se inválido
+
+        Raises:
+            ValueError: Se o valor não puder ser convertido
         """
         if not value_str:
             return 0.0
@@ -2387,12 +2412,12 @@ class PaymentProcessor:
         Formata valor float para string monetária.
 
         Args:
-            value: Valor numérico
+            value: Valor numérico a ser formatado
 
         Returns:
-            str: Valor formatado (ex: "R$ 148,65")
+            str: Valor formatado (ex: "148,65")
         """
-        return f"R$ {value:.2f}".replace(".", ",")
+        return f"{value:.2f}".replace(".", ",")
 
     @classmethod
     def calculate_service_value(cls, service_type: str) -> float:
@@ -2404,16 +2429,18 @@ class PaymentProcessor:
 
         Returns:
             float: Valor total do serviço
+
+        Raises:
+            ValueError: Se o tipo de serviço for inválido
         """
         if service_type not in cls.SERVICE_PRICES:
             raise ValueError(f"Tipo de serviço inválido: {service_type}")
-
         return cls.SERVICE_PRICES[service_type]["consulta"]
 
     @classmethod
     def validate_payment_total(cls, payments: dict, expected_total: float) -> bool:
         """
-        Valida se o total dos pagamentos corresponde exatamente ao valor esperado.
+        Valida se o total dos pagamentos corresponde ao valor esperado.
 
         Args:
             payments: Dicionário com valores por forma de pagamento
@@ -2421,41 +2448,63 @@ class PaymentProcessor:
 
         Returns:
             bool: True se válido, False caso contrário
+
+        Raises:
+            ValueError: Se houver erro na validação
         """
-        # Converte e soma todos os valores de pagamento
         try:
-            total = sum(
-                cls.convert_currency_value(value)
-                for value in payments.values()
-                if value
-            )
-            # Compara os valores exatamente
-            return total == expected_total
+            total = sum(cls.convert_currency_value(value) for value in payments.values() if value)
+            return abs(total - expected_total) < 0.01  # Permite pequena diferença por arredondamento
         except ValueError as e:
             raise ValueError(f"Erro ao validar pagamentos: {str(e)}")
 
     @classmethod
-    def process_payment_methods(cls, payment_data: dict) -> List[str]:
+    def process_payment_methods(cls, payment_data: dict) -> str:
         """
         Processa e formata métodos de pagamento.
+        
+        Se houver apenas um método, retorna apenas o código (D, C, E ou P).
+        Se houver múltiplos métodos, retorna no formato "D:3000|E:4127".
 
         Args:
-            payment_data: Dicionário com valores por forma de pagamento
+            payment_data: Dicionário com códigos de pagamento como chaves
+                        e valores como strings (ex: {"D": "148,65", "C": ""})
 
         Returns:
-            List[str]: Lista de strings formatadas de pagamento
+            str: String formatada com os métodos de pagamento
+                - Um método: apenas o código (ex: "D")
+                - Múltiplos métodos: códigos e valores sem formatação (ex: "D:3000|E:4127")
+
+        Examples:
+            >>> PaymentProcessor.process_payment_methods({"D": "148,65", "C": "", "E": "", "P": ""})
+            "D"
+            >>> PaymentProcessor.process_payment_methods({"D": "30,00", "E": "41,27"})
+            "D:3000|E:4127"
         """
-        result = []
-        for code, value in payment_data.items():
-            if value:
-                formatted_value = cls.format_currency(cls.convert_currency_value(value))
-                result.append(f"{code}:{formatted_value}")
-        return result
+        try:
+            # Filtra apenas os métodos selecionados (com valores não vazios)
+            selected_payments = {code: value for code, value in payment_data.items() 
+                            if value and str(value).strip()}
+            
+            # Se houver apenas um método de pagamento, retorna só o código
+            if len(selected_payments) == 1:
+                return list(selected_payments.keys())[0]
+            
+            # Se houver múltiplos métodos, retorna no formato "D:3000|E:4127"
+            formatted_parts = []
+            for code, value in selected_payments.items():
+                # Converte o valor para um número inteiro (removendo vírgula e ponto)
+                value_float = cls.convert_currency_value(value)
+                value_int = int(value_float * 100)  # Multiplica por 100 para preservar os centavos
+                formatted_parts.append(f"{code}:{value_int}")
+            
+            return "|".join(formatted_parts)
+
+        except Exception as e:
+            raise ValueError(f"Erro ao processar métodos de pagamento: {str(e)}")
 
     @classmethod
-    def calculate_professional_payment(
-        cls, service_type: str, num_patients: int
-    ) -> float:
+    def calculate_professional_payment(cls, service_type: str, num_patients: int) -> float:
         """
         Calcula pagamento do profissional baseado no tipo de serviço e número de pacientes.
 
@@ -2465,12 +2514,75 @@ class PaymentProcessor:
 
         Returns:
             float: Valor total a ser pago ao profissional
+
+        Raises:
+            ValueError: Se o tipo de serviço for inválido
         """
         if service_type not in cls.SERVICE_PRICES:
             raise ValueError(f"Tipo de serviço inválido: {service_type}")
 
         return cls.SERVICE_PRICES[service_type]["profissional"] * num_patients
 
+    @classmethod
+    def parse_payment_string(cls, payment_str: str) -> dict:
+        """
+        Converte uma string de pagamento no formato 'E:300,00|P:41,27' para dicionário.
+
+        Args:
+            payment_str: String com informações de pagamento
+
+        Returns:
+            dict: Dicionário com valores de pagamento por método
+
+        Raises:
+            ValueError: Se a string de pagamento estiver em formato inválido
+        """
+        try:
+            result = {}
+            # Se for apenas um código
+            if len(payment_str) == 1 and payment_str in cls.PAYMENT_TYPES:
+                return {payment_str: cls.PAYMENT_TYPES[payment_str]}
+
+            # Se for múltiplos pagamentos
+            for part in payment_str.split("|"):
+                if ":" in part:
+                    code, value = part.split(":")
+                    if code in cls.PAYMENT_TYPES:
+                        result[code] = value
+            return result
+        except Exception as e:
+            raise ValueError(f"Erro ao processar string de pagamento: {str(e)}")
+
+    @classmethod
+    def get_payment_description(cls, payment_str: str) -> str:
+        """
+        Gera descrição legível dos pagamentos.
+
+        Args:
+            payment_str: String com informações de pagamento
+
+        Returns:
+            str: Descrição formatada dos pagamentos
+
+        Example:
+            "E:300,00|P:41,27" -> "Espécie: R$ 300,00, PIX: R$ 41,27"
+            "D" -> "Débito"
+        """
+        try:
+            # Se for apenas um código
+            if len(payment_str) == 1 and payment_str in cls.PAYMENT_TYPES:
+                return cls.PAYMENT_TYPES[payment_str]
+
+            # Se for múltiplos pagamentos
+            parts = []
+            for part in payment_str.split("|"):
+                if ":" in part:
+                    code, value = part.split(":")
+                    if code in cls.PAYMENT_TYPES:
+                        parts.append(f"{cls.PAYMENT_TYPES[code]}: R$ {value}")
+            return ", ".join(parts)
+        except Exception as e:
+            return f"Erro ao processar pagamento: {str(e)}"
 
 class SistemaContas:
     """
