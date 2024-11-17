@@ -1044,7 +1044,7 @@ class FuncoesBotoes:
     """
 
     # Código de formatação...
-    def formatar_planilha(self):
+    def formatar_planilha(self, wb):
         """
         Formata a planilha preservando as informações necessárias.
         Aplica estilos, bordas e alinhamentos padronizados.
@@ -1347,30 +1347,31 @@ class FuncoesBotoes:
             if tipo_escolha in ["medico", "ambos"]:
                 nova_linha = encontrar_proxima_linha('B', 4)  # Coluna B para nomes, D para soma
                 ws.insert_rows(nova_linha)  # Insere uma nova linha antes da linha do 'Soma'
-                ws.cell(row=nova_linha, column=2).value = nome
+                ws.cell(row=nova_linha, column=2, value=nome)
                 ws.cell(row=nova_linha, column=2).alignment = Alignment(vertical='center')
-                ws.cell(row=nova_linha, column=3).value = renach
-                ws.cell(row=nova_linha, column=5).value = 148.65  # Valor fixo
+                ws.cell(row=nova_linha, column=3, value=renach)
+                ws.cell(row=nova_linha, column=5, value=148.65)  # Valor fixo
                 ws.cell(row=nova_linha, column=5).number_format = '"R$"#,##0.00'
-                ws.cell(row=nova_linha, column=6).value = info_pagamento
+                ws.cell(row=nova_linha, column=6, value=info_pagamento)
                 alteracoes_feitas = True
                 self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
 
             if tipo_escolha in ["psicologo", "ambos"]:
                 nova_linha = encontrar_proxima_linha('H', 10)  # Coluna H para nomes, J para soma
                 ws.insert_rows(nova_linha)  # Insere uma nova linha antes da linha do 'Soma'
-                ws.cell(row=nova_linha, column=8).value = nome
+                ws.cell(row=nova_linha, column=8, value=nome)
                 ws.cell(row=nova_linha, column=8).alignment = Alignment(vertical='center')
-                ws.cell(row=nova_linha, column=9).value = renach
-                ws.cell(row=nova_linha, column=11).value = 192.61  # Valor fixo
+                ws.cell(row=nova_linha, column=9, value=renach)
+                ws.cell(row=nova_linha, column=11, value=192.61)  # Valor fixo
                 ws.cell(row=nova_linha, column=11).number_format = '"R$"#,##0.00'
-                ws.cell(row=nova_linha, column=12).value = info_pagamento
+                ws.cell(row=nova_linha, column=12, value=info_pagamento)
                 alteracoes_feitas = True
                 self.logger.info(f"Dados psicológicos salvos na linha {nova_linha}")
 
             if alteracoes_feitas:
                 self.planilhas.wb.save(self.planilhas.file_path)
                 self.logger.info("Planilha salva com sucesso")
+                self.formatar_planilha(self.planilhas.wb)  # Chama a função formatar_planilha
                 return True
 
             return False
