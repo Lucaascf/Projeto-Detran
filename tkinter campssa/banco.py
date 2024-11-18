@@ -571,7 +571,7 @@ class DataBaseMarcacao:
         # Configuração da janela principal
         self.marcacoes_window = tk.Toplevel(self.master)
         self.marcacoes_window.title("Gerenciador de Marcações")
-        self.marcacoes_window.geometry("1000x700")
+        self.marcacoes_window.geometry("1700x700")
         cor_fundo = self.master.cget("bg")
         cor_texto = "#ECF0F1"
         self.marcacoes_window.configure(bg=cor_fundo)
@@ -931,7 +931,7 @@ class DataBaseMarcacao:
                 cursor.execute(
                     """
                     SELECT name, renach, appointment_date, attendance_status, observation, attendance_history
-                    FROM patients
+                    FROM marcacoes
                     WHERE LOWER(name) LIKE ? OR LOWER(renach) LIKE ?
                     ORDER BY appointment_date DESC
                 """,
@@ -1288,7 +1288,7 @@ class DataBaseMarcacao:
                 conn = sqlite3.connect(self.db_name)
                 cursor = conn.cursor()
 
-                cursor.execute("DELETE FROM patients WHERE renach = ?", (patient[2],))
+                cursor.execute("DELETE FROM marcacoes WHERE renach = ?", (patient[2],))
                 conn.commit()
 
                 messagebox.showinfo("Sucesso", "Marcação excluída com sucesso!")

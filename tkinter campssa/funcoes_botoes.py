@@ -834,6 +834,8 @@ class FuncoesBotoes:
         try:
             wb = self.get_active_workbook()
             ws = wb.active
+            conn = sqlite3.connect('db_marcacao.db')
+            cursor = conn.cursor()
 
             def realizar_exclusao():
                 """
@@ -926,6 +928,10 @@ class FuncoesBotoes:
                                 ):
                                     return row
                         return None
+                    
+                    # Excluir paciente do banco de dados
+                    cursor.execute("DELETE FROM marcacoes WHERE renach = ?", (renach,))
+                    conn.commit() # confirma exclusão
 
                     # Procura nas seções de médico e psicólogo
                     linha_medico = encontrar_paciente(3)  # Coluna C
@@ -950,6 +956,8 @@ class FuncoesBotoes:
                         excluir_window.destroy()
                     else:
                         messagebox.showwarning("Aviso", "RENACH não encontrado")
+
+                    conn.close() # Fecha a conexão com o banco de dados
 
                 except ValueError:
                     messagebox.showerror(
