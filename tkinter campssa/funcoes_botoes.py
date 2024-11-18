@@ -3837,14 +3837,9 @@ class PatientInfoDisplay:
             self.master.after_cancel(self.data_cache["timer"])
 
         def animate():
-            table = self.ui_refs["table"]["frame"]
-            table.tk_setPalette(background=self.theme["background"])
-
             filtered_data = self._filter_data()
             self._update_table(filtered_data)
             self._update_stats(filtered_data)
-
-            table.tk_setPalette(background=self.theme["background"])
 
         self.data_cache["timer"] = self.master.after(150, animate)
 
