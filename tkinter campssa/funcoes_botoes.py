@@ -755,9 +755,10 @@ class FuncoesBotoes:
             # Salvar dados
             try:
                 if self.salvar_na_planilha(nome, renach, pagamentos, escolha):
+                    self.formatar_planilha() # Formata apos salvar na planilha
                     if self.db_manager.adicionar_paciente(
                         nome, renach, pagamentos, escolha
-                    ):
+                    ): # Salva no banco de dados
                         self.adicionar_window.destroy()
                         return True
 
@@ -1044,7 +1045,7 @@ class FuncoesBotoes:
     """
 
     # Código de formatação...
-    def formatar_planilha(self, wb):
+    def formatar_planilha(self):
         """
         Formata a planilha preservando as informações necessárias.
         Aplica estilos, bordas e alinhamentos padronizados.
@@ -1308,6 +1309,7 @@ class FuncoesBotoes:
         Salva as informações do paciente na planilha Excel.
         """
         try:
+            # Garantir que o workbook está carregado
             if not self.planilhas.wb:
                 self.planilhas.reload_workbook()
 
@@ -1315,69 +1317,73 @@ class FuncoesBotoes:
             if not ws:
                 raise Exception("Não foi possível acessar a planilha ativa")
 
-            info_pagamento = pagamentos
-            alteracoes_feitas = False
-
-            def encontrar_proxima_linha(coluna_inicial, coluna_soma):
+            def encontrar_linha_insercao(coluna_inicial, coluna_soma):
                 """
-                Encontra a próxima linha disponível para inserção de dados.
-                Args:
-                    coluna_inicial: Coluna onde os nomes são inseridos (B para médico, H para psicólogo)
-                    coluna_soma: Coluna onde procurar 'Soma' (D para médico, J para psicólogo)
-                Returns:
-                    int: Número da próxima linha disponível
+                Encontra a linha para inserir o novo paciente, considerando a linha de soma.
+                Procura palavra 'Soma' na coluna de reexames (D para médico, J para psicólogo).
                 """
+                ultima_linha = 3  # Começa da linha 3 (após os cabeçalhos)
                 linha_soma = None
-                
-                # Procura a linha do 'Soma'
+
+                # Procura a linha que contém 'Soma' e a última linha com dados
                 for row in range(3, ws.max_row + 1):
-                    cell_value = ws.cell(row=row, column=coluna_soma).value
-                    if isinstance(cell_value, str) and cell_value.strip().lower() == "soma":
+                    valor_nome = ws.cell(row=row, column=coluna_inicial).value
+                    valor_soma = ws.cell(row=row, column=coluna_soma).value
+
+                    if valor_soma and str(valor_soma).strip().lower() == 'soma':
                         linha_soma = row
                         break
-                
-                # Se encontrou a linha do 'Soma', retorna a linha anterior a ela
-                if linha_soma is not None:
-                    return linha_soma
-                
-                # Se não encontrou 'Soma', retorna a última linha + 1
-                return ws.max_row + 1
+                    elif valor_nome:
+                        ultima_linha = row + 1
 
-            # Salvar dados conforme o tipo de atendimento
+                # Se encontrou 'Soma', insere antes; senão, usa a próxima linha disponível
+                return linha_soma if linha_soma else ultima_linha
+
+            alteracoes_feitas = False
+
+            # Salvar na seção médica
             if tipo_escolha in ["medico", "ambos"]:
-                nova_linha = encontrar_proxima_linha('B', 4)  # Coluna B para nomes, D para soma
-                ws.insert_rows(nova_linha)  # Insere uma nova linha antes da linha do 'Soma'
-                ws.cell(row=nova_linha, column=2, value=nome)
-                ws.cell(row=nova_linha, column=2).alignment = Alignment(vertical='center')
-                ws.cell(row=nova_linha, column=3, value=renach)
-                ws.cell(row=nova_linha, column=5, value=148.65)  # Valor fixo
-                ws.cell(row=nova_linha, column=5).number_format = '"R$"#,##0.00'
-                ws.cell(row=nova_linha, column=6, value=info_pagamento)
+                linha_medico = encontrar_linha_insercao(2, 4)  # Coluna B para nome, D para soma
+                
+                # Se há uma linha de soma, inserir uma nova linha
+                if ws.cell(row=linha_medico, column=4).value == 'Soma':
+                    ws.insert_rows(linha_medico)
+                
+                # Inserir dados médicos
+                ws.cell(row=linha_medico, column=1, value=linha_medico-2)  # Ordem
+                ws.cell(row=linha_medico, column=2, value=nome)  # Nome
+                ws.cell(row=linha_medico, column=3, value=renach)  # Renach
+                ws.cell(row=linha_medico, column=5, value=148.65)  # Valor fixo
+                ws.cell(row=linha_medico, column=6, value=pagamentos)  # Pagamento
+                
                 alteracoes_feitas = True
-                self.logger.info(f"Dados médicos salvos na linha {nova_linha}")
 
+            # Salvar na seção psicológica
             if tipo_escolha in ["psicologo", "ambos"]:
-                nova_linha = encontrar_proxima_linha('H', 10)  # Coluna H para nomes, J para soma
-                ws.insert_rows(nova_linha)  # Insere uma nova linha antes da linha do 'Soma'
-                ws.cell(row=nova_linha, column=8, value=nome)
-                ws.cell(row=nova_linha, column=8).alignment = Alignment(vertical='center')
-                ws.cell(row=nova_linha, column=9, value=renach)
-                ws.cell(row=nova_linha, column=11, value=192.61)  # Valor fixo
-                ws.cell(row=nova_linha, column=11).number_format = '"R$"#,##0.00'
-                ws.cell(row=nova_linha, column=12, value=info_pagamento)
+                linha_psi = encontrar_linha_insercao(8, 10)  # Coluna H para nome, J para soma
+                
+                # Se há uma linha de soma, inserir uma nova linha
+                if ws.cell(row=linha_psi, column=10).value == 'Soma':
+                    ws.insert_rows(linha_psi)
+                
+                # Inserir dados psicológicos
+                ws.cell(row=linha_psi, column=7, value=linha_psi-2)  # Ordem
+                ws.cell(row=linha_psi, column=8, value=nome)  # Nome
+                ws.cell(row=linha_psi, column=9, value=renach)  # Renach
+                ws.cell(row=linha_psi, column=11, value=192.61)  # Valor fixo
+                ws.cell(row=linha_psi, column=12, value=pagamentos)  # Pagamento
+                
                 alteracoes_feitas = True
-                self.logger.info(f"Dados psicológicos salvos na linha {nova_linha}")
 
             if alteracoes_feitas:
-                self.planilhas.wb.save(self.planilhas.file_path)
-                self.logger.info("Planilha salva com sucesso")
-                self.formatar_planilha(self.planilhas.wb)  # Chama a função formatar_planilha
+                self.planilhas.wb.save(self.file_path)
                 return True
 
             return False
 
         except Exception as e:
             self.logger.error(f"Erro ao salvar na planilha: {str(e)}")
+            messagebox.showerror("Erro", f"Erro ao salvar na planilha: {str(e)}")
             return False
         
     # Código de adição de totais...
