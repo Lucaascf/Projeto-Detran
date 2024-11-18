@@ -3092,7 +3092,7 @@ class GerenciadorPlanilhas:
 
         # Frame para criar nova sheet
         create_frame = ttk.LabelFrame(
-            main_frame, text="Criar Nova Planilha", padding="10"
+            main_frame, text="Criar Nova Sheet", padding="10"
         )
         create_frame.grid(row=3, column=0, sticky="ew", pady=(0, 20))
         create_frame.grid_columnconfigure(1, weight=1)
