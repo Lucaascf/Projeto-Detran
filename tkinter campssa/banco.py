@@ -720,8 +720,36 @@ class DataBaseMarcacao:
         fields_frame = tk.Frame(main_frame, bg=cor_fundo)
         fields_frame.pack(fill="x", pady=10)
 
-        # Função para criar campos de entrada
-        def create_field(parent, label_text, default_value=""):
+        # Função para criar campos somente leitura
+        def create_readonly_field(parent, label_text, default_value=""):
+            frame = tk.Frame(parent, bg=cor_fundo)
+            frame.pack(fill="x", pady=5)
+
+            tk.Label(
+                frame,
+                text=label_text,
+                font=("Arial", 10, "bold"),
+                bg=cor_fundo,
+                fg=cor_texto,
+                width=12,
+                anchor="w",
+            ).pack(side="left")
+
+            label = tk.Label(
+                frame,
+                text=default_value,
+                font=("Arial", 10),
+                bg="#2C3E50",
+                fg=cor_texto,
+                anchor="w",
+                padx=5,
+                pady=2,
+            )
+            label.pack(side="left", fill="x", expand=True)
+            return label
+
+        # Função para criar campos editáveis
+        def create_editable_field(parent, label_text, default_value=""):
             frame = tk.Frame(parent, bg=cor_fundo)
             frame.pack(fill="x", pady=5)
 
@@ -740,50 +768,16 @@ class DataBaseMarcacao:
             entry.insert(0, default_value)
             return entry
 
-        # Criação dos campos
-        nome_entry = create_field(fields_frame, "Nome:", patient[0])
-        renach_entry = create_field(fields_frame, "RENACH:", patient[1])
-        telefone_entry = create_field(fields_frame, "Telefone:", patient[2])
+        # Criar campos somente leitura
+        nome_label = create_readonly_field(fields_frame, "Nome:", patient[0])
+        renach_label = create_readonly_field(fields_frame, "RENACH:", patient[2])
+        
+        # Formatar data para exibição
+        data_formatada = datetime.strptime(patient[5], "%Y-%m-%d").strftime("%d/%m/%Y") if patient[5] else ""
+        data_label = create_readonly_field(fields_frame, "Data:", data_formatada)
 
-        # Campo de data
-        date_frame = tk.Frame(fields_frame, bg=cor_fundo)
-        date_frame.pack(fill="x", pady=5)
-
-        tk.Label(
-            date_frame,
-            text="Data:",
-            font=("Arial", 10, "bold"),
-            bg=cor_fundo,
-            fg=cor_texto,
-            width=12,
-            anchor="w",
-        ).pack(side="left")
-
-        # Buscar a data atual do paciente
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT appointment_date FROM patients WHERE renach = ?", (patient[2],)
-        )
-        current_date = cursor.fetchone()[0]
-        conn.close()
-
-        date_entry = DateEntry(
-            date_frame,
-            width=12,
-            background="darkblue",
-            foreground="white",
-            borderwidth=2,
-            font=("Arial", 10),
-        )
-        date_entry.pack(side="left")
-
-        # Definir a data atual do paciente
-        try:
-            current_date_obj = datetime.strptime(current_date, "%Y-%m-%d").date()
-            date_entry.set_date(current_date_obj)
-        except:
-            pass
+        # Criar campos editáveis
+        telefone_entry = create_editable_field(fields_frame, "Telefone:", patient[1])
 
         # Campo de observações
         tk.Label(
@@ -800,15 +794,8 @@ class DataBaseMarcacao:
 
         def save_changes():
             """Salva as alterações no banco de dados."""
-            nome = nome_entry.get().strip()
-            renach = renach_entry.get().strip()
             telefone = telefone_entry.get().strip()
-            nova_data = date_entry.get_date().strftime("%Y-%m-%d")
             observacoes = obs_text.get("1.0", tk.END).strip()
-
-            if not nome or not renach:
-                messagebox.showerror("Erro", "Nome e RENACH são campos obrigatórios!")
-                return
 
             try:
                 conn = sqlite3.connect(self.db_name)
@@ -816,11 +803,11 @@ class DataBaseMarcacao:
 
                 cursor.execute(
                     """
-                    UPDATE patients 
-                    SET name = ?, phone = ?, appointment_date = ?, observation = ?
+                    UPDATE marcacoes 
+                    SET telefone = ?, observacao = ?
                     WHERE renach = ?
                 """,
-                    (nome, telefone, nova_data, observacoes, patient[2]),
+                    (telefone, observacoes, patient[2]),
                 )
 
                 conn.commit()
