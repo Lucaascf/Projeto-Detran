@@ -396,9 +396,24 @@ class FuncoesBotoes:
 
         # Entradas para nome e Renach
         self.nome_entry = self.criar_entry("Nome:", "nome_entry", self.adicionar_window)
-        self.renach_entry = self.criar_entry(
-            "Renach:", "renach_entry", self.adicionar_window
-        )
+        self.renach_entry = self.criar_entry("Renach:", "renach_entry", self.adicionar_window)
+
+        # Checkbox para reexame
+        self.reexame_var = tk.BooleanVar()
+        reexame_frame = tk.Frame(self.adicionar_window, bg=cor_fundo)
+        reexame_frame.pack(pady=2)
+        
+        tk.Checkbutton(
+            reexame_frame,
+            text="Reexame",
+            variable=self.reexame_var,
+            bg=cor_fundo,
+            fg=cor_texto,
+            selectcolor=cor_selecionado,
+            activebackground=cor_fundo,
+            activeforeground=cor_texto,
+            font=("Arial", 12)
+        ).pack(side=tk.LEFT)
 
         # Frame de pagamento
         self._create_payment_frame(
@@ -408,6 +423,7 @@ class FuncoesBotoes:
         def limpar_campos():
             self.nome_entry.delete(0, tk.END)
             self.renach_entry.delete(0, tk.END)
+            self.reexame_var.set(False)
 
             # Limpar campos de forma de pagamento
             for entry in self.valor_entries.values():
@@ -422,7 +438,7 @@ class FuncoesBotoes:
             self.radio_var.set("")
 
         def adicionar_paciente():
-            if self.verificar_soma_pagamentos():  # Chamando o método da classe
+            if self.verificar_soma_pagamentos():
                 if self.salvar_informacao():
                     if self.adicionar_window.winfo_exists():
                         limpar_campos()
@@ -1322,10 +1338,9 @@ class FuncoesBotoes:
                 Encontra a linha para inserir o novo paciente, considerando a linha de soma.
                 Procura palavra 'Soma' na coluna de reexames (D para médico, J para psicólogo).
                 """
-                ultima_linha = 3  # Começa da linha 3 (após os cabeçalhos)
+                ultima_linha = 3
                 linha_soma = None
 
-                # Procura a linha que contém 'Soma' e a última linha com dados
                 for row in range(3, ws.max_row + 1):
                     valor_nome = ws.cell(row=row, column=coluna_inicial).value
                     valor_soma = ws.cell(row=row, column=coluna_soma).value
@@ -1336,23 +1351,22 @@ class FuncoesBotoes:
                     elif valor_nome:
                         ultima_linha = row + 1
 
-                # Se encontrou 'Soma', insere antes; senão, usa a próxima linha disponível
                 return linha_soma if linha_soma else ultima_linha
 
             alteracoes_feitas = False
+            reexame_mark = "R" if self.reexame_var.get() else ""
 
             # Salvar na seção médica
             if tipo_escolha in ["medico", "ambos"]:
-                linha_medico = encontrar_linha_insercao(2, 4)  # Coluna B para nome, D para soma
+                linha_medico = encontrar_linha_insercao(2, 4)
                 
-                # Se há uma linha de soma, inserir uma nova linha
                 if ws.cell(row=linha_medico, column=4).value == 'Soma':
                     ws.insert_rows(linha_medico)
                 
-                # Inserir dados médicos
                 ws.cell(row=linha_medico, column=1, value=linha_medico-2)  # Ordem
                 ws.cell(row=linha_medico, column=2, value=nome)  # Nome
                 ws.cell(row=linha_medico, column=3, value=renach)  # Renach
+                ws.cell(row=linha_medico, column=4, value=reexame_mark)  # Reexame
                 ws.cell(row=linha_medico, column=5, value=148.65)  # Valor fixo
                 ws.cell(row=linha_medico, column=6, value=pagamentos)  # Pagamento
                 
@@ -1360,16 +1374,15 @@ class FuncoesBotoes:
 
             # Salvar na seção psicológica
             if tipo_escolha in ["psicologo", "ambos"]:
-                linha_psi = encontrar_linha_insercao(8, 10)  # Coluna H para nome, J para soma
+                linha_psi = encontrar_linha_insercao(8, 10)
                 
-                # Se há uma linha de soma, inserir uma nova linha
                 if ws.cell(row=linha_psi, column=10).value == 'Soma':
                     ws.insert_rows(linha_psi)
                 
-                # Inserir dados psicológicos
                 ws.cell(row=linha_psi, column=7, value=linha_psi-2)  # Ordem
                 ws.cell(row=linha_psi, column=8, value=nome)  # Nome
                 ws.cell(row=linha_psi, column=9, value=renach)  # Renach
+                ws.cell(row=linha_psi, column=10, value=reexame_mark)  # Reexame
                 ws.cell(row=linha_psi, column=11, value=192.61)  # Valor fixo
                 ws.cell(row=linha_psi, column=12, value=pagamentos)  # Pagamento
                 
