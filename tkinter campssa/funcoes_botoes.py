@@ -740,7 +740,7 @@ class FuncoesBotoes:
         # Configuração da interface
         self._setup_add_interface(cor_fundo, cor_texto, cor_selecionado)
 
-    # Código de salvamento de informações...
+     # Código de salvamento de informações...
     def salvar_informacao(self):
         """
         Valida dados e coordena o salvamento no banco e na planilha.
