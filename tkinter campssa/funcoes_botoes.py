@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from config import ConfigManager
 import sys
 from typing import Dict, List, Optional, Tuple
 import tkinter as tk
@@ -2612,6 +2613,7 @@ class PaymentProcessor:
         except Exception as e:
             return f"Erro ao processar pagamento: {str(e)}"
 
+
 class SistemaContas:
     """
     SEÇÃO 1: INICIALIZAÇÃO E CONFIGURAÇÃO
@@ -2979,12 +2981,18 @@ class GerenciadorPlanilhas:
 
     # Inicializa o gerenciador com janela principal e sistema de contas
     def __init__(self, master, sistema_contas):
-        """Inicializa o gerenciador de planilhas."""
         self.master = master
         self.sistema_contas = sistema_contas
         self.file_path = None
         self.sheet_name = None
         self.active_window = None
+        
+        # Create instance of ConfigManager
+        self.config_manager = ConfigManager()
+        
+        # Get configs using instance method
+        self.config = self.config_manager.get_config('UI_CONFIG')
+        self.app_config = self.config_manager.get_config('APP_CONFIG')
 
     """
     SEÇÃO 2: INTERFACE GRÁFICA
@@ -2992,149 +3000,154 @@ class GerenciadorPlanilhas:
 
     # Abre janela principal do gerenciador
     def abrir_gerenciador(self):
-        """Abre a janela de gerenciamento de planilhas"""
         if self.active_window:
             self.active_window.lift()
             return
 
         self.active_window = Toplevel(self.master)
         self.active_window.title("Gerenciador de Planilhas")
-        self.active_window.geometry("600x700")
-        self.active_window.resizable(False, False)
-
-        # Centralizar a janela
-        window_width = 600
-        window_height = 700
+        
+        # Use window dimensions from config
+        window_width = self.app_config['window']['min_width']
+        window_height = self.app_config['window']['min_height']
         screen_width = self.active_window.winfo_screenwidth()
         screen_height = self.active_window.winfo_screenheight()
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
+        
         self.active_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
-
-        # Configurar grid da janela
+        self.active_window.minsize(
+            self.app_config['window']['min_width'],
+            self.app_config['window']['min_height']
+        )
+        self.active_window.maxsize(
+            self.app_config['window']['max_width'],
+            self.app_config['window']['max_height']
+        )
+        
+        # Configure window background
+        self.active_window.configure(bg=self.config['colors']['background'])
+        
         self.active_window.grid_columnconfigure(0, weight=1)
         self.active_window.grid_rowconfigure(0, weight=1)
 
         self._setup_interface()
-
-        # Cleanup quando a janela for fechada
         self.active_window.protocol("WM_DELETE_WINDOW", self._on_closing)
-
-        # Tornar a janela modal
         self.active_window.transient(self.master)
         self.active_window.grab_set()
 
     # Configura os elementos da interface
     def _setup_interface(self):
-        """Configura a interface do gerenciador"""
-        # Frame principal com padding
-        main_frame = ttk.Frame(self.active_window, padding="20 20 20 20")
+        style = ttk.Style()
+        style.configure('Custom.TFrame', background=self.config['colors']['background'])
+        style.configure('Custom.TLabelframe', background=self.config['colors']['frame'])
+        style.configure('Custom.TLabelframe.Label', foreground=self.config['colors']['text'], background=self.config['colors']['frame'])
+        style.configure('Custom.TButton', background=self.config['colors']['button'], foreground=self.config['colors']['text'])
+        style.configure('Custom.TEntry', fieldbackground=self.config['colors']['frame'], foreground=self.config['colors']['text'])
+
+        main_frame = ttk.Frame(
+            self.active_window, 
+            padding=20,
+            style='Custom.TFrame'
+        )
         main_frame.grid(row=0, column=0, sticky="nsew")
         main_frame.grid_columnconfigure(0, weight=1)
 
-        # Título
-        title_frame = ttk.Frame(main_frame)
-        title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
-        title_frame.grid_columnconfigure(0, weight=1)
+        self.active_window.configure(bg=self.config['colors']['background'])
 
         title_label = ttk.Label(
-            title_frame,
+            main_frame,
             text="Gerenciador de Planilhas Excel",
-            font=("Arial", 16, "bold"),
+            font=("Segoe UI", 18, "bold"),
+            foreground=self.config['colors']['title'],
+            background=self.config['colors']['background']
         )
-        title_label.grid(row=0, column=0)
+        title_label.grid(row=0, column=0, pady=(0, 20))
 
-        # Frame para arquivo atual
-        file_frame = ttk.LabelFrame(main_frame, text="Arquivo Atual", padding="10")
+        file_frame = ttk.LabelFrame(
+            main_frame, 
+            text="Arquivo Atual",
+            padding=10,
+            style='Custom.TLabelframe'
+        )
         file_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
         file_frame.grid_columnconfigure(0, weight=1)
 
         self.lbl_arquivo = ttk.Label(
             file_frame,
-            text=(
-                self.sistema_contas.file_path
-                if hasattr(self.sistema_contas, "file_path")
-                else "Nenhum arquivo selecionado"
-            ),
+            text=(self.sistema_contas.file_path if hasattr(self.sistema_contas, "file_path") else "Nenhum arquivo selecionado"),
             wraplength=500,
+            foreground=self.config['colors']['text'],
+            background=self.config['colors']['frame']
         )
         self.lbl_arquivo.grid(row=0, column=0, sticky="ew", padx=5)
 
-        # Frame para lista de sheets
         list_frame = ttk.LabelFrame(
-            main_frame, text="Planilhas Disponíveis", padding="10"
+            main_frame,
+            text="Planilhas Disponíveis",
+            padding=10,
+            style='Custom.TLabelframe'
         )
         list_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 20))
         list_frame.grid_columnconfigure(0, weight=1)
         list_frame.grid_rowconfigure(0, weight=1)
 
-        # Container para lista e scrollbars
-        list_container = ttk.Frame(list_frame)
-        list_container.grid(row=0, column=0, sticky="nsew")
-        list_container.grid_columnconfigure(0, weight=1)
-        list_container.grid_rowconfigure(0, weight=1)
-
         self.listbox = Listbox(
-            list_container,
-            font=("Arial", 10),
+            list_frame,
+            font=("Segoe UI", 10),
             selectmode=SINGLE,
             height=10,
+            bg=self.config['colors']['frame'],
+            fg=self.config['colors']['text'],
+            selectbackground=self.config['colors']['button'],
+            selectforeground=self.config['colors']['text'],
             borderwidth=1,
-            relief="solid",
+            relief="solid"
         )
         self.listbox.grid(row=0, column=0, sticky="nsew")
 
-        scrollbar_y = ttk.Scrollbar(
-            list_container, orient=VERTICAL, command=self.listbox.yview
-        )
-        scrollbar_y.grid(row=0, column=1, sticky="ns")
-
-        scrollbar_x = ttk.Scrollbar(
-            list_container, orient=HORIZONTAL, command=self.listbox.xview
-        )
-        scrollbar_x.grid(row=1, column=0, sticky="ew")
-
-        self.listbox.configure(
-            yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set
-        )
-
-        # Frame para criar nova sheet
         create_frame = ttk.LabelFrame(
-            main_frame, text="Criar Nova Sheet", padding="10"
+            main_frame,
+            text="Criar Nova Sheet",
+            padding=10,
+            style='Custom.TLabelframe'
         )
         create_frame.grid(row=3, column=0, sticky="ew", pady=(0, 20))
         create_frame.grid_columnconfigure(1, weight=1)
 
-        ttk.Label(create_frame, text="Nome:", font=("Arial", 10)).grid(
-            row=0, column=0, padx=(0, 10), sticky="w"
-        )
+        ttk.Label(
+            create_frame,
+            text="Nome:",
+            font=("Segoe UI", 10),
+            foreground=self.config['colors']['text'],
+            background=self.config['colors']['frame']
+        ).grid(row=0, column=0, padx=(0, 10), sticky="w")
 
-        self.nova_sheet_entry = ttk.Entry(create_frame)
+        self.nova_sheet_entry = ttk.Entry(
+            create_frame,
+            style='Custom.TEntry'
+        )
         self.nova_sheet_entry.grid(row=0, column=1, sticky="ew")
 
-        # Frame para botões
-        button_frame = ttk.Frame(main_frame)
+        button_frame = ttk.Frame(main_frame, style='Custom.TFrame')
         button_frame.grid(row=4, column=0, sticky="ew")
         for i in range(2):
             button_frame.grid_columnconfigure(i, weight=1)
 
-        # Primeira linha de botões
-        ttk.Button(
-            button_frame, text="Nova Planilha Excel", command=self.criar_nova_planilha
-        ).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        buttons = [
+            ("Nova Planilha Excel", self.criar_nova_planilha),
+            ("Abrir Planilha Existente", self.abrir_planilha),
+            ("Selecionar Sheet", self.selecionar_sheet),
+            ("Criar Nova Sheet", self.criar_nova_sheet)
+        ]
 
-        ttk.Button(
-            button_frame, text="Abrir Planilha Existente", command=self.abrir_planilha
-        ).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-
-        # Segunda linha de botões
-        ttk.Button(
-            button_frame, text="Selecionar Sheet", command=self.selecionar_sheet
-        ).grid(row=1, column=0, padx=5, pady=5, sticky="ew")
-
-        ttk.Button(
-            button_frame, text="Criar Nova Sheet", command=self.criar_nova_sheet
-        ).grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        for idx, (text, command) in enumerate(buttons):
+            ttk.Button(
+                button_frame,
+                text=text,
+                command=command,
+                style='Custom.TButton'
+            ).grid(row=idx//2, column=idx%2, padx=5, pady=5, sticky="ew")
 
         self.atualizar_lista_sheets()
 
@@ -3150,25 +3163,11 @@ class GerenciadorPlanilhas:
 
     # Cria nova planilha Excel
     def criar_nova_planilha(self):
-        """Cria um novo arquivo Excel"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
-            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+            filetypes=self.app_config['file_types']
         )
-
-        if file_path:
-            try:
-                wb = Workbook()
-                wb.save(file_path)
-                self.sistema_contas.file_path = file_path
-                self.lbl_arquivo.config(text=file_path)
-                self.atualizar_lista_sheets()
-                messagebox.showinfo(
-                    "Sucesso", "Nova planilha Excel criada com sucesso!"
-                )
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao criar planilha: {str(e)}")
-
+        
     # Abre planilha Excel existente
     def abrir_planilha(self):
         """Abre uma planilha Excel existente"""
@@ -3304,6 +3303,7 @@ class PatientInfoDisplay:
         self.master = master
         self.planilhas = planilhas
         self.logger = logger or logging.getLogger(__name__)
+        self.config_manager = ConfigManager()
 
         # Sistema de cache melhorado com TTL
         self.data_cache = {
@@ -3315,24 +3315,25 @@ class PatientInfoDisplay:
             "ttl": 300,  # 5 minutos de TTL para o cache
         }
 
-        # Temas e estilos modernos
+        # Obter cores do ConfigManager
+        ui_config = self.config_manager.get_config('UI_CONFIG')
         self.theme = {
-            "background": "#1a1a1a",
-            "secondary_bg": "#2d2d2d",
-            "text": "#ffffff",
-            "accent": "#3498db",
-            "header": "#2c3e50",
-            "highlight": "#34495e",
-            "separator": "#7f8c8d",
-            "hover": "#3e4d5c",
-            "error": "#e74c3c",
+            "background": ui_config['colors']['background'],
+            "secondary_bg": ui_config['colors']['frame'],
+            "text": ui_config['colors']['text'],
+            "accent": ui_config['colors']['button'],
+            "header": ui_config['colors']['frame'],
+            "highlight": ui_config['colors']['border'],
+            "separator": ui_config['colors']['border'],
+            "hover": ui_config['colors']['button_hover'],
+            "error": "#e74c3c"  # Mantido para consistência
         }
 
         # Configurações de UI responsiva
         self.ui_config = {
             "min_width": 800,
             "min_height": 600,
-            "padding": 10,
+            "padding": ui_config['padding']['default'],
             "animation_duration": 200,
         }
 
@@ -3341,6 +3342,7 @@ class PatientInfoDisplay:
 
         # Estado de ordenação
         self.sort_state = {"column": None, "reverse": False}
+
 
     @lru_cache(maxsize=1000)
     def _process_payment(self, value: str) -> str:
@@ -3546,7 +3548,7 @@ class PatientInfoDisplay:
             text=title,
             bg=self.theme["background"],
             fg=self.theme["text"],
-            font=("Arial", 10),
+            font=self.config_manager.get_config('UI_CONFIG')['fonts']['normal'],
         )
         frame.pack(side="left", padx=5, pady=5)
         return frame
@@ -3572,6 +3574,104 @@ class PatientInfoDisplay:
         )
 
         table_frame = tk.Frame(canvas, bg=self.theme["background"])
+
+        # Configuração do scroll
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _bound_to_mousewheel(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            canvas.bind_all("<Button-4>", _on_mousewheel)
+            canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        def _unbound_to_mousewheel(event):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        def _on_mousewheel(event):
+            if event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+            else:
+                if event.delta > 0:
+                    canvas.yview_scroll(-1, "units")
+                else:
+                    canvas.yview_scroll(1, "units")
+
+        table_frame.bind("<Configure>", _on_frame_configure)
+        canvas.bind("<Enter>", _bound_to_mousewheel)
+        canvas.bind("<Leave>", _unbound_to_mousewheel)
+
+        # Cabeçalhos clicáveis para ordenação
+        headers = [
+            ("Nº", 5),
+            ("Nome", 30),
+            ("RENACH", 10),
+            ("Forma de Pagamento", 20),
+            ("Tipo", 10),
+        ]
+
+        fonts = self.config_manager.get_config('UI_CONFIG')['fonts']
+        for col, (header, width) in enumerate(headers):
+            header_frame = tk.Frame(table_frame, bg=self.theme["header"])
+            header_frame.grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
+
+            label = tk.Label(
+                header_frame,
+                text=header,
+                bg=self.theme["header"],
+                fg=self.theme["text"],
+                font=fonts['header'],
+                padx=10,
+                pady=8,
+            )
+            label.pack(fill="both", expand=True)
+            label.bind("<Button-1>", lambda e, col=col: self._sort_table(col))
+            label.bind("<Enter>", lambda e, widget=label: self._on_header_hover(widget, True))
+            label.bind("<Leave>", lambda e, widget=label: self._on_header_hover(widget, False))
+
+        canvas.create_window((0, 0), window=table_frame, anchor="nw", tags=("table",))
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig("table", width=e.width))
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        for i in range(5):
+            table_frame.grid_columnconfigure(i, weight=1)
+
+        return {
+            "container": table_container,
+            "frame": table_frame,
+            "canvas": canvas,
+            "scrollbar": scrollbar,
+        }
+
+
+    def _create_table(self, parent: tk.Frame) -> Dict:
+        """Cria uma tabela moderna e responsiva."""
+        # Frame principal com bordas arredondadas
+        table_container = tk.Frame(
+            parent,
+            bg=self.theme["background"],
+            highlightbackground=self.theme["accent"],
+            highlightthickness=1,
+        )
+        table_container.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Canvas com scrollbar suave
+        canvas = tk.Canvas(
+            table_container, bg=self.theme["background"], highlightthickness=0
+        )
+
+        scrollbar = ttk.Scrollbar(
+            table_container, orient="vertical", command=canvas.yview
+        )
+
+        table_frame = tk.Frame(canvas, bg=self.theme["background"])
+
 
         # Configuração do scroll
         def _on_frame_configure(event):
@@ -3689,82 +3789,50 @@ class PatientInfoDisplay:
     def _update_table(self, data: List[PatientData]) -> None:
         """Atualiza a tabela com os dados filtrados."""
         table = self.ui_refs["table"]
-
+        
         # Limpa tabela preservando cabeçalho
         for widget in table["frame"].winfo_children():
             if int(widget.grid_info()["row"]) > 0:
                 widget.destroy()
 
-        # Separa os dados por tipo
+        fonts = self.config_manager.get_config('UI_CONFIG')['fonts']
         medicos = [p for p in data if p.tipo == "Médico"]
         psicologos = [p for p in data if p.tipo == "Psicólogo"]
 
         row = 2
-        # Processa médicos
-        for idx, patient in enumerate(medicos, 1):
-            bg_color = (
-                self.theme["highlight"] if idx % 2 == 0 else self.theme["background"]
-            )
+        for lista, tipo in [(medicos, "Médico"), (psicologos, "Psicólogo")]:
+            for idx, patient in enumerate(lista, 1):
+                bg_color = self.theme["highlight"] if idx % 2 == 0 else self.theme["background"]
+                
+                cells = [
+                    (str(idx), "center", 5),
+                    (patient.nome, "w", 30),
+                    (patient.renach, "center", 10),
+                    (patient.pagamento, "w", 20),
+                    (patient.tipo, "center", 10),
+                ]
 
-            cells = [
-                (str(idx), "center", 5),
-                (patient.nome, "w", 30),
-                (patient.renach, "center", 10),
-                (patient.pagamento, "w", 20),
-                (patient.tipo, "center", 10),
-            ]
+                for col, (text, anchor, width) in enumerate(cells):
+                    tk.Label(
+                        table["frame"],
+                        text=text,
+                        bg=bg_color,
+                        fg=self.theme["text"],
+                        font=fonts['normal'],
+                        anchor=anchor,
+                        width=width,
+                        padx=10,
+                        pady=5,
+                    ).grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
 
-            for col, (text, anchor, width) in enumerate(cells):
-                tk.Label(
-                    table["frame"],
-                    text=text,
-                    bg=bg_color,
-                    fg=self.theme["text"],
-                    font=("Arial", 10),
-                    anchor=anchor,
-                    width=width,
-                    padx=10,
-                    pady=5,
-                ).grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
+                row += 1
 
-            row += 1
+            # Adiciona separador entre médicos e psicólogos
+            if tipo == "Médico" and psicologos:
+                separator = tk.Frame(table["frame"], height=2, bg=self.theme["separator"])
+                separator.grid(row=row, column=0, columnspan=5, sticky="ew", pady=5)
+                row += 1
 
-        # Adiciona separador se houver médicos e psicólogos
-        if medicos and psicologos:
-            separator = tk.Frame(table["frame"], height=2, bg=self.theme["separator"])
-            separator.grid(row=row, column=0, columnspan=5, sticky="ew", pady=5)
-            row += 1
-
-        # Processa psicólogos
-        for idx, patient in enumerate(psicologos, 1):
-            bg_color = (
-                self.theme["highlight"] if row % 2 == 0 else self.theme["background"]
-            )
-
-            cells = [
-                (str(idx), "center", 5),
-                (patient.nome, "w", 30),
-                (patient.renach, "center", 10),
-                (patient.pagamento, "w", 20),
-                (patient.tipo, "center", 10),
-            ]
-
-            for col, (text, anchor, width) in enumerate(cells):
-                tk.Label(
-                    table["frame"],
-                    text=text,
-                    bg=bg_color,
-                    fg=self.theme["text"],
-                    font=("Arial", 10),
-                    anchor=anchor,
-                    width=width,
-                    padx=10,
-                    pady=5,
-                ).grid(row=row, column=col, sticky="nsew", padx=1, pady=1)
-
-            row += 1
-
-        # Atualiza scroll region
         table["frame"].update_idletasks()
         table["canvas"].configure(scrollregion=table["canvas"].bbox("all"))
 

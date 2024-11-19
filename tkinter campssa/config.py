@@ -39,9 +39,9 @@ class ConfigManager:
         """Carrega as configurações padrão do sistema."""
         self.default_config = {
             "APP_CONFIG": {
-                "title": "Gerenciamento de Pacientes - A",
+                "title": "Gerenciamento de Pacientes",
                 "version": "1.0.0",
-                "background_color": "#2C3E50",
+                "background_color": "#0D1117",
                 "initial_geometry": "1200x600",
                 "main_geometry": "1200x600",
                 "window": {
