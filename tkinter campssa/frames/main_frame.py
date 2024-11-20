@@ -5,7 +5,7 @@ from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
 from config import config_manager
-
+from frames.ntfs_fame import EmitirNota
 
 class MainFrame(Frame):
     """Frame principal da aplicação que gerencia a interface do usuário e suas interações."""
@@ -44,6 +44,7 @@ class MainFrame(Frame):
         """Inicializa atributos e dependências da classe."""
         self.current_user = getattr(app, "get_current_user", lambda: None)()
         self.funcoes_botoes = FuncoesBotoes(master, planilhas, file_path, app)
+        self.emitir_nota = EmitirNota(master)
         self.banco = DataBaseMarcacao(master, planilhas, file_path, app)
         self.sistema_contas = SistemaContas(file_path, current_user=self.current_user)
         self.gerenciador_planilhas = GerenciadorPlanilhas(master, self.sistema_contas)
@@ -125,7 +126,8 @@ class MainFrame(Frame):
             ("Cadastro e Gestão", 0, 0, [
                 ("Adicionar Informações", self.adicionar_informacao),
                 ("Excluir Informação", self.excluir_informacao),
-                ("Exibir Informações", self.exibir)
+                ("Exibir Informações", self.exibir),
+                ('nota', self.mostrar)
             ]),
             ("Agenda e Marcações", 0, 1, [
                 ("Nova Marcação", self.marcar_paciente),
@@ -194,3 +196,4 @@ class MainFrame(Frame):
     def visu_marcacoes(self): self.banco.view_marcacoes()
     def fechamento_contas(self): self.sistema_contas.abrir_janela()
     def planilha_sheet(self): self.gerenciador_planilhas.abrir_gerenciador()
+    def mostrar(self): self.emitir_nota.show()

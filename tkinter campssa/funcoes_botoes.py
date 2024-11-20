@@ -45,6 +45,7 @@ import ssl
 from datetime import datetime
 from tkcalendar import DateEntry
 import sqlite3
+from frames.ntfs_fame import EmitirNota
 from database_connection import DatabaseConnection
 
 
@@ -104,7 +105,7 @@ class FuncoesBotoes:
         self.app = app
         self.current_user = current_user
         self.login_frame = None
-        self.criar_conta_frame = None
+        self.criar_conta_frame = EmitirNota(master)
         self.logger = logging.getLogger(__name__)
         self.db_manager = DatabaseManager("db_marcacao.db", self.logger)
 
@@ -2131,6 +2132,10 @@ class FuncoesBotoes:
             driver.quit()
             logging.info("Processo finalizado")
             return cpfs
+
+
+    def mostrar_botao(self):
+        self.criar_conta_frame.show()
 
     # Exibe uma janela com detalhamento dos valores por tipo de atendimento
     def mostrar_valores_atendimentos(self):
