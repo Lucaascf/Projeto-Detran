@@ -5,7 +5,7 @@ from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
 from config import config_manager
-from frames.ntfs_fame import EmitirNota
+from frames.ntfs_frame import EmitirNota
 
 class MainFrame(Frame):
     """Frame principal da aplicação que gerencia a interface do usuário e suas interações."""

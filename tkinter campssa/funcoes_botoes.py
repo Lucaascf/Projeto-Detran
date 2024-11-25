@@ -45,7 +45,7 @@ import ssl
 from datetime import datetime
 from tkcalendar import DateEntry
 import sqlite3
-from frames.ntfs_fame import EmitirNota
+from frames.ntfs_frame import EmitirNota
 from database_connection import DatabaseConnection
 
 
@@ -105,9 +105,14 @@ class FuncoesBotoes:
         self.app = app
         self.current_user = current_user
         self.login_frame = None
-        self.criar_conta_frame = EmitirNota(master)
+        self.criar_conta_frame = None
         self.logger = logging.getLogger(__name__)
         self.db_manager = DatabaseManager("db_marcacao.db", self.logger)
+        self.emitir_nota = None
+        self.driver = None
+        self.primeira_conta = None
+        self.segunda_conta = None
+
 
         # Variáveis para pagamento
         self._init_payment_vars()
@@ -122,10 +127,7 @@ class FuncoesBotoes:
 
     # Código de inicialização de variáveis de pagamento...
     def _init_payment_vars(self):
-        """
-        Inicializa as variáveis relacionadas ao processamento de pagamentos.
-        Configura StringVars e IntVars para diferentes métodos de pagamento.
-        """
+        """Inicializa variáveis de pagamento"""
         self.forma_pagamento_var = tk.StringVar(value="")
         self.radio_var = tk.StringVar(value="")
         self.payment_vars = {
@@ -179,6 +181,22 @@ class FuncoesBotoes:
         y = (window.winfo_screenheight() // 2) - (height // 2)
         window.geometry(f"{width}x{height}+{x}+{y}")
         window.deiconify()
+
+    def mostrar_criar_conta(self):
+        """
+        Alterna a visibilidade do frame de login para o frame de criação de conta.
+        """
+        if self.login_frame and self.criar_conta_frame:
+            self.login_frame.grid_forget()
+            self.criar_conta_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+    
+    def voltar_para_login(self):
+        """
+        Alterna a visibilidade do frame de criação de conta para o frame de login.
+        """
+        if self.login_frame and self.criar_conta_frame:
+            self.criar_conta_frame.grid_forget()
+            self.login_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
 
     # Código de criação do frame de pagamento...
     def _create_payment_frame(self, parent, cor_fundo, cor_texto, cor_selecionado):
@@ -1922,322 +1940,200 @@ class FuncoesBotoes:
 
     # Código de processamento de notas...
     def processar_notas_fiscais(self):
-        """
-        Processa e emite notas fiscais.
-        Automatiza o processo de emissão de notas fiscais no sistema.
-        """
-        driver = webdriver.Chrome()
-        cpfs = {"medico": [], "psicologo": [], "ambos": []}
-
+        """Processa e emite notas fiscais com autenticação dupla."""
+        driver = None
+        primeira_conta = None
+        segunda_conta = None
+        
         try:
-            # Ler o arquivo Excel
-            logging.info("Lendo o arquivo Excel")
-            df = pd.read_excel(
-                self.file_path, skiprows=1, sheet_name="17.10", dtype={"Renach": str}
-            )
-        except Exception as e:
-            logging.error(f"Erro ao ler o arquivo Excel: {e}")
-            messagebox.showerror("Erro", f"Erro ao ler o arquivo Excel: {e}")
-            return
-
-        # logging.info(f'DataFrame lido: {df.head()}')
-        logging.info("DataFrame lido!")
-
-        try:
-            renach_c = df.iloc[:, 2].dropna().tolist()
-            renach_i = df.iloc[:, 8].dropna().tolist()
-
-            # Acessando o site e fazendo login
-            logging.info("Acessando o site do DETRAN e fazendo login")
-            driver.get("https://clinicas.detran.ba.gov.br/")
-            usuario = WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="documento"]'))
-            )
-            doc = "11599160000115"
-            for numero in doc:
-                usuario.send_keys(numero)
-
-            actions = ActionChains(driver)
-            actions.send_keys(Keys.TAB).perform()
-            time.sleep(1)
-
-            senha = "475869"
-            campo_senha = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="senha"]'))
-            )
-            for numero in senha:
-                campo_senha.send_keys(numero)
-
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//*[@id="acessar"]'))
-            ).click()
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "/html/body/aside/section/ul/li[2]/a/span[1]")
-                )
-            ).click()
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "/html/body/aside/section/ul/li[2]/ul/li/a/span")
-                )
-            ).click()
-
-            barra_pesquisa = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, '//*[@id="list_items_filter"]/label/input')
-                )
-            )
-
-            # coletando informações do cliente
-            logging.info("Coletando informações de CPFs")
-
-            def coletar_cpf(dados, tipo):
-                for dado in dados:
-                    dado = str(dado).strip()
-                    barra_pesquisa.clear()
-                    barra_pesquisa.send_keys(dado)
-                    time.sleep(2)
-                    try:
-                        paciente = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located(
-                                (By.XPATH, '//*[@id="list_items"]/tbody/tr/td[3]')
-                            )
-                        )
-                        cpf = paciente.text
-
-                        print(f"coletado dado: {dado}, tipo: {tipo}")
-
-                        if tipo == "medico" and dado in renach_i:
-                            cpfs["ambos"].append(cpf)
-                        elif tipo == "medico":
-                            cpfs["medico"].append(cpf)
-                        elif tipo == "psicologo" and cpf not in cpfs["ambos"]:
-                            cpfs["psicologo"].append(cpf)
-                    except Exception as e:
-                        logging.error(f"Error ao coletar CPF: {e}")
-
-            coletar_cpf(renach_c, "medico")
-            coletar_cpf(renach_i, "psicologo")
-
-            cpfs["medico"] = [cpf for cpf in cpfs["medico"] if cpf not in cpfs["ambos"]]
-            cpfs["psicologo"] = [
-                cpf for cpf in cpfs["psicologo"] if cpf not in cpfs["ambos"]
-            ]
-
-            logging.info("Acessando site para emissão de NTFS-e")
-            driver.get("https://nfse.salvador.ba.gov.br/")
-
-            # usuario
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="txtLogin"]'))
-            ).send_keys("11599160000115")
-            # senha
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="txtSenha"]'))
-            ).send_keys("486258camp")
-            # esperar resolver o captcha
-            WebDriverWait(driver, 30).until(
-                EC.invisibility_of_element_located((By.XPATH, '//*[@id="img1"]'))
-            )
-            # emissao NFS-e
-            WebDriverWait(driver, 30).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, '//*[@id="menu-lateral"]/li[1]/a')
-                )
-            ).click()
-
-            def emitir_nota(cpf, tipo):
+            emitir_nota = EmitirNota(self.master)
+            
+            def process_automation():
+                nonlocal driver, primeira_conta, segunda_conta
                 try:
-                    barra_pesquisa = WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable(
-                            (By.XPATH, '//*[@id="tbCPFCNPJTomador"]')
-                        )
+                    driver = webdriver.Chrome()
+                    cpfs = {"medico": [], "psicologo": [], "ambos": []}
+
+                    # Ler o arquivo Excel
+                    logging.info("Lendo o arquivo Excel")
+                    df = pd.read_excel(self.file_path, skiprows=1, sheet_name="17.10", dtype={"Renach": str})
+                    
+                    renach_c = df.iloc[:, 2].dropna().tolist()
+                    renach_i = df.iloc[:, 8].dropna().tolist()
+
+                    # Login no primeiro sistema (DETRAN)
+                    logging.info("Acessando o site do DETRAN")
+                    driver.get("https://clinicas.detran.ba.gov.br/")
+                    campo_usuario = WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="documento"]'))
                     )
-                    barra_pesquisa.clear()
-                    barra_pesquisa.send_keys(cpf)
+                    
+                    for numero in primeira_conta['usuario']:
+                        campo_usuario.send_keys(numero)
+
+                    actions = ActionChains(driver)
+                    actions.send_keys(Keys.TAB).perform()
+                    time.sleep(1)
+
+                    campo_senha = WebDriverWait(driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="senha"]'))
+                    )
+                    for numero in primeira_conta['senha']:
+                        campo_senha.send_keys(numero)
+
                     WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable((By.XPATH, '//*[@id="btAvancar"]'))
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="acessar"]'))
+                    ).click()
+                    WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "/html/body/aside/section/ul/li[2]/a/span[1]"))
+                    ).click()
+                    WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "/html/body/aside/section/ul/li[2]/ul/li/a/span"))
                     ).click()
 
-                    # Complete as informações da nota fiscal
-                    role_e_click(driver, '//*[@id="ddlCNAE_chosen"]/a')
-                    print("cnae clicada")
-                    # opcao cane
-                    WebDriverWait(driver, 30).until(
-                        EC.visibility_of_element_located(
-                            (By.XPATH, '//*[@id="ddlCNAE_chosen"]/div/ul/li[2]')
-                        )
-                    ).click()
-                    print("opcao cnae visivel")
-                    # aliq %
-                    WebDriverWait(driver, 30).until(
-                        EC.presence_of_element_located(
-                            (By.XPATH, '//*[@id="tbAliquota"]')
-                        )
-                    ).send_keys("2,5")
-
-                    servicos = {
-                        "ambos": "Exame de sanidade física e mental",
-                        "psicologo": "Exame de sanidade mental",
-                        "medico": "Exame de sanidade física",
-                    }
-                    # preenchendo o tipo de serviço
-                    tipo_servico = servicos.get(
-                        tipo, "Exame de sanidade física"
-                    )  # valor padrao, caso 'tipo' nao esteja no dicionario
-
-                    WebDriverWait(driver, 30).until(
-                        EC.presence_of_element_located(
-                            (By.XPATH, '//*[@id="tbDiscriminacao"]')
-                        )
-                    ).send_keys(tipo_servico)
-
-                    valor_nota = (
-                        "148,65"
-                        if tipo == "medico"
-                        else "192,61" if tipo == "psicolgo" else "341,26"
+                    # Coletar CPFs
+                    barra_pesquisa = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="list_items_filter"]/label/input'))
                     )
-                    # valor pago na consulta
-                    WebDriverWait(driver, 20).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="tbValor"]'))
-                    ).send_keys(valor_nota)
-                    # emitindo nota
-                    WebDriverWait(driver, 20).until(
-                        EC.element_to_be_clickable((By.XPATH, '//*[@id="btEmitir"]'))
+
+                    for dados, tipo in [(renach_c, "medico"), (renach_i, "psicologo")]:
+                        for dado in dados:
+                            dado = str(dado).strip()
+                            barra_pesquisa.clear()
+                            barra_pesquisa.send_keys(dado)
+                            time.sleep(2)
+                            try:
+                                paciente = WebDriverWait(driver, 10).until(
+                                    EC.presence_of_element_located((By.XPATH, '//*[@id="list_items"]/tbody/tr/td[3]'))
+                                )
+                                cpf = paciente.text
+
+                                if tipo == "medico" and dado in renach_i:
+                                    cpfs["ambos"].append(cpf)
+                                elif tipo == "medico":
+                                    cpfs["medico"].append(cpf)
+                                elif tipo == "psicologo" and cpf not in cpfs["ambos"]:
+                                    cpfs["psicologo"].append(cpf)
+                            except Exception as e:
+                                logging.error(f"Erro ao coletar CPF: {e}")
+
+                    # Filtrar CPFs duplicados
+                    cpfs["medico"] = [cpf for cpf in cpfs["medico"] if cpf not in cpfs["ambos"]]
+                    cpfs["psicologo"] = [cpf for cpf in cpfs["psicologo"] if cpf not in cpfs["ambos"]]
+
+                    # Login no segundo sistema (NFSe)
+                    logging.info("Acessando site para emissão de NTFS-e")
+                    driver.get("https://nfse.salvador.ba.gov.br/")
+                    
+                    WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="txtLogin"]'))
+                    ).send_keys(segunda_conta['usuario'])
+                    
+                    WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="txtSenha"]'))
+                    ).send_keys(segunda_conta['senha'])
+                    
+                    # Aguardar resolução do captcha
+                    WebDriverWait(driver, 30).until(
+                        EC.invisibility_of_element_located((By.XPATH, '//*[@id="img1"]'))
+                    )
+                    
+                    # Emissao NFS-e
+                    WebDriverWait(driver, 30).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="menu-lateral"]/li[1]/a'))
                     ).click()
-                    # aceitando o alerta
-                    WebDriverWait(driver, 20).until(EC.alert_is_present())
-                    alert = Alert(driver)
-                    alert.accept()
-                    # botao voltar - voltando para emissao de nota fiscal por cpf
-                    WebDriverWait(driver, 20).until(
-                        EC.element_to_be_clickable((By.XPATH, '//*[@id="btVoltar"]'))
-                    ).click()
-                    logging.info(f"Nota emitida para o CPF: {cpf}, Valor: {valor_nota}")
+
+                    # Emitir notas para cada tipo
+                    for tipo, lista_cpfs in cpfs.items():
+                        for cpf in lista_cpfs:
+                            try:
+                                barra_pesquisa = WebDriverWait(driver, 10).until(
+                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="tbCPFCNPJTomador"]'))
+                                )
+                                barra_pesquisa.clear()
+                                barra_pesquisa.send_keys(cpf)
+                                WebDriverWait(driver, 10).until(
+                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="btAvancar"]'))
+                                ).click()
+
+                                WebDriverWait(driver, 10).until(
+                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="ddlCNAE_chosen"]/a'))
+                                ).click()
+                                
+                                WebDriverWait(driver, 30).until(
+                                    EC.visibility_of_element_located((By.XPATH, '//*[@id="ddlCNAE_chosen"]/div/ul/li[2]'))
+                                ).click()
+
+                                WebDriverWait(driver, 30).until(
+                                    EC.presence_of_element_located((By.XPATH, '//*[@id="tbAliquota"]'))
+                                ).send_keys("2,5")
+
+                                servicos = {
+                                    "ambos": "Exame de sanidade física e mental",
+                                    "psicologo": "Exame de sanidade mental",
+                                    "medico": "Exame de sanidade física"
+                                }
+                                tipo_servico = servicos.get(tipo, "Exame de sanidade física")
+
+                                WebDriverWait(driver, 30).until(
+                                    EC.presence_of_element_located((By.XPATH, '//*[@id="tbDiscriminacao"]'))
+                                ).send_keys(tipo_servico)
+
+                                valor_nota = "148,65" if tipo == "medico" else "192,61" if tipo == "psicologo" else "341,26"
+                                WebDriverWait(driver, 20).until(
+                                    EC.presence_of_element_located((By.XPATH, '//*[@id="tbValor"]'))
+                                ).send_keys(valor_nota)
+
+                                WebDriverWait(driver, 20).until(
+                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="btEmitir"]'))
+                                ).click()
+
+                                # Aceitar alerta
+                                WebDriverWait(driver, 20).until(EC.alert_is_present())
+                                Alert(driver).accept()
+
+                                # Voltar para emissão
+                                WebDriverWait(driver, 20).until(
+                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="btVoltar"]'))
+                                ).click()
+
+                                logging.info(f"Nota emitida para o CPF: {cpf}, Valor: {valor_nota}")
+
+                            except Exception as e:
+                                logging.error(f"Erro ao emitir nota: {e}")
 
                 except Exception as e:
-                    logging.error("Erro ao emitir nota: {e}")
+                    logging.error(f"Erro durante o processamento: {e}")
+                    messagebox.showerror("Erro", f"Erro durante o processamento: {e}")
+                finally:
+                    if driver:
+                        driver.quit()
+                    logging.info("Processo finalizado")
 
-            # emitir notas
-            try:
-                for cpf in cpfs["medico"]:
-                    emitir_nota(cpf, "medico")
-                for cpf in cpfs["psicologo"]:
-                    emitir_nota(cpf, "psicologo")
-                for cpf in cpfs["ambos"]:
-                    emitir_nota(cpf, "ambos")
-            except Exception as e:
-                logging.error(f"Erro na emissao das notas: {e}")
-        finally:
-            driver.quit()
-            logging.info("Processo finalizado")
-            return cpfs
+            def after_first_login(usuario, senha):
+                nonlocal primeira_conta
+                primeira_conta = {'usuario': usuario, 'senha': senha}
+                self.second_window = emitir_nota.show_second_window()
+                
+                def after_second_login(result):
+                    if result:
+                        nonlocal segunda_conta
+                        segunda_conta = {
+                            'usuario': self.second_window.usuario,
+                            'senha': self.second_window.senha
+                        }
+                        process_automation()
+                        
+                self.second_window.login_callback = after_second_login
+            
+            emitir_nota.login_callback = after_first_login
+            emitir_nota.show()
 
-
-    def mostrar_botao(self):
-        self.criar_conta_frame.show()
-
-    # Exibe uma janela com detalhamento dos valores por tipo de atendimento
-    def mostrar_valores_atendimentos(self):
-        """
-        Exibe uma janela com detalhamento dos valores por tipo de atendimento.
-
-        Mostra um resumo detalhado dos valores para atendimentos médicos e
-        psicológicos, incluindo valores por método de pagamento, totais e
-        quantidade de pacientes.
-        """
-        totais = self._calcular_valores_atendimentos()
-        if not totais:
-            messagebox.showerror("Erro", "Não foi possível calcular os valores")
-            return
-
-        # Criação da janela
-        janela_valores = tk.Toplevel(self.master)
-        janela_valores.title("Valores dos Atendimentos")
-        janela_valores.geometry("400x500")
-        janela_valores.configure(bg="#2C3E50")
-
-        # Mostra valores para cada tipo
-        for tipo in ["medico", "psicologo"]:
-            titulo = "Médico" if tipo == "medico" else "Psicólogo"
-
-            tk.Label(
-                janela_valores,
-                text=f"Valores - {titulo}:",
-                bg="#2C3E50",
-                fg="#ECF0F1",
-                font=("Arial", 20, "bold"),
-            ).pack(pady=5)
-
-            # Valores por método de pagamento
-            for metodo in ["Débito", "Crédito", "Espécie", "PIX"]:
-                tk.Label(
-                    janela_valores,
-                    text=f"{metodo}: R$ {totais[tipo][metodo]:.2f}",
-                    bg="#2C3E50",
-                    fg="#ECF0F1",
-                    font=("Arial", 12, "bold"),
-                ).pack()
-
-            # Total e número de pacientes
-            tk.Label(
-                janela_valores,
-                text=f"Total: R$ {totais[tipo]['total']:.2f}",
-                bg="#2C3E50",
-                fg="#ECF0F1",
-                font=("Arial", 12, "bold"),
-            ).pack()
-
-            tk.Label(
-                janela_valores,
-                text=f"Pacientes: {totais[tipo]['pacientes']}",
-                bg="#2C3E50",
-                fg="#ECF0F1",
-                font=("Arial", 12, "bold"),
-            ).pack()
-
-            # Espaço entre seções
-            tk.Label(janela_valores, text="", bg="#2C3E50").pack(pady=10)
-
-        self.center(janela_valores)
-
-    # Converte códigos de método de pagamento em textos legíveis
-    def _traduzir_metodo(self, codigo):
-        """
-        Converte códigos de método de pagamento em textos legíveis.
-
-        Args:
-            codigo (str): Código do método de pagamento ('D', 'C', 'E' ou 'P')
-
-        Returns:
-            str: Nome do método de pagamento por extenso
-        """
-        return {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}.get(
-            codigo, "Desconhecido"
-        )
-
-    """
-    SEÇÃO 8: NAVEGAÇÃO DE INTERFACE
-    Esta seção contém métodos relacionados à navegação entre diferentes telas
-    """
-
-    # Código de navegação...
-    def mostrar_criar_conta(self):
-        """
-        Alterna para o frame de criar conta.
-        Oculta o frame de login e exibe o frame de criação de conta.
-        """
-        self.login_frame.hide()
-        self.criar_conta_frame.show()
-
-    # Código de navegação...
-    def voltar_para_login(self):
-        """
-        Alterna de volta para o frame de login.
-        Oculta o frame de criação de conta e exibe o frame de login.
-        """
-        self.criar_conta_frame.hide()
-        self.login_frame.show()
+        except Exception as e:
+            logging.error(f"Erro ao iniciar o processo: {e}")
+            messagebox.showerror("Erro", f"Erro ao iniciar o processo: {e}")
+            if driver:
+                driver.quit()
 
 
 # Gerencia operações de banco de dados relacionadas a pacientes

@@ -19,7 +19,9 @@ class EmitirNota:
         self.key = b"YOUR_SECRET_KEY_HERE"  # Substitua por uma chave segura em produção
         self.cipher_suite = Fernet(base64.urlsafe_b64encode(self.key.ljust(32)[:32]))
         self.credentials_file = "saved_credentials.enc"
-        self.second_window = None  # Reference to the second window
+        self.second_window = None
+        self.entry_user = None
+        self.entry_password = None
 
     def format_cnpj(self, cnpj):
         """Formate o CNPJ com máscaras: XX.XXX.XXX/XXXX-XX"""
@@ -27,10 +29,6 @@ class EmitirNota:
         if len(cnpj) != 14:
             return cnpj
         return f"{cnpj[:2]}.{cnpj[2:5]}.{cnpj[5:8]}/{cnpj[8:12]}-{cnpj[12:]}"
-
-    def unformat_cnpj(self, cnpj):
-        """Remove CNPJ formatting"""
-        return "".join(filter(str.isdigit, cnpj))
 
     def encrypt_data(self, data):
         return self.cipher_suite.encrypt(json.dumps(data).encode())
@@ -62,6 +60,7 @@ class EmitirNota:
             os.remove(self.credentials_file)
 
     def show(self):
+        """Mostra a primeira janela de login"""
         if self.window is not None:
             try:
                 self.window.state()
@@ -85,12 +84,6 @@ class EmitirNota:
         self.window.transient(self.master)
         self.window.grab_set()
 
-        def on_closing():
-            self.window.destroy()
-            self.window = None
-
-        self.window.protocol("WM_DELETE_WINDOW", on_closing)
-
     def _configure_window(self):
         width, height = 400, 350
         screen_w = self.window.winfo_screenwidth()
@@ -104,11 +97,10 @@ class EmitirNota:
         self.window.configure(bg=self.ui_config["colors"]["background"])
 
     def on_username_change(self, *args):
-        current_password = self.entry_password.get()  # Guarda a senha atual
+        current_password = self.entry_password.get()
         username = self.entry_user.get()
         formatted_username = self.format_cnpj(username)
 
-        # Atualiza o CNPJ formatado
         cursor_position = self.entry_user.index(tk.INSERT)
         self.entry_user.delete(0, tk.END)
         self.entry_user.insert(0, formatted_username)
@@ -118,27 +110,22 @@ class EmitirNota:
         except tk.TclError:
             pass
 
-        # Verifica se deve carregar credenciais salvas
         if self.remember_var.get():
             saved_creds = self.load_credentials()
             if saved_creds and saved_creds["username"] == formatted_username:
                 self.entry_password.delete(0, tk.END)
                 self.entry_password.insert(0, saved_creds["password"])
             else:
-                # Se não encontrou credenciais salvas, mantém a senha atual
                 self.entry_password.delete(0, tk.END)
                 self.entry_password.insert(0, current_password)
 
     def on_remember_change(self):
-        """Chamado quando o estado do checkbox muda"""
         if self.remember_var.get():
-            # Se marcou para lembrar, verifica se há credenciais salvas
             saved_creds = self.load_credentials()
             if saved_creds and saved_creds["username"] == self.entry_user.get():
                 self.entry_password.delete(0, tk.END)
                 self.entry_password.insert(0, saved_creds["password"])
         else:
-            # Se desmarcou, mantém as credenciais nos campos mas remove do arquivo
             self.clear_saved_credentials()
 
     def create_widgets(self):
@@ -233,11 +220,11 @@ class EmitirNota:
             bg=colors["button"],
             fg=colors["text"],
             width=15,
-            command=lambda: self.close_window(),
+            command=self.close_window,
         ).pack(side="left", padx=5)
 
     def close_window(self):
-        if self.window is not None:
+        if self.window:
             self.window.destroy()
             self.window = None
 
@@ -246,24 +233,27 @@ class EmitirNota:
         senha = self.entry_password.get()
 
         if usuario and senha:
-            # Aqui você deve adicionar sua lógica de validação de login
-            login_successful = True  # Substitua pela sua validação real
-
-            if login_successful:
-                if self.remember_var.get():
-                    self.save_credentials(usuario, senha)
-                else:
-                    self.clear_saved_credentials()
-
-                messagebox.showinfo("Sucesso", "Login realizado com sucesso!")
-                self.close_window()
-                # Open the second window after successful login
-                self.second_window = SecondLoginWindow(self.master, self.config_manager)
-                self.second_window.show()
+            if self.remember_var.get():
+                self.save_credentials(usuario, senha)
             else:
-                messagebox.showerror("Erro", "Credenciais inválidas!")
+                self.clear_saved_credentials()
+            
+            if self.login_callback:
+                self.login_callback(usuario, senha)  # Passando os argumentos corretamente
+                self.close_window()
+            return True
         else:
             messagebox.showerror("Erro", "Por favor, preencha todos os campos!")
+            return False
+
+    def show_second_window(self):
+        """Mostra a segunda janela de login"""
+        if self.second_window is None:
+            self.second_window = SecondLoginWindow(self.master, self.config_manager)
+        self.second_window.show()
+        return self.second_window
+
+
 
 
 class SecondLoginWindow:
@@ -278,6 +268,7 @@ class SecondLoginWindow:
         self.credentials_file = (
             "second_credentials.enc"  # Different file for second window
         )
+        self.login_callback = None
 
     def format_cnpj(self, cnpj):
         """Formate o CNPJ com máscaras: XX.XXX.XXX/XXXX-XX"""
@@ -498,21 +489,23 @@ class SecondLoginWindow:
         senha = self.entry_password.get()
 
         if usuario and senha:
-            # Add your second authentication logic here
-            login_successful = True  # Replace with actual validation
-
-            if login_successful:
-                if self.remember_var.get():
-                    self.save_credentials(usuario, senha)
-                else:
-                    self.clear_saved_credentials()
-
-                messagebox.showinfo(
-                    "Sucesso", "Segunda autenticação realizada com sucesso!"
-                )
-                self.close_window()
-                # Here you can add code to proceed to the next step of your application
+            if self.remember_var.get():
+                self.save_credentials(usuario, senha)
             else:
-                messagebox.showerror("Erro", "Credenciais inválidas!")
+                self.clear_saved_credentials()
+
+            messagebox.showinfo("Sucesso", "Segunda autenticação realizada com sucesso!")
+            
+            # Armazenar os valores em variáveis antes de fechar a janela
+            self.usuario = usuario
+            self.senha = senha
+            
+            self.close_window()
+
+            if self.login_callback:
+                self.login_callback(True)  # Chama o callback com o resultado do login
+
+            return True
         else:
             messagebox.showerror("Erro", "Por favor, preencha todos os campos!")
+            return False
