@@ -630,7 +630,12 @@ class FuncoesBotoes:
         try:
             # Carrega os dados da planilha
             wb = self.get_active_workbook()
+            if not wb:
+                raise ValueError("Não foi possível carregar o workbook")
+                
             ws = wb.active
+            if not ws:
+                raise ValueError("Não foi possível acessar a planilha ativa")
 
             totais = {
                 "medico": {
@@ -662,6 +667,7 @@ class FuncoesBotoes:
             )
 
             return totais
+        
 
         except Exception as e:
             self.logger.error(f"Erro ao calcular valores: {str(e)}")
@@ -719,17 +725,32 @@ class FuncoesBotoes:
                 metodo = PaymentProcessor.PAYMENT_TYPES[pagamento]
                 totais[tipo][metodo] += valor_consulta
             else:
-                # Para formatos como "D:100,65|C:48,00"
-                for parte in pagamento.split("|"):
-                    metodo, valor = parte.split(":")
+                # Aceita tanto | quanto / como separadores
+                partes_pagamento = []
+                if '|' in pagamento:
+                    partes_pagamento = pagamento.split('|')
+                elif '/' in pagamento:
+                    partes_pagamento = pagamento.split('/')
+                else:
+                    partes_pagamento = [pagamento]
+
+                for parte in partes_pagamento:
                     try:
+                        if ':' not in parte:
+                            continue
+                            
+                        metodo, valor = parte.split(':', 1)
+                        metodo = metodo.strip()
+                        valor = valor.strip()
+
+                        # Remove qualquer texto adicional após o valor
+                        valor = valor.split('/')[0].split('|')[0].strip()
+                        
                         valor_float = PaymentProcessor.convert_currency_value(valor)
-                        metodo_traduzido = PaymentProcessor.PAYMENT_TYPES[
-                            metodo.strip()
-                        ]
+                        metodo_traduzido = PaymentProcessor.PAYMENT_TYPES[metodo]
                         totais[tipo][metodo_traduzido] += valor_float
                     except (ValueError, KeyError) as e:
-                        self.logger.error(f"Erro ao processar pagamento: {e}")
+                        self.logger.error(f"Erro ao processar pagamento '{parte}': {e}")
                         continue
 
     """
