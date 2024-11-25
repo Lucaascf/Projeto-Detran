@@ -2423,10 +2423,10 @@ class PaymentProcessor:
             # Se houver múltiplos métodos, retorna no formato "D:3000|E:4127"
             formatted_parts = []
             for code, value in selected_payments.items():
-                # Converte o valor para um número inteiro (removendo vírgula e ponto)
+                # Converte o valor para float e formata com 2 casas decimais
                 value_float = cls.convert_currency_value(value)
-                value_int = int(value_float * 100)  # Multiplica por 100 para preservar os centavos
-                formatted_parts.append(f"{code}:{value_int}")
+                formatted_value = f"{value_float:.2f}".replace('.', ',')
+                formatted_parts.append(f"{code}:{formatted_value}")
             
             return "|".join(formatted_parts)
 
