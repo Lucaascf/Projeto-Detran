@@ -1959,6 +1959,91 @@ class FuncoesBotoes:
 
         self.center(janela_contas)
 
+    def mostrar_valores_atendimentos(self):
+        # Carrega os dados da planilha
+        wb = self.get_active_workbook()
+        ws = wb.active
+        # Inicializa o total de pagamentos acumulados para cada método
+        total_medico = {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0}
+        total_psicologo = {"Débito": 0, "Crédito": 0, "Espécie": 0, "PIX": 0}
+        # Valores fixos para consulta
+        VALOR_MEDICO = 148.65
+        VALOR_PSICOLOGO = 192.61
+        
+        def processar_pagamento(pagamento_str, valor_padrao, totais):
+            if not pagamento_str:
+                return
+                
+            try:
+                # Para códigos simples (D, C, E, P)
+                if pagamento_str in ["D", "C", "E", "P"]:
+                    metodo = self._traduzir_metodo(pagamento_str)
+                    totais[metodo] += valor_padrao
+                    return
+                    
+                # Para formatos complexos (D:100,65|C:48,00)
+                for parte in pagamento_str.split("|"):
+                    if ":" not in parte:
+                        continue
+                        
+                    partes = parte.split(":")
+                    if len(partes) != 2:
+                        continue
+                        
+                    metodo, valor = partes
+                    metodo = self._traduzir_metodo(metodo.strip())
+                    try:
+                        valor = float(valor.strip().replace(",", "."))
+                        totais[metodo] += valor
+                    except (ValueError, KeyError):
+                        continue
+                        
+            except Exception as e:
+                print(f"Erro ao processar pagamento '{pagamento_str}': {e}")
+        
+        # Itera sobre as linhas da planilha para calcular os valores
+        for row in range(3, ws.max_row + 1):
+            pagamento_medico = ws[f"F{row}"].value
+            pagamento_psicologo = ws[f"L{row}"].value
+            
+            # Processa os valores de pagamento
+            processar_pagamento(pagamento_medico, VALOR_MEDICO, total_medico)
+            processar_pagamento(pagamento_psicologo, VALOR_PSICOLOGO, total_psicologo)
+
+        # Criação da janela para exibir os valores
+        janela_valores = tk.Toplevel(self.master)
+        janela_valores.title("Valores dos Atendimentos")
+        janela_valores.geometry("400x400")
+        janela_valores.configure(bg="#2C3E50")
+        
+        # Exibindo valores acumulados para médico
+        tk.Label(janela_valores, text="Valores - Médico:", bg="#2C3E50", fg="#ECF0F1", 
+                font=("Arial", 20, "bold")).pack(pady=5)
+        for metodo, valor in total_medico.items():
+            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", 
+                    bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
+        
+        # Espaço entre seções
+        tk.Label(janela_valores, text="", bg="#2C3E50").pack()
+        
+        # Exibindo valores acumulados para psicólogo
+        tk.Label(janela_valores, text="Valores - Psicólogo:", bg="#2C3E50", fg="#ECF0F1", 
+                font=("Arial", 20, "bold")).pack(pady=5)
+        for metodo, valor in total_psicologo.items():
+            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", 
+                    bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
+        
+        # Centraliza a janela
+        self.center(janela_valores)
+    
+    def _traduzir_metodo(self, codigo):
+        """Converte os códigos de pagamento em textos legíveis."""
+        return {
+            "D": "Débito",
+            "C": "Crédito",
+            "E": "Espécie",
+            "P": "PIX"
+        }.get(codigo, "Desconhecido")
     # Código de processamento de notas...
     def processar_notas_fiscais(self):
         """Processa e emite notas fiscais com autenticação dupla."""
