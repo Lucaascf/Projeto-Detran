@@ -126,8 +126,7 @@ class MainFrame(Frame):
             ("Cadastro e Gestão", 0, 0, [
                 ("Adicionar Informações", self.adicionar_informacao),
                 ("Excluir Informação", self.excluir_informacao),
-                ("Exibir Informações", self.exibir),
-                ('nota', self.mostrar)
+                ("Exibir Informações", self.exibir)
             ]),
             ("Agenda e Marcações", 0, 1, [
                 ("Nova Marcação", self.marcar_paciente),
@@ -196,4 +195,3 @@ class MainFrame(Frame):
     def visu_marcacoes(self): self.banco.view_marcacoes()
     def fechamento_contas(self): self.sistema_contas.abrir_janela()
     def planilha_sheet(self): self.gerenciador_planilhas.abrir_gerenciador()
-    def mostrar(self): self.emitir_nota.show()
