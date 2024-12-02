@@ -14,232 +14,198 @@ class GraficoMarcacoes:
         self.app = app
         self.db_name = "db_marcacao.db"
         
+        # Paleta de cores melhorada
         self.colors = {
-            'ganhos': '#2ecc71',
-            'custos': '#e74c3c',
-            'custos_medicos': '#3498db',
-            'compareceram': '#2ecc71',
-            'faltaram': '#e74c3c',
-            'pendentes': '#f1c40f',
-            'background': '#2C3E50',
-            'text': '#ECF0F1'
+            'medico': '#2980B9',       # Azul para médico
+            'psicologo': '#8E44AD',    # Roxo para psicólogo
+            'compareceram': '#27AE60',  # Verde para presenças
+            'faltaram': '#E74C3C',     # Vermelho para faltas
+            'pendentes': '#F39C12',     # Laranja para pendentes
+            'background': '#ECF0F1',    # Fundo claro
+            'text': '#2C3E50'          # Texto escuro
         }
 
     def gerar_grafico(self):
         self.window = tk.Toplevel(self.master)
-        self.window.title("Visualização de Dados")
-        self.window.geometry("1200x800")
+        self.window.title("Dashboard - Análise de Atendimentos")
+        self.window.geometry("1400x800")
         self.window.configure(bg=self.colors['background'])
 
-        # Frame de seleção
-        selection_frame = tk.Frame(self.window, bg=self.colors['background'], padx=20, pady=20)
-        selection_frame.pack(fill="x")
+        # Frame principal
+        main_frame = tk.Frame(self.window, bg=self.colors['background'])
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Frame para datas
-        date_frame = tk.Frame(selection_frame, bg=self.colors['background'])
-        date_frame.pack(side=tk.TOP, fill="x", pady=(0, 10))
+        # Frame de controles
+        control_frame = tk.Frame(main_frame, bg=self.colors['background'])
+        control_frame.pack(fill="x", pady=(0, 20))
 
-        # Data inicial
+        # Seleção de período
         tk.Label(
-            date_frame,
-            text="Data Inicial:",
+            control_frame,
+            text="Período de Análise:",
             bg=self.colors['background'],
             fg=self.colors['text'],
-            font=("Arial", 12)
-        ).pack(side=tk.LEFT, padx=(0, 10))
+            font=("Arial", 12, "bold")
+        ).pack(side="left", padx=10)
 
         self.start_date = DateEntry(
-            date_frame,
+            control_frame,
             width=12,
             background='darkblue',
             foreground='white',
             borderwidth=2,
             date_pattern='dd/mm/yyyy'
         )
-        self.start_date.pack(side=tk.LEFT, padx=10)
+        self.start_date.pack(side="left", padx=5)
 
-        # Data final
         tk.Label(
-            date_frame,
-            text="Data Final:",
+            control_frame,
+            text="até",
             bg=self.colors['background'],
             fg=self.colors['text'],
             font=("Arial", 12)
-        ).pack(side=tk.LEFT, padx=(20, 10))
+        ).pack(side="left", padx=5)
 
         self.end_date = DateEntry(
-            date_frame,
+            control_frame,
             width=12,
             background='darkblue',
             foreground='white',
             borderwidth=2,
             date_pattern='dd/mm/yyyy'
         )
-        self.end_date.pack(side=tk.LEFT, padx=10)
+        self.end_date.pack(side="left", padx=5)
 
-        # Frame para tipo de gráfico
-        type_frame = tk.Frame(selection_frame, bg=self.colors['background'])
-        type_frame.pack(side=tk.TOP, fill="x", pady=10)
-
+        # Tipo de visualização
         tk.Label(
-            type_frame,
-            text="Tipo de Visualização:",
+            control_frame,
+            text="Tipo de Análise:",
             bg=self.colors['background'],
             fg=self.colors['text'],
-            font=("Arial", 12)
-        ).pack(side=tk.LEFT, padx=(0, 10))
+            font=("Arial", 12, "bold")
+        ).pack(side="left", padx=(20, 10))
 
         self.graph_type = ttk.Combobox(
-            type_frame,
+            control_frame,
             values=[
-                "Ganhos Totais",
-                "Custos Totais", 
-                "Custos Médicos",
-                "Frequência de Pacientes"
+                "Análise de Receitas",
+                "Comparativo de Atendimentos",
+                "Métricas por Profissional",
+                "Análise de Frequência"
             ],
-            width=30,
+            width=25,
             state="readonly"
         )
-        self.graph_type.pack(side=tk.LEFT, padx=10)
-        self.graph_type.set("Ganhos Totais")
+        self.graph_type.pack(side="left", padx=5)
+        self.graph_type.set("Análise de Receitas")
 
-        # Botão de atualização
         ttk.Button(
-            selection_frame,
-            text="Atualizar Gráfico",
+            control_frame,
+            text="Atualizar Visualização",
             command=self.update_graph
-        ).pack(side=tk.TOP, pady=10)
+        ).pack(side="left", padx=20)
 
-        # Frame para o gráfico
-        self.graph_frame = tk.Frame(
-            self.window, 
-            bg=self.colors['background'],
-            highlightbackground=self.colors['text'],
-            highlightthickness=1
-        )
-        self.graph_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        # Frame para gráficos
+        self.graph_frame = tk.Frame(main_frame, bg=self.colors['background'])
+        self.graph_frame.pack(fill="both", expand=True)
 
-    def get_date_range(self):
-        start_date = self.start_date.get_date()
-        end_date = self.end_date.get_date()
-        return start_date, end_date
+        # Frame para sumário
+        self.summary_frame = tk.Frame(main_frame, bg=self.colors['background'])
+        self.summary_frame.pack(fill="x", pady=(20, 0))
 
     def get_data(self):
         try:
+            start_date = self.start_date.get_date().strftime("%Y-%m-%d")
+            end_date = self.end_date.get_date().strftime("%Y-%m-%d")
             graph_type = self.graph_type.get()
-            start_date, end_date = self.get_date_range()
             
             queries = {
-                "Ganhos Totais": """
-                    SELECT date(data_agendamento) as data,
-                        COUNT(CASE WHEN nome in (SELECT nome FROM marcacoes m2 
-                            WHERE m2.nome = marcacoes.nome 
-                            AND m2.data_agendamento BETWEEN date(?) AND date(?)
-                            AND m2.status_comparecimento = 'attended'
-                            GROUP BY m2.nome
-                            HAVING COUNT(*) = 1) THEN 1 END) * 148.65 as valor_medico,
-                        COUNT(CASE WHEN nome in (SELECT nome FROM marcacoes m2 
-                            WHERE m2.nome = marcacoes.nome 
-                            AND m2.data_agendamento BETWEEN date(?) AND date(?)
-                            AND m2.status_comparecimento = 'attended'
-                            GROUP BY m2.nome
-                            HAVING COUNT(*) = 1) THEN 1 END) * 192.61 as valor_psicologo
+                "Análise de Receitas": """
+                    SELECT 
+                        date(data_agendamento) as data,
+                        SUM(CASE WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' 
+                            THEN 148.65 ELSE 0 END) as valor_medico,
+                        SUM(CASE WHEN historico_comparecimento IS NOT NULL AND historico_comparecimento != '[]' 
+                            THEN 192.61 ELSE 0 END) as valor_psicologo,
+                        COUNT(DISTINCT CASE WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' 
+                            THEN nome END) as pacientes_medico,
+                        COUNT(DISTINCT CASE WHEN historico_comparecimento IS NOT NULL AND historico_comparecimento != '[]' 
+                            THEN nome END) as pacientes_psicologo
                     FROM marcacoes 
-                    WHERE date(data_agendamento) BETWEEN date(?) AND date(?)
+                    WHERE data_agendamento BETWEEN ? AND ?
                         AND status_comparecimento = 'attended'
                     GROUP BY data
-                    ORDER BY data ASC
+                    ORDER BY data
                 """,
-                "Custos Totais": """
+
+                "Comparativo de Atendimentos": """
                     SELECT 
-                        nome,
+                        CASE 
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 'medico'
+                            ELSE 'psicologo'
+                        END as tipo,
+                        COUNT(*) as total_atendimentos,
+                        COUNT(DISTINCT nome) as pacientes_unicos,
                         SUM(CASE 
-                            WHEN tipo = 'medico' THEN 49.00
-                            WHEN tipo = 'psicologo' THEN 63.50
-                            ELSE 0 
-                        END) as valor_profissional
-                    FROM (
-                        SELECT 
-                            nome,
-                            CASE 
-                                WHEN EXISTS (
-                                    SELECT 1 FROM marcacoes m2 
-                                    WHERE m2.nome = m1.nome 
-                                    AND m2.data_agendamento BETWEEN date(?) AND date(?)
-                                    AND m2.status_comparecimento = 'attended'
-                                    GROUP BY m2.nome
-                                    HAVING COUNT(*) = 1
-                                ) THEN 'medico'
-                                ELSE 'psicologo'
-                            END as tipo
-                        FROM marcacoes m1
-                        WHERE date(data_agendamento) BETWEEN date(?) AND date(?)
-                        AND status_comparecimento = 'attended'
-                    ) subquery
-                    GROUP BY nome
-                    HAVING valor_profissional > 0
-                    ORDER BY valor_profissional DESC
-                """,
-                "Custos Médicos": """
-                    SELECT 
-                        'Médico' as tipo,
-                        COUNT(*) * 49.00 as valor_medico,
-                        0 as valor_psicologo
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 148.65
+                            ELSE 192.61 
+                        END) as valor_total
                     FROM marcacoes
-                    WHERE date(data_agendamento) BETWEEN date(?) AND date(?)
+                    WHERE data_agendamento BETWEEN ? AND ?
                         AND status_comparecimento = 'attended'
-                        AND EXISTS (
-                            SELECT 1 FROM marcacoes m2 
-                            WHERE m2.nome = marcacoes.nome
-                            AND m2.data_agendamento BETWEEN date(?) AND date(?)
-                            AND m2.status_comparecimento = 'attended'
-                            GROUP BY m2.nome
-                            HAVING COUNT(*) = 1
-                        )
-                    UNION ALL
-                    SELECT 
-                        'Psicólogo' as tipo,
-                        0 as valor_medico,
-                        COUNT(*) * 63.50 as valor_psicologo
-                    FROM marcacoes
-                    WHERE date(data_agendamento) BETWEEN date(?) AND date(?)
-                        AND status_comparecimento = 'attended'
-                        AND EXISTS (
-                            SELECT 1 FROM marcacoes m2 
-                            WHERE m2.nome = marcacoes.nome
-                            AND m2.data_agendamento BETWEEN date(?) AND date(?)
-                            AND m2.status_comparecimento = 'attended'
-                            GROUP BY m2.nome
-                            HAVING COUNT(*) > 1
-                        )
-                    ORDER BY tipo
+                    GROUP BY 
+                        CASE 
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 'medico'
+                            ELSE 'psicologo'
+                        END
                 """,
-                "Frequência de Pacientes": """
-                    SELECT date(data_agendamento) as data,
+
+                "Métricas por Profissional": """
+                    SELECT 
+                        CASE 
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 'medico'
+                            ELSE 'psicologo'
+                        END as tipo,
+                        COUNT(*) as total_consultas,
+                        COUNT(DISTINCT nome) as total_pacientes,
+                        SUM(CASE WHEN status_comparecimento = 'attended' THEN 1 ELSE 0 END) as presencas,
+                        SUM(CASE WHEN status_comparecimento = 'missed' THEN 1 ELSE 0 END) as faltas
+                    FROM marcacoes
+                    WHERE data_agendamento BETWEEN ? AND ?
+                    GROUP BY 
+                        CASE 
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 'medico'
+                            ELSE 'psicologo'
+                        END
+                """,
+
+                "Análise de Frequência": """
+                    SELECT 
+                        date(data_agendamento) as data,
+                        CASE 
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 'medico'
+                            ELSE 'psicologo'
+                        END as tipo,
                         SUM(CASE WHEN status_comparecimento = 'attended' THEN 1 ELSE 0 END) as compareceram,
                         SUM(CASE WHEN status_comparecimento = 'missed' THEN 1 ELSE 0 END) as faltaram,
                         SUM(CASE WHEN status_comparecimento = 'pending' THEN 1 ELSE 0 END) as pendentes
                     FROM marcacoes
-                    WHERE date(data_agendamento) BETWEEN date(?) AND date(?)
-                    GROUP BY data
-                    ORDER BY data ASC
+                    WHERE data_agendamento BETWEEN ? AND ?
+                    GROUP BY data,
+                        CASE 
+                            WHEN historico_comparecimento IS NULL OR historico_comparecimento = '[]' THEN 'medico'
+                            ELSE 'psicologo'
+                        END
+                    ORDER BY data, tipo
                 """
             }
 
             with sqlite3.connect(self.db_name) as conn:
                 cursor = conn.cursor()
-                query = queries.get(graph_type)
+                query = queries[graph_type]
                 
-                # Ajustar parâmetros baseado no tipo de consulta
-                if graph_type == "Ganhos Totais":
-                    cursor.execute(query, (start_date, end_date, start_date, end_date, start_date, end_date))
-                elif graph_type == "Custos Totais":
-                    cursor.execute(query, (start_date, end_date, start_date, end_date))
-                elif graph_type == "Custos Médicos":
-                    cursor.execute(query, (start_date, end_date, start_date, end_date, start_date, end_date, start_date, end_date))
-                else:  # Frequência de Pacientes
-                    cursor.execute(query, (start_date, end_date))
-                
+                # Todas as queries agora usam apenas dois parâmetros de data
+                cursor.execute(query, (start_date, end_date))
                 results = cursor.fetchall()
                 
                 if not results:
@@ -249,124 +215,235 @@ class GraficoMarcacoes:
                 return results
 
         except sqlite3.Error as e:
-            messagebox.showerror("Erro", f"Erro ao buscar dados: {e}")
+            messagebox.showerror("Erro", f"Erro ao buscar dados: {str(e)}")
             return None
 
     def update_graph(self):
         for widget in self.graph_frame.winfo_children():
+            widget.destroy()
+        for widget in self.summary_frame.winfo_children():
             widget.destroy()
 
         data = self.get_data()
         if not data:
             return
 
-        fig, ax = plt.subplots(figsize=(12, 7))
+        graph_type = self.graph_type.get()
+        
+        fig, ax = plt.subplots(figsize=(12, 6))
         fig.patch.set_facecolor(self.colors['background'])
         ax.set_facecolor(self.colors['background'])
-        
-        graph_type = self.graph_type.get()
 
-        if graph_type in ["Ganhos Totais", "Custos Totais"]:
-            self._plot_value_graph(ax, data, graph_type)
-        elif graph_type == "Custos Médicos":
-            self._plot_cost_graph(ax, data)
-        else:  # Frequência de Pacientes
-            self._plot_frequency_graph(ax, data)
+        if graph_type == "Análise de Receitas":
+            self._plot_receitas(ax, data)
+        elif graph_type == "Comparativo de Atendimentos":
+            self._plot_comparativo(ax, data)
+        elif graph_type == "Métricas por Profissional":
+            self._plot_metricas(ax, data)
+        else:
+            self._plot_frequencia(ax, data)
 
         plt.tight_layout()
         
-        canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
+        canvas = FigureCanvasTkAgg(fig, self.graph_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True)
 
-    def _plot_value_graph(self, ax, data, graph_type):
-        dates = [datetime.strptime(row[0], '%Y-%m-%d').strftime('%d/%m/%Y') for row in data]
-        values = [float(row[1] or 0) for row in data]
-        color = self.colors['ganhos'] if graph_type == "Ganhos Totais" else self.colors['custos']
-        
-        bars = ax.bar(dates, values, color=color, alpha=0.8)
-        
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(
-                bar.get_x() + bar.get_width()/2.,
-                height,
-                f'R${height:,.2f}',
-                ha='center', 
-                va='bottom',
-                color=self.colors['text']
-            )
-            
-        ax.set_ylabel('Valor (R$)', color=self.colors['text'])
-        ax.set_title(f"{graph_type}", color=self.colors['text'])
-        plt.xticks(rotation=45, ha='right', color=self.colors['text'])
-        plt.yticks(color=self.colors['text'])
+        # Atualiza sumário
+        self._update_summary(data, graph_type)
 
-    def _plot_cost_graph(self, ax, data):
-        """Plot específico para custos médicos e psicológicos"""
-        tipos = [row[0] for row in data]
-        valores_medico = [float(row[1] or 0) for row in data]
-        valores_psicologo = [float(row[2] or 0) for row in data]
-        
-        # Posições das barras
+    def _plot_receitas(self, ax, data):
+        dates = [datetime.strptime(row[0], '%Y-%m-%d').strftime('%d/%m') for row in data]
+        medico = [float(row[1] or 0) for row in data]
+        psicologo = [float(row[2] or 0) for row in data]
+
+        width = 0.35
+        ax.bar([i - width/2 for i in range(len(dates))], medico, width, 
+               label='Médico', color=self.colors['medico'])
+        ax.bar([i + width/2 for i in range(len(dates))], psicologo, width,
+               label='Psicólogo', color=self.colors['psicologo'])
+
+        ax.set_title('Receitas por Profissional')
+        ax.set_xlabel('Data')
+        ax.set_ylabel('Valor (R$)')
+        ax.set_xticks(range(len(dates)))
+        ax.set_xticklabels(dates, rotation=45)
+        ax.legend()
+
+    def _plot_comparativo(self, ax, data):
+        tipos = ['Médico' if row[0] == 'medico' else 'Psicólogo' for row in data]
+        atendimentos = [row[1] for row in data]
+        pacientes = [row[2] for row in data]
+        valores = [row[3] for row in data]
+
         x = range(len(tipos))
-        width = 0.35
-        
-        # Criar barras
-        bars1 = ax.bar(x, valores_medico, width, label='Médico', color=self.colors['custos'])
-        bars2 = ax.bar([i + width for i in x], valores_psicologo, width, label='Psicólogo', color=self.colors['custos_medicos'])
-        
-        # Adicionar rótulos
-        def autolabel(bars):
-            for bar in bars:
-                height = bar.get_height()
-                if height > 0:
-                    ax.text(bar.get_x() + bar.get_width()/2., height,
-                            f'R${height:,.2f}',
-                            ha='center', va='bottom', color=self.colors['text'])
+        width = 0.25
 
-        autolabel(bars1)
-        autolabel(bars2)
-        
-        # Customizar eixos
-        ax.set_ylabel('Valor Total (R$)', color=self.colors['text'])
-        ax.set_title('Custos por Tipo de Profissional', color=self.colors['text'])
-        ax.set_xticks([i + width/2 for i in x])
+        ax.bar([i - width for i in x], atendimentos, width, label='Atendimentos')
+        ax.bar([i for i in x], pacientes, width, label='Pacientes Únicos')
+        ax.bar([i + width for i in x], valores, width, label='Valor Total (R$)')
+
+        ax.set_title('Comparativo entre Profissionais')
+        ax.set_xticks(x)
         ax.set_xticklabels(tipos)
-        plt.xticks(color=self.colors['text'])
-        plt.yticks(color=self.colors['text'])
-        ax.legend(facecolor=self.colors['background'], labelcolor=self.colors['text'])
+        ax.legend()
 
-    def _plot_frequency_graph(self, ax, data):
-        dates = [datetime.strptime(row[0], '%Y-%m-%d').strftime('%d/%m/%Y') for row in data]
-        attended = [int(row[1] or 0) for row in data]
-        missed = [int(row[2] or 0) for row in data]
-        pending = [int(row[3] or 0) for row in data]
-        
+    def _plot_metricas(self, ax, data):
+        tipos = ['Médico' if row[0] == 'medico' else 'Psicólogo' for row in data]
+        consultas = [row[1] for row in data]
+        pacientes = [row[2] for row in data]
+        presencas = [row[3] for row in data]
+        faltas = [row[4] for row in data]
+
+        x = range(len(tipos))
+        width = 0.2
+
+        ax.bar([i - 1.5*width for i in x], consultas, width, label='Total Consultas')
+        ax.bar([i - 0.5*width for i in x], pacientes, width, label='Total Pacientes')
+        ax.bar([i + 0.5*width for i in x], presencas, width, label='Presenças')
+        ax.bar([i + 1.5*width for i in x], faltas, width, label='Faltas')
+
+        ax.set_title('Métricas por Profissional')
+        ax.set_xticks(x)
+        ax.set_xticklabels(tipos)
+        ax.legend()
+
+    def _plot_frequencia(self, ax, data):
+        dates = sorted(list(set(row[0] for row in data)))
+        medico_data = {date: [0, 0, 0] for date in dates}
+        psicologo_data = {date: [0, 0, 0] for date in dates}
+
+        for row in data:
+            data_dict = medico_data if row[1] == 'medico' else psicologo_data
+            data_dict[row[0]] = [row[2], row[3], row[4]]
+
         width = 0.35
+        x = range(len(dates))
+
+        # Médico
+        bottom_med = [0] * len(dates)
+        for i, status in enumerate(['Compareceram', 'Faltaram', 'Pendentes']):
+            values = [medico_data[d][i] for d in dates]
+            ax.bar([xi - width/2 for xi in x], values, width, bottom=bottom_med,
+                   label=f'Médico - {status}')
+            bottom_med = [sum(x) for x in zip(bottom_med, values)]
+
+        # Psicólogo
+        bottom_psi = [0] * len(dates)
+        for i, status in enumerate(['Compareceram', 'Faltaram', 'Pendentes']):
+            values = [psicologo_data[d][i] for d in dates]
+            ax.bar([xi + width/2 for xi in x], values, width, bottom=bottom_psi,
+                   label=f'Psicólogo - {status}')
+            bottom_psi = [sum(x) for x in zip(bottom_psi, values)]
+
+        ax.set_title('Frequência por Profissional')
+        ax.set_xlabel('Data')
+        ax.set_ylabel('Quantidade')
+        ax.set_xticks(x)
+        ax.set_xticklabels([datetime.strptime(d, '%Y-%m-%d').strftime('%d/%m') for d in dates], 
+                          rotation=45)
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    def _update_summary(self, data, graph_type):
+        if not data or not data[0]:  # Verifica se há dados válidos
+            return
+            
+        summary_text = "Resumo da Análise:\n\n"
         
-        p1 = ax.bar(dates, attended, width, label='Compareceram', color=self.colors['compareceram'])
-        p2 = ax.bar(dates, missed, width, bottom=attended, label='Faltaram', color=self.colors['faltaram'])
-        p3 = ax.bar(dates, pending, width, bottom=[i+j for i,j in zip(attended, missed)], 
-                    label='Pendentes', color=self.colors['pendentes'])
-        
-        def auto_label(rects, heights, bottom=None):
-            for i, rect in enumerate(rects):
-                height = heights[i]
-                if height > 0:
-                    y = rect.get_y() + (rect.get_height()/2)
-                    if bottom is not None:
-                        y = bottom[i] + (rect.get_height()/2)
-                    ax.text(rect.get_x() + rect.get_width()/2., y,
-                            str(height),
-                            ha='center', va='center', color=self.colors['text'])
-        
-        auto_label(p1, attended)
-        auto_label(p2, missed, attended)
-        auto_label(p3, pending, [i+j for i,j in zip(attended, missed)])
-        
-        ax.set_ylabel('Número de Pacientes', color=self.colors['text'])
-        ax.set_title('Frequência de Pacientes', color=self.colors['text'])
-        ax.legend(facecolor=self.colors['background'], labelcolor=self.colors['text'])
-        plt.xticks(rotation=45, ha='right', color=self.colors['text'])
-        plt.yticks(color=self.colors['text'])
+        try:
+            if graph_type == "Análise de Receitas":
+                # Calcula totais para médico e psicólogo
+                total_medico = sum(float(row[1] or 0) for row in data)
+                total_psicologo = sum(float(row[2] or 0) for row in data)
+                total_pacientes_med = len(set(row[3] for row in data if row[3]))
+                total_pacientes_psi = len(set(row[4] for row in data if row[4]))
+                
+                summary_text += f"""Médico:
+• Receita Total: R$ {total_medico:,.2f}
+• Total de Pacientes: {total_pacientes_med}
+• Média por Paciente: R$ {(total_medico/total_pacientes_med if total_pacientes_med else 0):,.2f}
+
+Psicólogo:
+• Receita Total: R$ {total_psicologo:,.2f}
+• Total de Pacientes: {total_pacientes_psi}
+• Média por Paciente: R$ {(total_psicologo/total_pacientes_psi if total_pacientes_psi else 0):,.2f}
+
+Total Geral: R$ {(total_medico + total_psicologo):,.2f}"""
+
+            elif graph_type == "Comparativo de Atendimentos":
+                for row in data:
+                    prof_tipo = "Médico" if row[0] == "medico" else "Psicólogo"
+                    atendimentos = int(row[1] or 0)
+                    pacientes = int(row[2] or 0)
+                    valor = float(row[3] or 0)
+                    
+                    summary_text += f"""{prof_tipo}:
+• Total de Atendimentos: {atendimentos}
+• Pacientes Únicos: {pacientes}
+• Valor Total: R$ {valor:,.2f}
+• Média por Atendimento: R$ {(valor/atendimentos if atendimentos else 0):,.2f}\n\n"""
+
+            elif graph_type == "Métricas por Profissional":
+                for row in data:
+                    prof_tipo = "Médico" if row[0] == "medico" else "Psicólogo"
+                    total_consultas = int(row[1] or 0)
+                    total_pacientes = int(row[2] or 0)
+                    presencas = int(row[3] or 0)
+                    faltas = int(row[4] or 0)
+                    
+                    taxa_presenca = (presencas / total_consultas * 100) if total_consultas else 0
+                    taxa_falta = (faltas / total_consultas * 100) if total_consultas else 0
+                    
+                    summary_text += f"""{prof_tipo}:
+• Total de Consultas: {total_consultas}
+• Total de Pacientes: {total_pacientes}
+• Presenças: {presencas} ({taxa_presenca:.1f}%)
+• Faltas: {faltas} ({taxa_falta:.1f}%)\n\n"""
+
+            else:  # Análise de Frequência
+                medico_data = [row for row in data if row[1] == 'medico']
+                psi_data = [row for row in data if row[1] == 'psicologo']
+                
+                # Dados do Médico
+                med_presencas = sum(int(row[2] or 0) for row in medico_data)
+                med_faltas = sum(int(row[3] or 0) for row in medico_data)
+                med_pendentes = sum(int(row[4] or 0) for row in medico_data)
+                med_total = med_presencas + med_faltas
+                
+                # Dados do Psicólogo
+                psi_presencas = sum(int(row[2] or 0) for row in psi_data)
+                psi_faltas = sum(int(row[3] or 0) for row in psi_data)
+                psi_pendentes = sum(int(row[4] or 0) for row in psi_data)
+                psi_total = psi_presencas + psi_faltas
+                
+                summary_text += f"""Médico:
+• Presenças: {med_presencas}
+• Faltas: {med_faltas}
+• Pendentes: {med_pendentes}
+• Taxa de Comparecimento: {(med_presencas/med_total*100 if med_total else 0):.1f}%
+
+Psicólogo:
+• Presenças: {psi_presencas}
+• Faltas: {psi_faltas}
+• Pendentes: {psi_pendentes}
+• Taxa de Comparecimento: {(psi_presencas/psi_total*100 if psi_total else 0):.1f}%"""
+
+        except Exception as e:
+            summary_text += f"\nErro ao processar dados: {str(e)}"
+
+        finally:
+            # Criar e configurar o widget de texto para o sumário
+            text_widget = tk.Text(
+                self.summary_frame,
+                height=12,
+                width=50,
+                font=("Arial", 10),
+                bg=self.colors['background'],
+                fg=self.colors['text'],
+                relief=tk.GROOVE,
+                padx=10,
+                pady=10
+            )
+            text_widget.insert("1.0", summary_text)
+            text_widget.config(state="disabled")
+            text_widget.pack(side="left", padx=20, pady=10)
