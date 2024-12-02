@@ -6,6 +6,7 @@ from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
 from config import config_manager
 from frames.ntfs_frame import EmitirNota
+from graficos import GraficoMarcacoes
 
 class MainFrame(Frame):
     """Frame principal da aplicação que gerencia a interface do usuário e suas interações."""
@@ -18,6 +19,7 @@ class MainFrame(Frame):
         self._init_attributes(master, planilhas, file_path, app)
         self._setup_styles()
         self.create_widgets()
+        self.grafico_marcacoes = GraficoMarcacoes(master, planilhas, file_path, app)
 
 
     def configure_window(self):
@@ -143,7 +145,8 @@ class MainFrame(Frame):
                 ("Enviar Relatório Email", self.relatorio_email)
             ]),
             ("Ferramentas", 2, 0, [
-                ("Gerenciar Planilhas/Sheets", self.planilha_sheet)
+                ("Gerenciar Planilhas/Sheets", self.planilha_sheet),
+                ("Gráfico de Marcações", self.abrir_grafico)
             ], 2)
         ]
 
@@ -195,3 +198,5 @@ class MainFrame(Frame):
     def visu_marcacoes(self): self.banco.view_marcacoes()
     def fechamento_contas(self): self.sistema_contas.abrir_janela()
     def planilha_sheet(self): self.gerenciador_planilhas.abrir_gerenciador()
+    def abrir_grafico(self):
+        self.grafico_marcacoes.gerar_grafico()

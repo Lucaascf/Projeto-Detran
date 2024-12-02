@@ -1381,13 +1381,26 @@ class DataBaseMarcacao:
     """
 
     # Filtra marcações
-    def filter_marcacoes(self, *args):
-        """Filtra as marcações com base no termo de busca."""
-        search_term = self.search_var.get().strip()
-        if search_term:
-            self.update_patient_list()
-        else:
-            self.update_patient_list(None)
+    def filter_marcacoes(self):
+        try:
+            with DatabaseConnection(self.db_name) as conn:
+                cursor = conn.cursor()
+                if self.search_var:
+                    search_term = self.search_var.get().strip()
+                    if search_term:
+                        cursor.execute(
+                            "SELECT * FROM marcacoes WHERE nome LIKE ? OR telefone LIKE ? OR renach LIKE ?",
+                            (f"%{search_term}%", f"%{search_term}%", f"%{search_term}%")
+                        )
+                    else:
+                        cursor.execute("SELECT * FROM marcacoes")
+                else:
+                    cursor.execute("SELECT * FROM marcacoes")
+
+                return cursor.fetchall()
+        except sqlite3.Error as e:
+            logger.error(f"Erro ao filtrar marcações: {e}")
+            return []
 
     # Busca pacientes
     def get_patients_by_name_or_renach(

@@ -1,12 +1,16 @@
-[124006:124006:1106/203624.502849:WARNING:chrome_main_delegate.cc(744)] This is Chrome version 130.0.6723.116 (not a warning)
-[124006:124006:1106/203624.714361:INFO:chrome_browser_cloud_management_controller.cc(196)] No machine level policy manager exists.
-[124042:124042:1106/203624.901158:WARNING:sandbox_linux.cc(430)] InitializeSandbox() called with multiple threads in process gpu-process.
-[124042:124042:1106/203624.902567:WARNING:viz_main_impl.cc(85)] VizNullHypothesis is disabled (not a warning)
-[124006:124006:1106/203625.135533:ERROR:object_proxy.cc(576)] Failed to call method: org.freedesktop.ScreenSaver.GetActive: object_path= /org/freedesktop/ScreenSaver: org.freedesktop.DBus.Error.NotSupported: This method is not part of the idle inhibition specification: https://specifications.freedesktop.org/idle-inhibit-spec/latest/
-[124006:124006:1106/203625.745505:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'bluetooth'.", source:  (0)
-[124006:124006:1106/203625.844890:INFO:CONSOLE(123)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v3/yr/r/vxr0NzpcjJx.js (123)
-[124042:124042:1106/203629.338921:ERROR:gl_surface_presentation_helper.cc(260)] GetVSyncParametersIfAvailable() failed for 1 times!
-[124006:124006:1106/203633.430560:INFO:CONSOLE(153)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v3/yo/r/iHKIcVcww9p.js (153)
-[124006:124006:1106/203635.501803:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'bluetooth'.", source:  (0)
-[124044:124055:1106/203639.801589:WARNING:sqlite_persistent_store_backend_base.cc(198)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:248 to client_task_runner_.
-[124044:124055:1106/203639.801718:WARNING:sqlite_persistent_store_backend_base.cc(198)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:248 to client_task_runner_.
+[25354:25354:1129/211636.071074:WARNING:chrome_main_delegate.cc(672)] This is Chrome version 131.0.6778.85 (not a warning)
+[25354:25354:1129/211636.259823:INFO:chrome_browser_cloud_management_controller.cc(196)] No machine level policy manager exists.
+[25392:25392:1129/211636.467391:WARNING:sandbox_linux.cc(430)] InitializeSandbox() called with multiple threads in process gpu-process.
+[25392:25392:1129/211636.469585:WARNING:viz_main_impl.cc(85)] VizNullHypothesis is disabled (not a warning)
+[25354:25354:1129/211636.726944:ERROR:object_proxy.cc(576)] Failed to call method: org.freedesktop.ScreenSaver.GetActive: object_path= /org/freedesktop/ScreenSaver: org.freedesktop.DBus.Error.NotSupported: This method is not part of the idle inhibition specification: https://specifications.freedesktop.org/idle-inhibit-spec/latest/
+[25354:25354:1129/211637.517033:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'bluetooth'.", source:  (0)
+[25354:25354:1129/211637.614012:INFO:CONSOLE(153)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v3/yo/r/iHKIcVcww9p.js (153)
+[25354:25354:1129/211645.097879:INFO:CONSOLE(154)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v3/yz/r/4NZY0qPqwWi.js (154)
+[25354:25354:1129/211647.185190:WARNING:controller_impl.cc(1192)] Background download complete, client: 6, completion type: 0, file size:5155
+[25354:25354:1129/211647.442739:WARNING:controller_impl.cc(1192)] Background download complete, client: 6, completion type: 0, file size:883094
+[25354:25354:1129/211647.683478:WARNING:controller_impl.cc(1192)] Background download complete, client: 6, completion type: 0, file size:45161
+[25354:25354:1129/211648.124333:WARNING:controller_impl.cc(1192)] Background download complete, client: 6, completion type: 0, file size:2747168
+[25354:25354:1129/211648.583436:WARNING:controller_impl.cc(1192)] Background download complete, client: 6, completion type: 0, file size:118577
+[25392:25392:1129/211650.294104:ERROR:gl_surface_presentation_helper.cc(260)] GetVSyncParametersIfAvailable() failed for 1 times!
+[25394:25404:1129/211651.145551:WARNING:sqlite_persistent_store_backend_base.cc(198)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:248 to client_task_runner_.
+[25394:25404:1129/211651.145733:WARNING:sqlite_persistent_store_backend_base.cc(198)] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:248 to client_task_runner_.
