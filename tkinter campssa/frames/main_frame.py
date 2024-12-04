@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk
-from funcoes_botoes import FuncoesBotoes, SistemaContas, GerenciadorPlanilhas
+from funcoes_botoes import FuncoesBotoes, GerenciadorPlanilhas
+from banco import SistemaContas
 from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao

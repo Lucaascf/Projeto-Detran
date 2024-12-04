@@ -1,4 +1,6 @@
 import sqlite3
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import NamedStyle, Font, PatternFill, Alignment, Color, Border, Side
 import tkinter as tk
 from tkinter import ttk, messagebox, Toplevel, Frame, Label
 from tkcalendar import DateEntry
@@ -9,6 +11,8 @@ from planilhas import Planilhas
 from typing import Optional, List, Dict, Any, Tuple
 import logging
 from database_connection import DatabaseConnection
+import os
+
 
 
 # Configuração de logging
@@ -1598,3 +1602,595 @@ class DataBaseMarcacao:
             bg=self.master.cget("bg"),
             fg="#ECF0F1",
         ).pack()
+
+
+
+class SistemaContas:
+    """
+    Sistema de gerenciamento de contas com interface gráfica e persistência em banco de dados e Excel.
+    """
+
+    def __init__(self, file_path: str, db_path: str = "contas.db", current_user=None):
+        """
+        Inicializa o sistema de contas.
+
+        Args:
+            file_path (str): Caminho para o arquivo Excel
+            db_path (str): Caminho para o banco de dados SQLite
+            current_user (str, optional): Usuário atual do sistema
+        """
+        # Configuração de logging
+        logging.basicConfig(
+            filename='sistema_contas.log',
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger(__name__)
+
+        self.file_path = file_path
+        self.db_path = db_path
+        self.current_user = current_user
+        self.sheet_name = "Contas Fechamento"
+        
+        # Inicialização do sistema
+        self.criar_sheet_se_nao_existir()
+        self.criar_banco_dados()
+        
+        # Atributos da interface
+        self.window = None
+        self.date_entry = None
+        self.info_entry = None
+        self.valor_entry = None
+        self.status_label = None
+
+    def criar_banco_dados(self):
+        """Cria as tabelas necessárias no banco de dados SQLite."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Tabela principal de contas
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS contas (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        data DATE NOT NULL,
+                        descricao TEXT NOT NULL,
+                        valor DECIMAL(10,2) NOT NULL,
+                        categoria TEXT,
+                        status TEXT DEFAULT 'PENDENTE',
+                        usuario_criacao TEXT,
+                        data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Tabela de histórico de alterações
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS historico_alteracoes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        conta_id INTEGER,
+                        tipo_alteracao TEXT NOT NULL,
+                        valor_anterior TEXT,
+                        valor_novo TEXT,
+                        usuario TEXT,
+                        data_alteracao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conta_id) REFERENCES contas(id)
+                    )
+                """)
+                
+                # Índices para melhorar performance
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_contas_data 
+                    ON contas(data)
+                """)
+                
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_historico_conta_id 
+                    ON historico_alteracoes(conta_id)
+                """)
+                
+                self.logger.info("Banco de dados inicializado com sucesso")
+                
+        except sqlite3.Error as e:
+            self.logger.error(f"Erro ao criar banco de dados: {e}")
+            messagebox.showerror("Erro", f"Erro ao criar banco de dados: {str(e)}")
+
+    def salvar_informacoes(self, data_escolhida: str, info: str, valor: str) -> bool:
+        """
+        Salva as informações no banco de dados e no Excel.
+        """
+        try:
+            # Converte a data para o formato do banco
+            data_formatada = datetime.strptime(data_escolhida, "%d/%m/%Y").date()
+            
+            # Limpa o valor e converte para float
+            valor_limpo = valor.replace('R$', '').replace('.', '').replace(',', '.').strip()
+            valor_float = float(valor_limpo)
+            
+            # Operações no banco de dados
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Insere na tabela de contas
+                cursor.execute(
+                    """
+                    INSERT INTO contas (data, descricao, valor, usuario_criacao)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (data_formatada.strftime("%Y-%m-%d"), info, valor_float, self.current_user)
+                )
+                
+                conta_id = cursor.lastrowid
+                
+                # Registra no histórico
+                cursor.execute(
+                    """
+                    INSERT INTO historico_alteracoes 
+                    (conta_id, tipo_alteracao, valor_novo, usuario)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        conta_id,
+                        'CRIAÇÃO',
+                        json.dumps({
+                            "data": data_escolhida,
+                            "info": info,
+                            "valor": valor
+                        }),
+                        self.current_user
+                    )
+                )
+                
+                conn.commit()
+                
+            # Atualiza o Excel
+            self.atualizar_excel(data_formatada, info, valor_float)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Erro ao salvar informações: {e}")
+            messagebox.showerror("Erro", f"Erro ao salvar informações: {str(e)}")
+            return False
+        
+    def buscar_contas_por_periodo(self, data_inicial: str, data_final: str) -> list:
+        """Busca contas por período no banco de dados."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Ajusta formato das datas para comparação
+            data_inicial = datetime.strptime(data_inicial, "%Y-%m-%d").date()
+            data_final = datetime.strptime(data_final, "%Y-%m-%d").date()
+            
+            cursor.execute("""
+                SELECT data, descricao, valor, usuario_criacao, data_criacao
+                FROM contas 
+                WHERE date(data) BETWEEN date(?) AND date(?)
+                ORDER BY data
+            """, (data_inicial, data_final))
+            
+            return cursor.fetchall()
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro na consulta: {str(e)}")
+            return []
+        finally:
+            conn.close()
+
+    def obter_historico_alteracoes(self, conta_id: int) -> list:
+        """Obtém histórico de alterações de uma conta específica."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT tipo_alteracao, valor_anterior, valor_novo, usuario, data_alteracao
+                FROM historico_alteracoes
+                WHERE conta_id = ?
+                ORDER BY data_alteracao DESC
+            """, (conta_id,))
+            
+            return cursor.fetchall()
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao buscar histórico: {str(e)}")
+            return []
+        finally:
+            conn.close()
+
+    def atualizar_conta(self, conta_id: int, nova_descricao: str, novo_valor: float) -> bool:
+        """Atualiza informações de uma conta existente."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Busca dados anteriores
+            cursor.execute("SELECT descricao, valor FROM contas WHERE id = ?", (conta_id,))
+            desc_anterior, valor_anterior = cursor.fetchone()
+            
+            # Atualiza a conta
+            cursor.execute("""
+                UPDATE contas 
+                SET descricao = ?, valor = ?, data_atualizacao = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (nova_descricao, novo_valor, conta_id))
+            
+            # Registra alteração no histórico
+            cursor.execute("""
+                INSERT INTO historico_alteracoes (
+                    conta_id, tipo_alteracao, valor_anterior, valor_novo, usuario
+                )
+                VALUES (?, 'ATUALIZAÇÃO', ?, ?, ?)
+            """, (
+                conta_id,
+                json.dumps({"descricao": desc_anterior, "valor": valor_anterior}),
+                json.dumps({"descricao": nova_descricao, "valor": novo_valor}),
+                self.current_user
+            ))
+            
+            conn.commit()
+            return True
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao atualizar conta: {str(e)}")
+            return False
+        finally:
+            conn.close()
+
+    def formatar_valor_digitado(self, event=None):
+        """
+        Formata o valor enquanto o usuário digita, mantendo apenas números e mantendo
+        a posição do cursor para permitir digitação contínua.
+        """
+        if not hasattr(self, 'valor_entry'):
+            return
+            
+        # Guarda a posição do cursor
+        cursor_pos = self.valor_entry.index(tk.INSERT)
+        
+        # Obtém o valor atual e remove formatação
+        valor = self.valor_entry.get().replace('R$', '').replace('.', '').replace(',', '').strip()
+        
+        # Se não houver valor, limpa o campo e retorna
+        if not valor:
+            self.valor_entry.delete(0, tk.END)
+            self.valor_entry.insert(0, "R$ 0,00")
+            self.valor_entry.icursor(6)
+            return
+        
+        try:
+            # Remove caracteres não numéricos
+            valor = ''.join(filter(str.isdigit, valor))
+            
+            # Converte para float (centavos)
+            valor_float = float(valor) / 100
+            
+            # Formata como moeda
+            valor_formatado = f"R$ {valor_float:,.2f}".replace('.', '_').replace(',', '.').replace('_', ',')
+            
+            # Atualiza o valor mantendo o cursor na posição correta
+            self.valor_entry.delete(0, tk.END)
+            self.valor_entry.insert(0, valor_formatado)
+            
+            # Ajusta a posição do cursor
+            if cursor_pos > 0:
+                # Conta quantos pontos de milhar existem até a posição do cursor
+                texto_ate_cursor = valor_formatado[:cursor_pos + 3]
+                num_pontos = texto_ate_cursor.count('.')
+                nova_pos = cursor_pos + num_pontos + 3  # +3 pelo "R$ "
+                self.valor_entry.icursor(min(nova_pos, len(valor_formatado)))
+            
+        except ValueError:
+            # Se houver erro na conversão, reinicia o campo
+            self.valor_entry.delete(0, tk.END)
+            self.valor_entry.insert(0, "R$ 0,00")
+            self.valor_entry.icursor(6)
+
+    def atualizar_excel(self, data: datetime.date, info: str, valor: float):
+        """
+        Atualiza a planilha Excel com as novas informações.
+        
+        Args:
+            data (datetime.date): Data da conta
+            info (str): Descrição da conta
+            valor (float): Valor da conta
+        """
+        try:
+            wb = load_workbook(self.file_path)
+            ws = wb[self.sheet_name]
+            
+            # Encontra a última linha com dados
+            ultima_linha = ws.max_row + 1
+            for row in range(ws.max_row, 0, -1):
+                if ws.cell(row=row, column=1).value is not None:
+                    ultima_linha = row + 1
+                    break
+            
+            # Adiciona os novos dados
+            ws.cell(row=ultima_linha, column=1, value=data)
+            ws.cell(row=ultima_linha, column=2, value=info)
+            ws.cell(row=ultima_linha, column=3, value=valor)
+            
+            # Formata as células
+            ws.cell(row=ultima_linha, column=1).number_format = 'DD/MM/YYYY'
+            ws.cell(row=ultima_linha, column=3).number_format = 'R$ #,##0.00'
+            
+            wb.save(self.file_path)
+            
+        except Exception as e:
+            self.logger.error(f"Erro ao atualizar Excel: {e}")
+            raise
+
+    # Mantém métodos existentes relacionados à interface...
+    def criar_sheet_se_nao_existir(self):
+        """Mantém compatibilidade com versão anterior."""
+        if os.path.exists(self.file_path):
+            wb = load_workbook(self.file_path)
+            if self.sheet_name not in wb.sheetnames:
+                ws = wb.create_sheet(title=self.sheet_name)
+                ws.append(["DATA", "CONTAS", "VALOR"])
+                wb.save(self.file_path)
+        else:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = self.sheet_name
+            ws.append(["DATA", "CONTAS", "VALOR"])
+            wb.save(self.file_path)
+
+    def abrir_janela(self):
+        """Abre a janela principal do sistema."""
+        self.window = tk.Toplevel()
+        self.window.title("Sistema de Gerenciamento de Contas")
+        self.window.geometry("600x500")
+        
+        # Configurações da janela
+        self.window.transient(self.window.master)
+        self.window.grab_set()
+        self.window.focus_set()
+        
+        # Cria interface
+        self.criar_interface()
+        
+        # Centraliza a janela
+        self.centralizar_janela(self.window)
+
+    def criar_interface(self):
+        """Cria a interface gráfica principal do sistema."""
+        if not self.window:
+            return
+            
+        # Configurações visuais
+        style = ttk.Style()
+        style.configure('Header.TLabel', font=('Arial', 12, 'bold'))
+        style.configure('Status.TLabel', font=('Arial', 10))
+        
+        # Frame principal
+        main_frame = ttk.Frame(self.window, padding="20")
+        main_frame.grid(row=0, column=0, sticky="nsew")
+        
+        # Configuração de grid
+        self.window.grid_rowconfigure(0, weight=1)
+        self.window.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+        
+        # Título
+        ttk.Label(
+            main_frame, 
+            text="Sistema de Gerenciamento de Contas", 
+            style='Header.TLabel'
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        
+        # Campo de data
+        ttk.Label(main_frame, text="Data:").grid(row=1, column=0, sticky="w", pady=5)
+        self.date_entry = DateEntry(
+            main_frame,
+            width=20,
+            date_pattern="dd/mm/yyyy",
+            background="darkblue",
+            foreground="white",
+            borderwidth=2
+        )
+        self.date_entry.grid(row=1, column=1, sticky="we", padx=(5, 0), pady=5)
+        
+        # Campo de descrição
+        ttk.Label(main_frame, text="Descrição:").grid(row=2, column=0, sticky="w", pady=5)
+        self.info_entry = ttk.Entry(main_frame)
+        self.info_entry.grid(row=2, column=1, sticky="we", padx=(5, 0), pady=5)
+        
+        # Campo de valor com formatação automática
+        ttk.Label(main_frame, text="Valor (R$):").grid(row=3, column=0, sticky="w", pady=5)
+        self.valor_entry = ttk.Entry(main_frame)
+        self.valor_entry.grid(row=3, column=1, sticky="we", padx=(5, 0), pady=5)
+        # Vincula a função de formatação aos eventos de digitação
+        self.valor_entry.bind('<KeyRelease>', self.formatar_valor_digitado)
+        
+        # Frame de botões
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=20)
+        
+        # Botões
+        ttk.Button(button_frame, text="Salvar", command=self.capturar_dados, width=20).grid(row=0, column=0, padx=5, pady=5)
+        ttk.Button(button_frame, text="Limpar", command=self.limpar_campos, width=20).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(button_frame, text="Visualizar Contas", command=self.visualizar_contas, width=20).grid(row=1, column=0, padx=5, pady=5)
+        ttk.Button(button_frame, text="Fechar", command=self.window.destroy, width=20).grid(row=1, column=1, padx=5, pady=5)
+        
+        # Status
+        self.status_label = ttk.Label(main_frame, text="", style='Status.TLabel')
+        self.status_label.grid(row=5, column=0, columnspan=2, sticky="we", pady=(10, 0))
+        
+        # Foco inicial
+        self.info_entry.focus()
+
+    def capturar_dados(self):
+        """Captura e valida os dados do formulário antes de salvar."""
+        if self.validar_campos():
+            data = self.date_entry.get()
+            info = self.info_entry.get()
+            valor = self.valor_entry.get()
+            
+            if self.salvar_informacoes(data, info, valor):
+                messagebox.showinfo("Sucesso", "Informações salvas com sucesso!")
+                self.limpar_campos()
+
+    def validar_campos(self):
+        """
+        Valida os campos do formulário, com tratamento especial para o campo de valor.
+        """
+        info = self.info_entry.get().strip()
+        valor = self.valor_entry.get().strip()
+        data = self.date_entry.get().strip()
+
+        if not all([data, info, valor]):
+            messagebox.showerror("Erro", "Todos os campos são obrigatórios!")
+            return False
+
+        try:
+            # Remove a formatação monetária e converte para float
+            valor_limpo = valor.replace('R$', '').replace('.', '').replace(',', '.').strip()
+            float(valor_limpo)  # Tenta converter para confirmar que é um número válido
+            return True
+        except ValueError:
+            messagebox.showerror("Erro", "O valor deve ser um número válido!")
+            return False
+
+    def limpar_campos(self):
+        self.info_entry.delete(0, tk.END)
+        self.valor_entry.delete(0, tk.END)
+
+    def visualizar_contas(self):
+        """Abre a janela de visualização de contas."""
+        view_window = tk.Toplevel(self.window)
+        view_window.title("Visualização de Contas")
+        view_window.geometry("1000x700")
+        
+        # Frame para filtros
+        filter_frame = ttk.Frame(view_window, padding="10")
+        filter_frame.pack(fill="x", padx=20, pady=10)
+        
+        # Campos de data
+        ttk.Label(filter_frame, text="Período:").pack(side="left", padx=(0, 5))
+        data_inicial = DateEntry(filter_frame, width=12, background='darkblue', foreground='white')
+        data_inicial.pack(side="left", padx=5)
+        
+        ttk.Label(filter_frame, text="até").pack(side="left", padx=5)
+        data_final = DateEntry(filter_frame, width=12, background='darkblue', foreground='white')
+        data_final.pack(side="left", padx=5)
+        
+        # Frame para a tabela
+        table_frame = ttk.Frame(view_window, padding="10")
+        table_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Configuração da tabela - Removida a coluna categoria
+        columns = ("Data", "Descrição", "Valor", "Usuário", "Última Atualização")
+        tree = ttk.Treeview(table_frame, columns=columns, show='headings', height=20)
+        
+        # Configuração das colunas
+        column_widths = {
+            "Data": 100,
+            "Descrição": 400,
+            "Valor": 150,
+            "Usuário": 150,
+            "Última Atualização": 180
+        }
+        
+        for col, width in column_widths.items():
+            tree.heading(col, text=col)
+            tree.column(col, width=width)
+        
+        # Scrollbars
+        y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        x_scroll = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        
+        # Layout da tabela e scrollbars
+        tree.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        
+        # Configuração do grid
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+        
+        # Frame para totais
+        totals_frame = ttk.Frame(view_window, padding="10")
+        totals_frame.pack(fill="x", padx=20, pady=10)
+        
+        total_label = ttk.Label(totals_frame, text="Total: R$ 0,00", style='Header.TLabel')
+        total_label.pack(side="right")
+        
+        def atualizar_tabela():
+            """Atualiza os dados da tabela."""
+            for item in tree.get_children():
+                tree.delete(item)
+                
+            data_ini = data_inicial.get_date().strftime("%Y-%m-%d")
+            data_fim = data_final.get_date().strftime("%Y-%m-%d")
+            
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    cursor = conn.cursor()
+                    # Query atualizada para corresponder à estrutura atual do banco
+                    cursor.execute("""
+                        SELECT 
+                            data, descricao, valor,
+                            usuario_criacao, data_atualizacao
+                        FROM contas 
+                        WHERE data BETWEEN ? AND ?
+                        ORDER BY data DESC
+                    """, (data_ini, data_fim))
+                    
+                    total_valor = 0
+                    for row in cursor.fetchall():
+                        data = datetime.strptime(row[0], "%Y-%m-%d").strftime("%d/%m/%Y")
+                        valor = float(row[2])
+                        valor_formatado = f"R$ {valor:,.2f}"
+                        data_atualizacao = datetime.strptime(row[4], "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M")
+                        
+                        tree.insert("", "end", values=(
+                            data,               # Data
+                            row[1],             # Descrição
+                            valor_formatado,    # Valor
+                            row[3] or "-",      # Usuário
+                            data_atualizacao    # Última Atualização
+                        ))
+                        
+                        total_valor += valor
+                    
+                    total_label.configure(text=f"Total: R$ {total_valor:,.2f}")
+                    
+            except sqlite3.Error as e:
+                self.logger.error(f"Erro ao buscar dados: {e}")
+                messagebox.showerror("Erro", "Erro ao carregar dados")
+        
+        # Botão de atualização
+        ttk.Button(
+            filter_frame, 
+            text="Buscar", 
+            command=atualizar_tabela
+        ).pack(side="left", padx=20)
+        
+        # Carrega dados iniciais
+        atualizar_tabela()
+        
+        # Centraliza a janela
+        self.centralizar_janela(view_window)
+
+    def centralizar_janela(self, window):
+        """Centraliza uma janela na tela."""
+        window.update_idletasks()
+        width = window.winfo_width()
+        height = window.winfo_height()
+        x = (window.winfo_screenwidth() // 2) - (width // 2)
+        y = (window.winfo_screenheight() // 2) - (height // 2)
+        window.geometry(f'{width}x{height}+{x}+{y}')
+
+    def _create_or_get_style(self, wb, name, **properties):
+        """Cria ou recupera um estilo existente."""
+        if name in wb.named_styles:
+            return wb.named_styles[name]
+        
+        style = NamedStyle(name=name)
+        for prop, value in properties.items():
+            setattr(style, prop, value)
+        wb.add_named_style(style)
+        return style
+
