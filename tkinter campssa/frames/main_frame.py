@@ -1,3 +1,4 @@
+# /home/lusca/py_excel/tkinter campssa/frames/main_frame.py
 from tkinter import *
 from tkinter import ttk
 from funcoes_botoes import FuncoesBotoes, GerenciadorPlanilhas
@@ -127,18 +128,18 @@ class MainFrame(Frame):
         """Cria as seções principais da interface."""
         sections = [
             ("Cadastro e Gestão", 0, 0, [
-                ("Adicionar Informações", self.adicionar_informacao),
-                ("Excluir Informação", self.excluir_informacao),
-                ("Exibir Informações", self.exibir)
+                ("Adicionar Paciente", self.adicionar_informacao),
+                ("Excluir Paciente", self.excluir_informacao),
+                ("Informações do Atendimento", self.exibir)
             ]),
             ("Agenda e Marcações", 0, 1, [
-                ("Nova Marcação", self.marcar_paciente),
+                ("Marcar Paciente", self.marcar_paciente),
                 ("Visualizar Marcações", self.visu_marcacoes)
             ]),
             ("Gestão Financeira", 1, 0, [
-                ("Valores Atendimento", self.resultados_consulta),
-                ("Exibir Contas", self.exibir_contas),
-                ("Fechamento Contas", self.fechamento_contas)
+                ("Relatorio de Pagamentos", self.resultados_consulta),
+                ("Valores Atendimento", self.exibir_contas),
+                ("Gastos da Clinica", self.fechamento_contas)
             ]),
             ("Documentos e Relatórios", 1, 1, [
                 ("Emitir NTFS-e", self.emitir_notas),
@@ -147,7 +148,7 @@ class MainFrame(Frame):
             ]),
             ("Ferramentas", 2, 0, [
                 ("Gerenciar Planilhas/Sheets", self.planilha_sheet),
-                ("Gráfico de Marcações", self.abrir_grafico)
+                ("Gráficos Gerais", self.abrir_grafico)
             ], 2)
         ]
 
@@ -185,6 +186,12 @@ class MainFrame(Frame):
             self.create_button(frame, btn_text, btn_command).pack(pady=4, padx=8, fill="x")
 
         return frame
+
+
+    def _check_button_permission(self, button_text):
+        button_permission = {
+
+        }
 
     # Métodos de ação permanecem os mesmos
     def adicionar_informacao(self): self.funcoes_botoes.adicionar_informacao()

@@ -1,4 +1,4 @@
-# app.py
+# /home/lusca/py_excel/tkinter campssa/app.py
 from tkinter import *
 from tkinter import filedialog, messagebox
 import logging
@@ -86,22 +86,24 @@ class App(Frame):
     """Cria e configura o frame de login."""
 
     def _create_login_frame(self):
-        """Cria e configura o frame de login."""
         self.login_frame = LoginFrame(
-            self.master, self.login_success, self.funcoes_botoes
+            master=self.master,
+            config_manager=config_manager,
+            user_manager=self.db.user_manager,
+            on_login_success=self.login_success
         )
-        # Usar self.app_config em vez de APP_CONFIG
         self.login_frame.configure(bg=self.app_config["background_color"])
         self.login_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
 
     """Cria e configura o frame de criação de conta."""
 
     def _create_signup_frame(self):
-        """Cria e configura o frame de criação de conta."""
         self.criar_conta_frame = CriarContaFrame(
-            self.master, self.db, self.funcoes_botoes
+            master=self.master,
+            config_manager=config_manager,
+            user_manager=self.db.user_manager,
+            on_account_created=self.voltar_para_login
         )
-        # Usar self.app_config em vez de APP_CONFIG
         self.criar_conta_frame.configure(bg=self.app_config["background_color"])
         self.criar_conta_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         self.criar_conta_frame.grid_forget()
@@ -111,7 +113,8 @@ class App(Frame):
     def login_success(self):
         """Gerencia o processo após um login bem-sucedido."""
         try:
-            self.current_user = self.login_frame.current_user
+            # Store the username string instead of the User object
+            self.current_user = self.login_frame.current_user.username  # Access the username attribute
             # Atualiza o current_user nas funcoes_botoes
             self.funcoes_botoes.set_current_user(self.current_user)
             self.login_frame.grid_forget()

@@ -1,4 +1,6 @@
+# /home/lusca/py_excel/tkinter campssa/banco.py
 import sqlite3
+from frames.login_frame import UserManager
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import NamedStyle, Font, PatternFill, Alignment, Color, Border, Side
 import tkinter as tk
@@ -12,7 +14,7 @@ from typing import Optional, List, Dict, Any, Tuple
 import logging
 from database_connection import DatabaseConnection
 import os
-
+from auth.user_manager import UserManager
 
 
 # Configuração de logging
@@ -31,9 +33,10 @@ class DataBaseLogin:
 
     # Inicializa o gerenciador do banco de dados
     def __init__(self, db_name: str = "login.db"):
-        """Inicializa o gerenciador de login."""
         self.db_name = db_name
-        self.create_db()
+        self._current_user = None
+        self.user_manager = UserManager(db_name)
+
 
     # Cria estrutura inicial do banco
     def create_db(self) -> None:
@@ -56,50 +59,47 @@ class DataBaseLogin:
         except sqlite3.Error as e:
             logger.error(f"Erro ao criar banco de dados de usuários: {e}")
             raise
+    
+    @property
+    def current_user(self):
+        return self._current_user
+
+    @current_user.setter
+    def current_user(self, value):
+        self._current_user = value
+
 
     """
     SEÇÃO 2: OPERAÇÕES DE CRIAÇÃO E VALIDAÇÃO
     """
 
     # Cria novo usuário no sistema
-    def create_user(self, user: str, password: str) -> bool:
-        """
-        Cria um novo usuário
-        Returns: True se criado com sucesso, False se já existe
-        """
+    def create_user(self, username: str, password: str) -> bool:
         try:
-            with DatabaseConnection(self.db_name) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO users (user, password) VALUES (?, ?)", (user, password)
-                )
-                conn.commit()
-                logger.info(f"Novo usuário criado: {user}")
-                return True
-        except sqlite3.IntegrityError:
-            logger.warning(f"Tentativa de criar usuário duplicado: {user}")
+            role = 'employee'
+            permissions = UserManager.DEFAULT_PERMISSIONS['employee']
+            
+            if (self._current_user and 
+                self.user_manager.current_user and 
+                'manage_users' in self.user_manager.current_user.permissions):
+                role = 'manager'
+                permissions = UserManager.DEFAULT_PERMISSIONS['manager']
+
+            return self.user_manager.create_user(username, password, role, permissions)
+        except Exception as e:
+            logging.error(f"Erro na criação do usuário: {e}")
             return False
-        except sqlite3.Error as e:
-            logger.error(f"Erro ao criar usuário: {e}")
-            raise
 
     # Valida credenciais do usuário
-    def validate_user(self, user: str, password: str) -> bool:
-        """Valida credenciais do usuário"""
+    def validate_user(self, username: str, password: str) -> bool:
         try:
-            with DatabaseConnection(self.db_name) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT id FROM users WHERE user = ? AND password = ?",
-                    (user, password),
-                )
-                is_valid = cursor.fetchone() is not None
-                logger.info(
-                    f"Tentativa de login para usuário {user}: {'sucesso' if is_valid else 'falha'}"
-                )
-                return is_valid
-        except sqlite3.Error as e:
-            logger.error(f"Erro ao validar usuário: {e}")
+            authenticated_user = self.user_manager.authenticate(username, password)
+            if authenticated_user:
+                self._current_user = username
+                return True
+            return False
+        except Exception as e:
+            logging.error(f"Erro na validação do usuário: {e}")
             return False
 
     """
@@ -138,6 +138,20 @@ class DataBaseLogin:
         conn.comit()
         conn.close()
 
+    @property
+    def current_user(self):
+        """Property para acessar usuário atual."""
+        return self._current_user
+    
+    @current_user.setter
+    def current_user(self, value):
+        """Setter para usuário atual."""
+        self._current_user = value
+
+    def has_permission(self, permission: str) -> bool:
+        if self._current_user and self.user_manager.current_user:
+            return permission in self.user_manager.current_user.permissions
+        return False
 
 class DataBaseMarcacao:
     """

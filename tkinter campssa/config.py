@@ -1,3 +1,4 @@
+# /home/lusca/py_excel/tkinter campssa/config.py
 import json
 import os
 from pathlib import Path

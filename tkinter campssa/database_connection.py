@@ -1,3 +1,5 @@
+# /home/lusca/py_excel/tkinter campssa/database_connection.py
+
 import sqlite3
 
 class DatabaseConnection:

@@ -1,3 +1,4 @@
+# /home/lusca/py_excel/tkinter campssa/funcoes_botoes.py
 from dataclasses import dataclass
 from config import ConfigManager
 import sys
@@ -113,7 +114,6 @@ class FuncoesBotoes:
         self.primeira_conta = None
         self.segunda_conta = None
 
-
         # Variáveis para pagamento
         self._init_payment_vars()
 
@@ -188,8 +188,10 @@ class FuncoesBotoes:
         """
         if self.login_frame and self.criar_conta_frame:
             self.login_frame.grid_forget()
-            self.criar_conta_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-    
+            self.criar_conta_frame.grid(
+                row=0, column=0, sticky="nsew", padx=20, pady=20
+            )
+
     def voltar_para_login(self):
         """
         Alterna a visibilidade do frame de criação de conta para o frame de login.
@@ -416,13 +418,15 @@ class FuncoesBotoes:
 
         # Entradas para nome e Renach
         self.nome_entry = self.criar_entry("Nome:", "nome_entry", self.adicionar_window)
-        self.renach_entry = self.criar_entry("Renach:", "renach_entry", self.adicionar_window)
+        self.renach_entry = self.criar_entry(
+            "Renach:", "renach_entry", self.adicionar_window
+        )
 
         # Checkbox para reexame
         self.reexame_var = tk.BooleanVar()
         reexame_frame = tk.Frame(self.adicionar_window, bg=cor_fundo)
         reexame_frame.pack(pady=2)
-        
+
         tk.Checkbutton(
             reexame_frame,
             text="Reexame",
@@ -432,7 +436,7 @@ class FuncoesBotoes:
             selectcolor=cor_selecionado,
             activebackground=cor_fundo,
             activeforeground=cor_texto,
-            font=("Arial", 12)
+            font=("Arial", 12),
         ).pack(side=tk.LEFT)
 
         # Frame de pagamento
@@ -632,7 +636,7 @@ class FuncoesBotoes:
             wb = self.get_active_workbook()
             if not wb:
                 raise ValueError("Não foi possível carregar o workbook")
-                
+
             ws = wb.active
             if not ws:
                 raise ValueError("Não foi possível acessar a planilha ativa")
@@ -667,7 +671,6 @@ class FuncoesBotoes:
             )
 
             return totais
-        
 
         except Exception as e:
             self.logger.error(f"Erro ao calcular valores: {str(e)}")
@@ -727,25 +730,25 @@ class FuncoesBotoes:
             else:
                 # Aceita tanto | quanto / como separadores
                 partes_pagamento = []
-                if '|' in pagamento:
-                    partes_pagamento = pagamento.split('|')
-                elif '/' in pagamento:
-                    partes_pagamento = pagamento.split('/')
+                if "|" in pagamento:
+                    partes_pagamento = pagamento.split("|")
+                elif "/" in pagamento:
+                    partes_pagamento = pagamento.split("/")
                 else:
                     partes_pagamento = [pagamento]
 
                 for parte in partes_pagamento:
                     try:
-                        if ':' not in parte:
+                        if ":" not in parte:
                             continue
-                            
-                        metodo, valor = parte.split(':', 1)
+
+                        metodo, valor = parte.split(":", 1)
                         metodo = metodo.strip()
                         valor = valor.strip()
 
                         # Remove qualquer texto adicional após o valor
-                        valor = valor.split('/')[0].split('|')[0].strip()
-                        
+                        valor = valor.split("/")[0].split("|")[0].strip()
+
                         valor_float = PaymentProcessor.convert_currency_value(valor)
                         metodo_traduzido = PaymentProcessor.PAYMENT_TYPES[metodo]
                         totais[tipo][metodo_traduzido] += valor_float
@@ -780,7 +783,8 @@ class FuncoesBotoes:
         # Configuração da interface
         self._setup_add_interface(cor_fundo, cor_texto, cor_selecionado)
 
-     # Código de salvamento de informações...
+    # Código de salvamento de informações...
+
     def salvar_informacao(self):
         """
         Valida dados e coordena o salvamento no banco e na planilha.
@@ -812,10 +816,10 @@ class FuncoesBotoes:
             # Salvar dados
             try:
                 if self.salvar_na_planilha(nome, renach, pagamentos, escolha):
-                    self.formatar_planilha() # Formata apos salvar na planilha
+                    self.formatar_planilha()  # Formata apos salvar na planilha
                     if self.db_manager.adicionar_paciente(
                         nome, renach, pagamentos, escolha
-                    ): # Salva no banco de dados
+                    ):  # Salva no banco de dados
                         self.adicionar_window.destroy()
                         return True
 
@@ -875,7 +879,7 @@ class FuncoesBotoes:
         try:
             wb = self.get_active_workbook()
             ws = wb.active
-            conn = sqlite3.connect('db_marcacao.db')
+            conn = sqlite3.connect("db_marcacao.db")
             cursor = conn.cursor()
 
             def realizar_exclusao():
@@ -969,10 +973,10 @@ class FuncoesBotoes:
                                 ):
                                     return row
                         return None
-                    
+
                     # Excluir paciente do banco de dados
                     cursor.execute("DELETE FROM marcacoes WHERE renach = ?", (renach,))
-                    conn.commit() # confirma exclusão
+                    conn.commit()  # confirma exclusão
 
                     # Procura nas seções de médico e psicólogo
                     linha_medico = encontrar_paciente(3)  # Coluna C
@@ -998,7 +1002,7 @@ class FuncoesBotoes:
                     else:
                         messagebox.showwarning("Aviso", "RENACH não encontrado")
 
-                    conn.close() # Fecha a conexão com o banco de dados
+                    conn.close()  # Fecha a conexão com o banco de dados
 
                 except ValueError:
                     messagebox.showerror(
@@ -1148,12 +1152,15 @@ class FuncoesBotoes:
             def is_total_row(valor):
                 if not valor or not isinstance(valor, str):
                     return False
-                return any(palavra in valor.lower() for palavra in ["soma", "médico", "psicólogo", "total"])
+                return any(
+                    palavra in valor.lower()
+                    for palavra in ["soma", "médico", "psicólogo", "total"]
+                )
 
             # Encontrar linhas com "Soma" para determinar onde parar a coleta de dados
             soma_medicos_row = None
             soma_psicologos_row = None
-            
+
             for row in range(3, max_row):
                 if ws.cell(row=row, column=4).value == "Soma":
                     soma_medicos_row = row
@@ -1166,9 +1173,12 @@ class FuncoesBotoes:
                 # Se encontrou a linha de soma, para de coletar
                 if soma_medicos_row and row >= soma_medicos_row:
                     break
-                
-                if (isinstance(nome_med, str) and nome_med.strip() and 
-                    not is_total_row(nome_med)):
+
+                if (
+                    isinstance(nome_med, str)
+                    and nome_med.strip()
+                    and not is_total_row(nome_med)
+                ):
                     dados_medicos.append(
                         {
                             "nome": nome_med.strip(),
@@ -1190,9 +1200,12 @@ class FuncoesBotoes:
                 # Se encontrou a linha de soma, para de coletar
                 if soma_psicologos_row and row >= soma_psicologos_row:
                     break
-                
-                if (isinstance(nome_psi, str) and nome_psi.strip() and 
-                    not is_total_row(nome_psi)):
+
+                if (
+                    isinstance(nome_psi, str)
+                    and nome_psi.strip()
+                    and not is_total_row(nome_psi)
+                ):
                     dados_psicologos.append(
                         {
                             "nome": nome_psi.strip(),
@@ -1232,7 +1245,7 @@ class FuncoesBotoes:
                 if hasattr(self, "current_user") and self.current_user
                 else "Usuário"
             )
-            
+
             # Cabeçalhos principais
             ws["A1"] = f"({usuario}) Atendimento Médico {data_atual}"
             ws.merge_cells("A1:F1")
@@ -1304,17 +1317,23 @@ class FuncoesBotoes:
                 linha_med = len(dados_medicos) + 3
 
                 # Soma
-                ws.cell(row=linha_med, column=4).value = "Soma"  # Adiciona "Soma" na coluna de reexames
+                ws.cell(row=linha_med, column=4).value = (
+                    "Soma"  # Adiciona "Soma" na coluna de reexames
+                )
                 ws.cell(row=linha_med, column=5).value = len(dados_medicos) * 148.65
                 ws.cell(row=linha_med, column=5).number_format = '"R$"#,##0.00'
 
                 # Médico
-                ws.cell(row=linha_med + 1, column=4).value = "Médico"  # Adiciona "Médico" na coluna de reexames
+                ws.cell(row=linha_med + 1, column=4).value = (
+                    "Médico"  # Adiciona "Médico" na coluna de reexames
+                )
                 ws.cell(row=linha_med + 1, column=5).value = len(dados_medicos) * 49.00
                 ws.cell(row=linha_med + 1, column=5).number_format = '"R$"#,##0.00'
 
                 # Total
-                ws.cell(row=linha_med + 2, column=4).value = "Total"  # Adiciona "Total" na coluna de reexames
+                ws.cell(row=linha_med + 2, column=4).value = (
+                    "Total"  # Adiciona "Total" na coluna de reexames
+                )
                 ws.cell(row=linha_med + 2, column=5).value = (
                     len(dados_medicos) * 148.65
                 ) - (len(dados_medicos) * 49.00)
@@ -1325,19 +1344,25 @@ class FuncoesBotoes:
                 linha_psi = len(dados_psicologos) + 3
 
                 # Soma
-                ws.cell(row=linha_psi, column=10).value = "Soma"  # Adiciona "Soma" na coluna de reexames
+                ws.cell(row=linha_psi, column=10).value = (
+                    "Soma"  # Adiciona "Soma" na coluna de reexames
+                )
                 ws.cell(row=linha_psi, column=11).value = len(dados_psicologos) * 192.61
                 ws.cell(row=linha_psi, column=11).number_format = '"R$"#,##0.00'
 
                 # Psicólogo
-                ws.cell(row=linha_psi + 1, column=10).value = "Psicólogo"  # Adiciona "Psicólogo" na coluna de reexames
+                ws.cell(row=linha_psi + 1, column=10).value = (
+                    "Psicólogo"  # Adiciona "Psicólogo" na coluna de reexames
+                )
                 ws.cell(row=linha_psi + 1, column=11).value = (
                     len(dados_psicologos) * 63.50
                 )
                 ws.cell(row=linha_psi + 1, column=11).number_format = '"R$"#,##0.00'
 
                 # Total
-                ws.cell(row=linha_psi + 2, column=10).value = "Total"  # Adiciona "Total" na coluna de reexames
+                ws.cell(row=linha_psi + 2, column=10).value = (
+                    "Total"  # Adiciona "Total" na coluna de reexames
+                )
                 ws.cell(row=linha_psi + 2, column=11).value = (
                     len(dados_psicologos) * 192.61
                 ) - (len(dados_psicologos) * 63.50)
@@ -1367,7 +1392,7 @@ class FuncoesBotoes:
         except Exception as e:
             self.logger.error(f"Erro ao formatar planilha: {str(e)}")
             return False
-        
+
     # Código de salvamento na planilha...
     def salvar_na_planilha(self, nome, renach, pagamentos, tipo_escolha):
         """
@@ -1394,7 +1419,7 @@ class FuncoesBotoes:
                     valor_nome = ws.cell(row=row, column=coluna_inicial).value
                     valor_soma = ws.cell(row=row, column=coluna_soma).value
 
-                    if valor_soma and str(valor_soma).strip().lower() == 'soma':
+                    if valor_soma and str(valor_soma).strip().lower() == "soma":
                         linha_soma = row
                         break
                     elif valor_nome:
@@ -1408,33 +1433,33 @@ class FuncoesBotoes:
             # Salvar na seção médica
             if tipo_escolha in ["medico", "ambos"]:
                 linha_medico = encontrar_linha_insercao(2, 4)
-                
-                if ws.cell(row=linha_medico, column=4).value == 'Soma':
+
+                if ws.cell(row=linha_medico, column=4).value == "Soma":
                     ws.insert_rows(linha_medico)
-                
-                ws.cell(row=linha_medico, column=1, value=linha_medico-2)  # Ordem
+
+                ws.cell(row=linha_medico, column=1, value=linha_medico - 2)  # Ordem
                 ws.cell(row=linha_medico, column=2, value=nome)  # Nome
                 ws.cell(row=linha_medico, column=3, value=renach)  # Renach
                 ws.cell(row=linha_medico, column=4, value=reexame_mark)  # Reexame
                 ws.cell(row=linha_medico, column=5, value=148.65)  # Valor fixo
                 ws.cell(row=linha_medico, column=6, value=pagamentos)  # Pagamento
-                
+
                 alteracoes_feitas = True
 
             # Salvar na seção psicológica
             if tipo_escolha in ["psicologo", "ambos"]:
                 linha_psi = encontrar_linha_insercao(8, 10)
-                
-                if ws.cell(row=linha_psi, column=10).value == 'Soma':
+
+                if ws.cell(row=linha_psi, column=10).value == "Soma":
                     ws.insert_rows(linha_psi)
-                
-                ws.cell(row=linha_psi, column=7, value=linha_psi-2)  # Ordem
+
+                ws.cell(row=linha_psi, column=7, value=linha_psi - 2)  # Ordem
                 ws.cell(row=linha_psi, column=8, value=nome)  # Nome
                 ws.cell(row=linha_psi, column=9, value=renach)  # Renach
                 ws.cell(row=linha_psi, column=10, value=reexame_mark)  # Reexame
                 ws.cell(row=linha_psi, column=11, value=192.61)  # Valor fixo
                 ws.cell(row=linha_psi, column=12, value=pagamentos)  # Pagamento
-                
+
                 alteracoes_feitas = True
 
             if alteracoes_feitas:
@@ -1447,7 +1472,7 @@ class FuncoesBotoes:
             self.logger.error(f"Erro ao salvar na planilha: {str(e)}")
             messagebox.showerror("Erro", f"Erro ao salvar na planilha: {str(e)}")
             return False
-        
+
     # Código de adição de totais...
     def _adicionar_totais(
         self,
@@ -1969,27 +1994,27 @@ class FuncoesBotoes:
         # Valores fixos para consulta
         VALOR_MEDICO = 148.65
         VALOR_PSICOLOGO = 192.61
-        
+
         def processar_pagamento(pagamento_str, valor_padrao, totais):
             if not pagamento_str:
                 return
-                
+
             try:
                 # Para códigos simples (D, C, E, P)
                 if pagamento_str in ["D", "C", "E", "P"]:
                     metodo = self._traduzir_metodo(pagamento_str)
                     totais[metodo] += valor_padrao
                     return
-                    
+
                 # Para formatos complexos (D:100,65|C:48,00)
                 for parte in pagamento_str.split("|"):
                     if ":" not in parte:
                         continue
-                        
+
                     partes = parte.split(":")
                     if len(partes) != 2:
                         continue
-                        
+
                     metodo, valor = partes
                     metodo = self._traduzir_metodo(metodo.strip())
                     try:
@@ -1997,15 +2022,15 @@ class FuncoesBotoes:
                         totais[metodo] += valor
                     except (ValueError, KeyError):
                         continue
-                        
+
             except Exception as e:
                 print(f"Erro ao processar pagamento '{pagamento_str}': {e}")
-        
+
         # Itera sobre as linhas da planilha para calcular os valores
         for row in range(3, ws.max_row + 1):
             pagamento_medico = ws[f"F{row}"].value
             pagamento_psicologo = ws[f"L{row}"].value
-            
+
             # Processa os valores de pagamento
             processar_pagamento(pagamento_medico, VALOR_MEDICO, total_medico)
             processar_pagamento(pagamento_psicologo, VALOR_PSICOLOGO, total_psicologo)
@@ -2015,45 +2040,63 @@ class FuncoesBotoes:
         janela_valores.title("Valores dos Atendimentos")
         janela_valores.geometry("400x400")
         janela_valores.configure(bg="#2C3E50")
-        
+
         # Exibindo valores acumulados para médico
-        tk.Label(janela_valores, text="Valores - Médico:", bg="#2C3E50", fg="#ECF0F1", 
-                font=("Arial", 20, "bold")).pack(pady=5)
+        tk.Label(
+            janela_valores,
+            text="Valores - Médico:",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 20, "bold"),
+        ).pack(pady=5)
         for metodo, valor in total_medico.items():
-            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", 
-                    bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
-        
+            tk.Label(
+                janela_valores,
+                text=f"{metodo}: R$ {valor:.2f}",
+                bg="#2C3E50",
+                fg="#ECF0F1",
+                font=("Arial", 12, "bold"),
+            ).pack()
+
         # Espaço entre seções
         tk.Label(janela_valores, text="", bg="#2C3E50").pack()
-        
+
         # Exibindo valores acumulados para psicólogo
-        tk.Label(janela_valores, text="Valores - Psicólogo:", bg="#2C3E50", fg="#ECF0F1", 
-                font=("Arial", 20, "bold")).pack(pady=5)
+        tk.Label(
+            janela_valores,
+            text="Valores - Psicólogo:",
+            bg="#2C3E50",
+            fg="#ECF0F1",
+            font=("Arial", 20, "bold"),
+        ).pack(pady=5)
         for metodo, valor in total_psicologo.items():
-            tk.Label(janela_valores, text=f"{metodo}: R$ {valor:.2f}", 
-                    bg="#2C3E50", fg="#ECF0F1", font=("Arial", 12, "bold")).pack()
-        
+            tk.Label(
+                janela_valores,
+                text=f"{metodo}: R$ {valor:.2f}",
+                bg="#2C3E50",
+                fg="#ECF0F1",
+                font=("Arial", 12, "bold"),
+            ).pack()
+
         # Centraliza a janela
         self.center(janela_valores)
-    
+
     def _traduzir_metodo(self, codigo):
         """Converte os códigos de pagamento em textos legíveis."""
-        return {
-            "D": "Débito",
-            "C": "Crédito",
-            "E": "Espécie",
-            "P": "PIX"
-        }.get(codigo, "Desconhecido")
+        return {"D": "Débito", "C": "Crédito", "E": "Espécie", "P": "PIX"}.get(
+            codigo, "Desconhecido"
+        )
+
     # Código de processamento de notas...
     def processar_notas_fiscais(self):
         """Processa e emite notas fiscais com autenticação dupla."""
         driver = None
         primeira_conta = None
         segunda_conta = None
-        
+
         try:
             emitir_nota = EmitirNota(self.master)
-            
+
             def process_automation():
                 nonlocal driver, primeira_conta, segunda_conta
                 try:
@@ -2062,8 +2105,13 @@ class FuncoesBotoes:
 
                     # Ler o arquivo Excel
                     logging.info("Lendo o arquivo Excel")
-                    df = pd.read_excel(self.file_path, skiprows=1, sheet_name="17.10", dtype={"Renach": str})
-                    
+                    df = pd.read_excel(
+                        self.file_path,
+                        skiprows=1,
+                        sheet_name="17.10",
+                        dtype={"Renach": str},
+                    )
+
                     renach_c = df.iloc[:, 2].dropna().tolist()
                     renach_i = df.iloc[:, 8].dropna().tolist()
 
@@ -2071,10 +2119,12 @@ class FuncoesBotoes:
                     logging.info("Acessando o site do DETRAN")
                     driver.get("https://clinicas.detran.ba.gov.br/")
                     campo_usuario = WebDriverWait(driver, 30).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="documento"]'))
+                        EC.presence_of_element_located(
+                            (By.XPATH, '//*[@id="documento"]')
+                        )
                     )
-                    
-                    for numero in primeira_conta['usuario']:
+
+                    for numero in primeira_conta["usuario"]:
                         campo_usuario.send_keys(numero)
 
                     actions = ActionChains(driver)
@@ -2084,22 +2134,28 @@ class FuncoesBotoes:
                     campo_senha = WebDriverWait(driver, 20).until(
                         EC.presence_of_element_located((By.XPATH, '//*[@id="senha"]'))
                     )
-                    for numero in primeira_conta['senha']:
+                    for numero in primeira_conta["senha"]:
                         campo_senha.send_keys(numero)
 
                     WebDriverWait(driver, 10).until(
                         EC.element_to_be_clickable((By.XPATH, '//*[@id="acessar"]'))
                     ).click()
                     WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable((By.XPATH, "/html/body/aside/section/ul/li[2]/a/span[1]"))
+                        EC.element_to_be_clickable(
+                            (By.XPATH, "/html/body/aside/section/ul/li[2]/a/span[1]")
+                        )
                     ).click()
                     WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable((By.XPATH, "/html/body/aside/section/ul/li[2]/ul/li/a/span"))
+                        EC.element_to_be_clickable(
+                            (By.XPATH, "/html/body/aside/section/ul/li[2]/ul/li/a/span")
+                        )
                     ).click()
 
                     # Coletar CPFs
                     barra_pesquisa = WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="list_items_filter"]/label/input'))
+                        EC.presence_of_element_located(
+                            (By.XPATH, '//*[@id="list_items_filter"]/label/input')
+                        )
                     )
 
                     for dados, tipo in [(renach_c, "medico"), (renach_i, "psicologo")]:
@@ -2110,7 +2166,12 @@ class FuncoesBotoes:
                             time.sleep(2)
                             try:
                                 paciente = WebDriverWait(driver, 10).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="list_items"]/tbody/tr/td[3]'))
+                                    EC.presence_of_element_located(
+                                        (
+                                            By.XPATH,
+                                            '//*[@id="list_items"]/tbody/tr/td[3]',
+                                        )
+                                    )
                                 )
                                 cpf = paciente.text
 
@@ -2124,29 +2185,41 @@ class FuncoesBotoes:
                                 logging.error(f"Erro ao coletar CPF: {e}")
 
                     # Filtrar CPFs duplicados
-                    cpfs["medico"] = [cpf for cpf in cpfs["medico"] if cpf not in cpfs["ambos"]]
-                    cpfs["psicologo"] = [cpf for cpf in cpfs["psicologo"] if cpf not in cpfs["ambos"]]
+                    cpfs["medico"] = [
+                        cpf for cpf in cpfs["medico"] if cpf not in cpfs["ambos"]
+                    ]
+                    cpfs["psicologo"] = [
+                        cpf for cpf in cpfs["psicologo"] if cpf not in cpfs["ambos"]
+                    ]
 
                     # Login no segundo sistema (NFSe)
                     logging.info("Acessando site para emissão de NTFS-e")
                     driver.get("https://nfse.salvador.ba.gov.br/")
-                    
+
                     WebDriverWait(driver, 30).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="txtLogin"]'))
-                    ).send_keys(segunda_conta['usuario'])
-                    
+                        EC.presence_of_element_located(
+                            (By.XPATH, '//*[@id="txtLogin"]')
+                        )
+                    ).send_keys(segunda_conta["usuario"])
+
                     WebDriverWait(driver, 30).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="txtSenha"]'))
-                    ).send_keys(segunda_conta['senha'])
-                    
+                        EC.presence_of_element_located(
+                            (By.XPATH, '//*[@id="txtSenha"]')
+                        )
+                    ).send_keys(segunda_conta["senha"])
+
                     # Aguardar resolução do captcha
                     WebDriverWait(driver, 30).until(
-                        EC.invisibility_of_element_located((By.XPATH, '//*[@id="img1"]'))
+                        EC.invisibility_of_element_located(
+                            (By.XPATH, '//*[@id="img1"]')
+                        )
                     )
-                    
+
                     # Emissao NFS-e
                     WebDriverWait(driver, 30).until(
-                        EC.element_to_be_clickable((By.XPATH, '//*[@id="menu-lateral"]/li[1]/a'))
+                        EC.element_to_be_clickable(
+                            (By.XPATH, '//*[@id="menu-lateral"]/li[1]/a')
+                        )
                     ).click()
 
                     # Emitir notas para cada tipo
@@ -2154,44 +2227,69 @@ class FuncoesBotoes:
                         for cpf in lista_cpfs:
                             try:
                                 barra_pesquisa = WebDriverWait(driver, 10).until(
-                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="tbCPFCNPJTomador"]'))
+                                    EC.element_to_be_clickable(
+                                        (By.XPATH, '//*[@id="tbCPFCNPJTomador"]')
+                                    )
                                 )
                                 barra_pesquisa.clear()
                                 barra_pesquisa.send_keys(cpf)
                                 WebDriverWait(driver, 10).until(
-                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="btAvancar"]'))
+                                    EC.element_to_be_clickable(
+                                        (By.XPATH, '//*[@id="btAvancar"]')
+                                    )
                                 ).click()
 
                                 WebDriverWait(driver, 10).until(
-                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="ddlCNAE_chosen"]/a'))
-                                ).click()
-                                
-                                WebDriverWait(driver, 30).until(
-                                    EC.visibility_of_element_located((By.XPATH, '//*[@id="ddlCNAE_chosen"]/div/ul/li[2]'))
+                                    EC.element_to_be_clickable(
+                                        (By.XPATH, '//*[@id="ddlCNAE_chosen"]/a')
+                                    )
                                 ).click()
 
                                 WebDriverWait(driver, 30).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="tbAliquota"]'))
+                                    EC.visibility_of_element_located(
+                                        (
+                                            By.XPATH,
+                                            '//*[@id="ddlCNAE_chosen"]/div/ul/li[2]',
+                                        )
+                                    )
+                                ).click()
+
+                                WebDriverWait(driver, 30).until(
+                                    EC.presence_of_element_located(
+                                        (By.XPATH, '//*[@id="tbAliquota"]')
+                                    )
                                 ).send_keys("2,5")
 
                                 servicos = {
                                     "ambos": "Exame de sanidade física e mental",
                                     "psicologo": "Exame de sanidade mental",
-                                    "medico": "Exame de sanidade física"
+                                    "medico": "Exame de sanidade física",
                                 }
-                                tipo_servico = servicos.get(tipo, "Exame de sanidade física")
+                                tipo_servico = servicos.get(
+                                    tipo, "Exame de sanidade física"
+                                )
 
                                 WebDriverWait(driver, 30).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="tbDiscriminacao"]'))
+                                    EC.presence_of_element_located(
+                                        (By.XPATH, '//*[@id="tbDiscriminacao"]')
+                                    )
                                 ).send_keys(tipo_servico)
 
-                                valor_nota = "148,65" if tipo == "medico" else "192,61" if tipo == "psicologo" else "341,26"
+                                valor_nota = (
+                                    "148,65"
+                                    if tipo == "medico"
+                                    else "192,61" if tipo == "psicologo" else "341,26"
+                                )
                                 WebDriverWait(driver, 20).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="tbValor"]'))
+                                    EC.presence_of_element_located(
+                                        (By.XPATH, '//*[@id="tbValor"]')
+                                    )
                                 ).send_keys(valor_nota)
 
                                 WebDriverWait(driver, 20).until(
-                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="btEmitir"]'))
+                                    EC.element_to_be_clickable(
+                                        (By.XPATH, '//*[@id="btEmitir"]')
+                                    )
                                 ).click()
 
                                 # Aceitar alerta
@@ -2200,10 +2298,14 @@ class FuncoesBotoes:
 
                                 # Voltar para emissão
                                 WebDriverWait(driver, 20).until(
-                                    EC.element_to_be_clickable((By.XPATH, '//*[@id="btVoltar"]'))
+                                    EC.element_to_be_clickable(
+                                        (By.XPATH, '//*[@id="btVoltar"]')
+                                    )
                                 ).click()
 
-                                logging.info(f"Nota emitida para o CPF: {cpf}, Valor: {valor_nota}")
+                                logging.info(
+                                    f"Nota emitida para o CPF: {cpf}, Valor: {valor_nota}"
+                                )
 
                             except Exception as e:
                                 logging.error(f"Erro ao emitir nota: {e}")
@@ -2218,20 +2320,20 @@ class FuncoesBotoes:
 
             def after_first_login(usuario, senha):
                 nonlocal primeira_conta
-                primeira_conta = {'usuario': usuario, 'senha': senha}
+                primeira_conta = {"usuario": usuario, "senha": senha}
                 self.second_window = emitir_nota.show_second_window()
-                
+
                 def after_second_login(result):
                     if result:
                         nonlocal segunda_conta
                         segunda_conta = {
-                            'usuario': self.second_window.usuario,
-                            'senha': self.second_window.senha
+                            "usuario": self.second_window.usuario,
+                            "senha": self.second_window.senha,
                         }
                         process_automation()
-                        
+
                 self.second_window.login_callback = after_second_login
-            
+
             emitir_nota.login_callback = after_first_login
             emitir_nota.show()
 
@@ -2489,8 +2591,14 @@ class PaymentProcessor:
             ValueError: Se houver erro na validação
         """
         try:
-            total = sum(cls.convert_currency_value(value) for value in payments.values() if value)
-            return abs(total - expected_total) < 0.01  # Permite pequena diferença por arredondamento
+            total = sum(
+                cls.convert_currency_value(value)
+                for value in payments.values()
+                if value
+            )
+            return (
+                abs(total - expected_total) < 0.01
+            )  # Permite pequena diferença por arredondamento
         except ValueError as e:
             raise ValueError(f"Erro ao validar pagamentos: {str(e)}")
 
@@ -2498,7 +2606,7 @@ class PaymentProcessor:
     def process_payment_methods(cls, payment_data: dict) -> str:
         """
         Processa e formata métodos de pagamento.
-        
+
         Se houver apenas um método, retorna apenas o código (D, C, E ou P).
         Se houver múltiplos métodos, retorna no formato "D:3000|E:4127".
 
@@ -2519,28 +2627,33 @@ class PaymentProcessor:
         """
         try:
             # Filtra apenas os métodos selecionados (com valores não vazios)
-            selected_payments = {code: value for code, value in payment_data.items() 
-                            if value and str(value).strip()}
-            
+            selected_payments = {
+                code: value
+                for code, value in payment_data.items()
+                if value and str(value).strip()
+            }
+
             # Se houver apenas um método de pagamento, retorna só o código
             if len(selected_payments) == 1:
                 return list(selected_payments.keys())[0]
-            
+
             # Se houver múltiplos métodos, retorna no formato "D:3000|E:4127"
             formatted_parts = []
             for code, value in selected_payments.items():
                 # Converte o valor para float e formata com 2 casas decimais
                 value_float = cls.convert_currency_value(value)
-                formatted_value = f"{value_float:.2f}".replace('.', ',')
+                formatted_value = f"{value_float:.2f}".replace(".", ",")
                 formatted_parts.append(f"{code}:{formatted_value}")
-            
+
             return "|".join(formatted_parts)
 
         except Exception as e:
             raise ValueError(f"Erro ao processar métodos de pagamento: {str(e)}")
 
     @classmethod
-    def calculate_professional_payment(cls, service_type: str, num_patients: int) -> float:
+    def calculate_professional_payment(
+        cls, service_type: str, num_patients: int
+    ) -> float:
         """
         Calcula pagamento do profissional baseado no tipo de serviço e número de pacientes.
 
@@ -2621,7 +2734,6 @@ class PaymentProcessor:
             return f"Erro ao processar pagamento: {str(e)}"
 
 
-
 class GerenciadorPlanilhas:
     """
     SEÇÃO 1: INICIALIZAÇÃO E CONFIGURAÇÃO
@@ -2634,13 +2746,13 @@ class GerenciadorPlanilhas:
         self.file_path = None
         self.sheet_name = None
         self.active_window = None
-        
+
         # Create instance of ConfigManager
         self.config_manager = ConfigManager()
-        
+
         # Get configs using instance method
-        self.config = self.config_manager.get_config('UI_CONFIG')
-        self.app_config = self.config_manager.get_config('APP_CONFIG')
+        self.config = self.config_manager.get_config("UI_CONFIG")
+        self.app_config = self.config_manager.get_config("APP_CONFIG")
 
     """
     SEÇÃO 2: INTERFACE GRÁFICA
@@ -2654,28 +2766,28 @@ class GerenciadorPlanilhas:
 
         self.active_window = Toplevel(self.master)
         self.active_window.title("Gerenciador de Planilhas")
-        
+
         # Use window dimensions from config
-        window_width = self.app_config['window']['min_width']
-        window_height = self.app_config['window']['min_height']
+        window_width = self.app_config["window"]["min_width"]
+        window_height = self.app_config["window"]["min_height"]
         screen_width = self.active_window.winfo_screenwidth()
         screen_height = self.active_window.winfo_screenheight()
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
-        
+
         self.active_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         self.active_window.minsize(
-            self.app_config['window']['min_width'],
-            self.app_config['window']['min_height']
+            self.app_config["window"]["min_width"],
+            self.app_config["window"]["min_height"],
         )
         self.active_window.maxsize(
-            self.app_config['window']['max_width'],
-            self.app_config['window']['max_height']
+            self.app_config["window"]["max_width"],
+            self.app_config["window"]["max_height"],
         )
-        
+
         # Configure window background
-        self.active_window.configure(bg=self.config['colors']['background'])
-        
+        self.active_window.configure(bg=self.config["colors"]["background"])
+
         self.active_window.grid_columnconfigure(0, weight=1)
         self.active_window.grid_rowconfigure(0, weight=1)
 
@@ -2687,46 +2799,55 @@ class GerenciadorPlanilhas:
     # Configura os elementos da interface
     def _setup_interface(self):
         style = ttk.Style()
-        style.configure('Custom.TFrame', background=self.config['colors']['background'])
-        style.configure('Custom.TLabelframe', background=self.config['colors']['frame'])
-        style.configure('Custom.TLabelframe.Label', foreground=self.config['colors']['text'], background=self.config['colors']['frame'])
-        style.configure('Custom.TButton', background=self.config['colors']['button'], foreground=self.config['colors']['text'])
-        style.configure('Custom.TEntry', fieldbackground=self.config['colors']['frame'], foreground=self.config['colors']['text'])
-
-        main_frame = ttk.Frame(
-            self.active_window, 
-            padding=20,
-            style='Custom.TFrame'
+        style.configure("Custom.TFrame", background=self.config["colors"]["background"])
+        style.configure("Custom.TLabelframe", background=self.config["colors"]["frame"])
+        style.configure(
+            "Custom.TLabelframe.Label",
+            foreground=self.config["colors"]["text"],
+            background=self.config["colors"]["frame"],
         )
+        style.configure(
+            "Custom.TButton",
+            background=self.config["colors"]["button"],
+            foreground=self.config["colors"]["text"],
+        )
+        style.configure(
+            "Custom.TEntry",
+            fieldbackground=self.config["colors"]["frame"],
+            foreground=self.config["colors"]["text"],
+        )
+
+        main_frame = ttk.Frame(self.active_window, padding=20, style="Custom.TFrame")
         main_frame.grid(row=0, column=0, sticky="nsew")
         main_frame.grid_columnconfigure(0, weight=1)
 
-        self.active_window.configure(bg=self.config['colors']['background'])
+        self.active_window.configure(bg=self.config["colors"]["background"])
 
         title_label = ttk.Label(
             main_frame,
             text="Gerenciador de Planilhas Excel",
             font=("Segoe UI", 18, "bold"),
-            foreground=self.config['colors']['title'],
-            background=self.config['colors']['background']
+            foreground=self.config["colors"]["title"],
+            background=self.config["colors"]["background"],
         )
         title_label.grid(row=0, column=0, pady=(0, 20))
 
         file_frame = ttk.LabelFrame(
-            main_frame, 
-            text="Arquivo Atual",
-            padding=10,
-            style='Custom.TLabelframe'
+            main_frame, text="Arquivo Atual", padding=10, style="Custom.TLabelframe"
         )
         file_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
         file_frame.grid_columnconfigure(0, weight=1)
 
         self.lbl_arquivo = ttk.Label(
             file_frame,
-            text=(self.sistema_contas.file_path if hasattr(self.sistema_contas, "file_path") else "Nenhum arquivo selecionado"),
+            text=(
+                self.sistema_contas.file_path
+                if hasattr(self.sistema_contas, "file_path")
+                else "Nenhum arquivo selecionado"
+            ),
             wraplength=500,
-            foreground=self.config['colors']['text'],
-            background=self.config['colors']['frame']
+            foreground=self.config["colors"]["text"],
+            background=self.config["colors"]["frame"],
         )
         self.lbl_arquivo.grid(row=0, column=0, sticky="ew", padx=5)
 
@@ -2734,7 +2855,7 @@ class GerenciadorPlanilhas:
             main_frame,
             text="Planilhas Disponíveis",
             padding=10,
-            style='Custom.TLabelframe'
+            style="Custom.TLabelframe",
         )
         list_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 20))
         list_frame.grid_columnconfigure(0, weight=1)
@@ -2745,20 +2866,17 @@ class GerenciadorPlanilhas:
             font=("Segoe UI", 10),
             selectmode=SINGLE,
             height=10,
-            bg=self.config['colors']['frame'],
-            fg=self.config['colors']['text'],
-            selectbackground=self.config['colors']['button'],
-            selectforeground=self.config['colors']['text'],
+            bg=self.config["colors"]["frame"],
+            fg=self.config["colors"]["text"],
+            selectbackground=self.config["colors"]["button"],
+            selectforeground=self.config["colors"]["text"],
             borderwidth=1,
-            relief="solid"
+            relief="solid",
         )
         self.listbox.grid(row=0, column=0, sticky="nsew")
 
         create_frame = ttk.LabelFrame(
-            main_frame,
-            text="Criar Nova Sheet",
-            padding=10,
-            style='Custom.TLabelframe'
+            main_frame, text="Criar Nova Sheet", padding=10, style="Custom.TLabelframe"
         )
         create_frame.grid(row=3, column=0, sticky="ew", pady=(0, 20))
         create_frame.grid_columnconfigure(1, weight=1)
@@ -2767,17 +2885,14 @@ class GerenciadorPlanilhas:
             create_frame,
             text="Nome:",
             font=("Segoe UI", 10),
-            foreground=self.config['colors']['text'],
-            background=self.config['colors']['frame']
+            foreground=self.config["colors"]["text"],
+            background=self.config["colors"]["frame"],
         ).grid(row=0, column=0, padx=(0, 10), sticky="w")
 
-        self.nova_sheet_entry = ttk.Entry(
-            create_frame,
-            style='Custom.TEntry'
-        )
+        self.nova_sheet_entry = ttk.Entry(create_frame, style="Custom.TEntry")
         self.nova_sheet_entry.grid(row=0, column=1, sticky="ew")
 
-        button_frame = ttk.Frame(main_frame, style='Custom.TFrame')
+        button_frame = ttk.Frame(main_frame, style="Custom.TFrame")
         button_frame.grid(row=4, column=0, sticky="ew")
         for i in range(2):
             button_frame.grid_columnconfigure(i, weight=1)
@@ -2786,16 +2901,13 @@ class GerenciadorPlanilhas:
             ("Nova Planilha Excel", self.criar_nova_planilha),
             ("Abrir Planilha Existente", self.abrir_planilha),
             ("Selecionar Sheet", self.selecionar_sheet),
-            ("Criar Nova Sheet", self.criar_nova_sheet)
+            ("Criar Nova Sheet", self.criar_nova_sheet),
         ]
 
         for idx, (text, command) in enumerate(buttons):
             ttk.Button(
-                button_frame,
-                text=text,
-                command=command,
-                style='Custom.TButton'
-            ).grid(row=idx//2, column=idx%2, padx=5, pady=5, sticky="ew")
+                button_frame, text=text, command=command, style="Custom.TButton"
+            ).grid(row=idx // 2, column=idx % 2, padx=5, pady=5, sticky="ew")
 
         self.atualizar_lista_sheets()
 
@@ -2812,10 +2924,9 @@ class GerenciadorPlanilhas:
     # Cria nova planilha Excel
     def criar_nova_planilha(self):
         file_path = filedialog.asksaveasfilename(
-            defaultextension=".xlsx",
-            filetypes=self.app_config['file_types']
+            defaultextension=".xlsx", filetypes=self.app_config["file_types"]
         )
-        
+
     # Abre planilha Excel existente
     def abrir_planilha(self):
         """Abre uma planilha Excel existente"""
@@ -2964,24 +3075,24 @@ class PatientInfoDisplay:
         }
 
         # Obter cores do ConfigManager
-        ui_config = self.config_manager.get_config('UI_CONFIG')
+        ui_config = self.config_manager.get_config("UI_CONFIG")
         self.theme = {
-            "background": ui_config['colors']['background'],
-            "secondary_bg": ui_config['colors']['frame'],
-            "text": ui_config['colors']['text'],
-            "accent": ui_config['colors']['button'],
-            "header": ui_config['colors']['frame'],
-            "highlight": ui_config['colors']['border'],
-            "separator": ui_config['colors']['border'],
-            "hover": ui_config['colors']['button_hover'],
-            "error": "#e74c3c"  # Mantido para consistência
+            "background": ui_config["colors"]["background"],
+            "secondary_bg": ui_config["colors"]["frame"],
+            "text": ui_config["colors"]["text"],
+            "accent": ui_config["colors"]["button"],
+            "header": ui_config["colors"]["frame"],
+            "highlight": ui_config["colors"]["border"],
+            "separator": ui_config["colors"]["border"],
+            "hover": ui_config["colors"]["button_hover"],
+            "error": "#e74c3c",  # Mantido para consistência
         }
 
         # Configurações de UI responsiva
         self.ui_config = {
             "min_width": 800,
             "min_height": 600,
-            "padding": ui_config['padding']['default'],
+            "padding": ui_config["padding"]["default"],
             "animation_duration": 200,
         }
 
@@ -2990,7 +3101,6 @@ class PatientInfoDisplay:
 
         # Estado de ordenação
         self.sort_state = {"column": None, "reverse": False}
-
 
     @lru_cache(maxsize=1000)
     def _process_payment(self, value: str) -> str:
@@ -3196,7 +3306,7 @@ class PatientInfoDisplay:
             text=title,
             bg=self.theme["background"],
             fg=self.theme["text"],
-            font=self.config_manager.get_config('UI_CONFIG')['fonts']['normal'],
+            font=self.config_manager.get_config("UI_CONFIG")["fonts"]["normal"],
         )
         frame.pack(side="left", padx=5, pady=5)
         return frame
@@ -3261,7 +3371,7 @@ class PatientInfoDisplay:
             ("Tipo", 10),
         ]
 
-        fonts = self.config_manager.get_config('UI_CONFIG')['fonts']
+        fonts = self.config_manager.get_config("UI_CONFIG")["fonts"]
         for col, (header, width) in enumerate(headers):
             header_frame = tk.Frame(table_frame, bg=self.theme["header"])
             header_frame.grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
@@ -3271,14 +3381,18 @@ class PatientInfoDisplay:
                 text=header,
                 bg=self.theme["header"],
                 fg=self.theme["text"],
-                font=fonts['header'],
+                font=fonts["header"],
                 padx=10,
                 pady=8,
             )
             label.pack(fill="both", expand=True)
             label.bind("<Button-1>", lambda e, col=col: self._sort_table(col))
-            label.bind("<Enter>", lambda e, widget=label: self._on_header_hover(widget, True))
-            label.bind("<Leave>", lambda e, widget=label: self._on_header_hover(widget, False))
+            label.bind(
+                "<Enter>", lambda e, widget=label: self._on_header_hover(widget, True)
+            )
+            label.bind(
+                "<Leave>", lambda e, widget=label: self._on_header_hover(widget, False)
+            )
 
         canvas.create_window((0, 0), window=table_frame, anchor="nw", tags=("table",))
         canvas.bind("<Configure>", lambda e: canvas.itemconfig("table", width=e.width))
@@ -3296,7 +3410,6 @@ class PatientInfoDisplay:
             "canvas": canvas,
             "scrollbar": scrollbar,
         }
-
 
     def _create_table(self, parent: tk.Frame) -> Dict:
         """Cria uma tabela moderna e responsiva."""
@@ -3319,7 +3432,6 @@ class PatientInfoDisplay:
         )
 
         table_frame = tk.Frame(canvas, bg=self.theme["background"])
-
 
         # Configuração do scroll
         def _on_frame_configure(event):
@@ -3437,21 +3549,25 @@ class PatientInfoDisplay:
     def _update_table(self, data: List[PatientData]) -> None:
         """Atualiza a tabela com os dados filtrados."""
         table = self.ui_refs["table"]
-        
+
         # Limpa tabela preservando cabeçalho
         for widget in table["frame"].winfo_children():
             if int(widget.grid_info()["row"]) > 0:
                 widget.destroy()
 
-        fonts = self.config_manager.get_config('UI_CONFIG')['fonts']
+        fonts = self.config_manager.get_config("UI_CONFIG")["fonts"]
         medicos = [p for p in data if p.tipo == "Médico"]
         psicologos = [p for p in data if p.tipo == "Psicólogo"]
 
         row = 2
         for lista, tipo in [(medicos, "Médico"), (psicologos, "Psicólogo")]:
             for idx, patient in enumerate(lista, 1):
-                bg_color = self.theme["highlight"] if idx % 2 == 0 else self.theme["background"]
-                
+                bg_color = (
+                    self.theme["highlight"]
+                    if idx % 2 == 0
+                    else self.theme["background"]
+                )
+
                 cells = [
                     (str(idx), "center", 5),
                     (patient.nome, "w", 30),
@@ -3466,7 +3582,7 @@ class PatientInfoDisplay:
                         text=text,
                         bg=bg_color,
                         fg=self.theme["text"],
-                        font=fonts['normal'],
+                        font=fonts["normal"],
                         anchor=anchor,
                         width=width,
                         padx=10,
@@ -3477,7 +3593,9 @@ class PatientInfoDisplay:
 
             # Adiciona separador entre médicos e psicólogos
             if tipo == "Médico" and psicologos:
-                separator = tk.Frame(table["frame"], height=2, bg=self.theme["separator"])
+                separator = tk.Frame(
+                    table["frame"], height=2, bg=self.theme["separator"]
+                )
                 separator.grid(row=row, column=0, columnspan=5, sticky="ew", pady=5)
                 row += 1
 
