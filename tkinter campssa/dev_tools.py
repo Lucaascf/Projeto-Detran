@@ -7,20 +7,22 @@ import hashlib
 from datetime import datetime
 from database_connection import DatabaseConnection
 
-
 class StandaloneDevTools:
     PERMISSIONS = {
-        'manage_users': 'Gerenciar Usuários',
-        'view_reports': 'Visualizar Relatórios',
-        'edit_data': 'Editar Dados',
-        'export_data': 'Exportar Dados',
-        'admin_access': 'Acesso Administrativo'
-    }
-    
-    DEFAULT_PERMISSIONS = {
-        'admin': list(PERMISSIONS.keys()),
-        'manager': ['view_reports', 'edit_data', 'export_data'],
-        'employee': ['view_reports', 'edit_data']
+        'add_paciente': 'Adicionar Paciente',
+        'delet_paciente': 'Excluir Paciente',
+        'information_service': 'Informações do Atendimento',
+        'marcar_paciente': 'Marcar Paciente',
+        'vizu_marcacoes': 'Visualizar Marcações',
+        'relatorio_pag': 'Relatorio de Pagamentos',
+        'valores_atend': 'Valores Atendimento',
+        'gastos_clinica': 'Gastos da Clinica',
+        'emitir_ntfs': 'Emitir NTFS-e',
+        'enviar_wpp': 'Enviar Relatorio WhatsApp',
+        'enviar_email': 'Enviar Relatório Email',
+        'gerenciar_planilha': 'Gerenciar Planilhas/Sheets',
+        'graficos_gerais': 'Gráficos Gerais',
+        'manage_users': 'Gerenciar Usuários'
     }
 
     def __init__(self):
@@ -28,6 +30,7 @@ class StandaloneDevTools:
         self.setup_logging()
         self.setup_database()
         self.setup_main_window()
+        self.admin_subcounts = {}  # Dicionário para controlar subcontas por admin
         
     def setup_logging(self):
         """Configura o sistema de logging"""
@@ -53,20 +56,37 @@ class StandaloneDevTools:
                         permissions TEXT,
                         is_active INTEGER DEFAULT 1,
                         created_by TEXT,
+                        parent_admin TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_login TIMESTAMP
                     )
                 """)
                 
+                # Verifica se a coluna parent_admin existe
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM pragma_table_info('users')
+                    WHERE name = 'parent_admin'
+                """)
+                column_exists = cursor.fetchone()[0]
+                
+                if not column_exists:
+                    # Adiciona a coluna parent_admin à tabela users
+                    cursor.execute("""
+                        ALTER TABLE users
+                        ADD COLUMN parent_admin TEXT
+                    """)
+                
                 # Verifica se existe um usuário admin
                 cursor.execute("SELECT COUNT(*) FROM users WHERE user = 'admin'")
                 if cursor.fetchone()[0] == 0:
-                    # Cria usuário admin padrão se não existir
+                    # Cria usuário admin padrão com todas as permissões
                     hashed_password = hashlib.sha256('admin123'.encode()).hexdigest()
+                    all_permissions = list(self.PERMISSIONS.keys())
                     cursor.execute("""
                         INSERT INTO users (user, password, role, permissions, is_active)
                         VALUES (?, ?, ?, ?, ?)
-                    """, ('admin', hashed_password, 'admin', json.dumps(['all']), 1))
+                    """, ('admin', hashed_password, 'admin', json.dumps(all_permissions), 1))
                 
                 conn.commit()
                 self.logger.info("Database initialized successfully")
@@ -78,7 +98,7 @@ class StandaloneDevTools:
     def setup_main_window(self):
         """Configura a janela principal"""
         self.root.title("Developer Tools - User Management")
-        self.root.geometry("800x600")
+        self.root.geometry("900x600")
         self.root.configure(bg='#2c3e50')
         
         style = ttk.Style()
@@ -211,7 +231,7 @@ class StandaloneDevTools:
         """Mostra a janela de adição de usuário"""
         window = tk.Toplevel(self.root)
         window.title("Criar Usuário")
-        window.geometry("500x400")
+        window.geometry("500x600")
         window.configure(bg='#2c3e50')
         
         frame = ttk.Frame(window, padding="20")
@@ -227,44 +247,39 @@ class StandaloneDevTools:
         password_entry = ttk.Entry(frame, show="*", width=40)
         password_entry.pack(fill='x', pady=2)
         
-        # Role selection
-        ttk.Label(frame, text="Role:").pack(anchor='w', pady=2)
-        role_var = tk.StringVar(value='employee')
-        role_frame = ttk.Frame(frame)
-        role_frame.pack(fill='x', pady=2)
-        
-        ttk.Radiobutton(role_frame, text="Employee", variable=role_var, value='employee').pack(side='left', padx=10)
-        ttk.Radiobutton(role_frame, text="Manager", variable=role_var, value='manager').pack(side='left', padx=10)
-        ttk.Radiobutton(role_frame, text="Admin", variable=role_var, value='admin').pack(side='left', padx=10)
-        
         # Permissions Frame
         perm_frame = ttk.LabelFrame(frame, text="Permissions", padding=10)
         perm_frame.pack(fill='x', pady=10)
         
         permission_vars = {}
+        # Cria checkbuttons para todas as permissões, inicialmente marcadas
         for perm_key, perm_name in self.PERMISSIONS.items():
-            var = tk.BooleanVar()
+            var = tk.BooleanVar(value=True)  # Inicialmente marcado
             permission_vars[perm_key] = var
             ttk.Checkbutton(
                 perm_frame, 
                 text=perm_name, 
                 variable=var
             ).pack(anchor='w')
-        
-        def update_permissions(*args):
-            """Atualiza permissões baseado no papel selecionado"""
-            role = role_var.get()
-            default_perms = self.DEFAULT_PERMISSIONS.get(role, [])
-            for perm_key, var in permission_vars.items():
-                var.set(perm_key in default_perms)
-        
-        role_var.trace('w', update_permissions)
-        update_permissions()
-        
+
+        def check_admin_subcounts(admin_username):
+            """Verifica o número de subcontas de um admin"""
+            try:
+                with DatabaseConnection('login.db') as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM users 
+                        WHERE parent_admin = ?
+                    """, (admin_username,))
+                    count = cursor.fetchone()[0]
+                    return count
+            except sqlite3.Error as e:
+                self.logger.error(f"Erro ao verificar subcontas: {e}")
+                return 0
+
         def create_user():
             username = username_entry.get().strip()
             password = password_entry.get().strip()
-            role = role_var.get()
             
             if not username or not password:
                 messagebox.showerror("Erro", "Username e password são obrigatórios")
@@ -273,17 +288,40 @@ class StandaloneDevTools:
             if self.check_user_exists(username):
                 messagebox.showerror("Erro", "Username já existe")
                 return
-            
+
+            # Se for uma subconta de admin, verifica o limite
+            current_user = self.get_current_user()
+            if current_user and current_user['role'] == 'admin':
+                subcount_count = check_admin_subcounts(current_user['username'])
+                if subcount_count >= 2:
+                    messagebox.showerror("Erro", "Limite de subcontas atingido (máximo 2)")
+                    return
+
             selected_permissions = [
                 perm for perm, var in permission_vars.items()
                 if var.get()
             ]
-            
-            if self.create_user_in_db(username, password, role, selected_permissions):
-                messagebox.showinfo("Sucesso", "Usuário criado com sucesso!")
-                window.destroy()
-                self.load_users()
-            else:
+
+            try:
+                with DatabaseConnection('login.db') as conn:
+                    cursor = conn.cursor()
+                    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+                    parent_admin = current_user['username'] if current_user and current_user['role'] == 'admin' else None
+                    
+                    cursor.execute("""
+                        INSERT INTO users (
+                            user, password, role, permissions, is_active, created_by, parent_admin
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (username, hashed_password, 'employee', json.dumps(selected_permissions), 
+                        1, current_user['username'] if current_user else None, parent_admin))
+                    
+                    conn.commit()
+                    messagebox.showinfo("Sucesso", "Usuário criado com sucesso!")
+                    window.destroy()
+                    self.load_users()
+                    
+            except sqlite3.Error as e:
+                self.logger.error(f"Erro ao criar usuário: {e}")
                 messagebox.showerror("Erro", "Falha ao criar usuário")
         
         ttk.Button(
@@ -291,9 +329,56 @@ class StandaloneDevTools:
             text="Criar Usuário",
             command=create_user
         ).pack(pady=20)
+
+        # Botão para verificar permissões do admin
+        if self.is_admin():
+            ttk.Button(
+                frame,
+                text="Gerenciar Subcontas",
+                command=self.show_admin_subcounts
+            ).pack(pady=10)
         
         self.center(window)
 
+    def show_admin_subcounts(self):
+        """Mostra as subcontas do admin atual"""
+        window = tk.Toplevel(self.root)
+        window.title("Gerenciar Subcontas")
+        window.geometry("600x400")
+        
+        frame = ttk.Frame(window, padding="20")
+        frame.pack(fill='both', expand=True)
+        
+        # Lista de subcontas
+        tree = ttk.Treeview(frame, columns=('Username', 'Role', 'Status'), show='headings')
+        tree.heading('Username', text='Username')
+        tree.heading('Role', text='Role')
+        tree.heading('Status', text='Status')
+        tree.pack(fill='both', expand=True, pady=10)
+        
+        current_user = self.get_current_user()
+        if current_user:
+            try:
+                with DatabaseConnection('login.db') as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT user, role, is_active 
+                        FROM users 
+                        WHERE parent_admin = ?
+                    """, (current_user['username'],))
+                    
+                    for user in cursor.fetchall():
+                        tree.insert('', 'end', values=(
+                            user[0],
+                            user[1],
+                            'Ativo' if user[2] else 'Inativo'
+                        ))
+            except sqlite3.Error as e:
+                self.logger.error(f"Erro ao carregar subcontas: {e}")
+                messagebox.showerror("Erro", "Falha ao carregar subcontas")
+        
+        self.center(window)
+    
     def show_user_details(self):
         """Mostra os detalhes do usuário selecionado"""
         selection = self.tree.selection()
@@ -484,6 +569,35 @@ class StandaloneDevTools:
         """Inicia a aplicação"""
         self.center(self.root)
         self.root.mainloop()
+
+    def get_current_user(self):
+        """Obtém informações do usuário atual"""
+        try:
+            with DatabaseConnection('login.db') as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT user, role, permissions 
+                    FROM users 
+                    WHERE id = (SELECT MAX(id) FROM users WHERE is_active = 1)
+                """)
+                user = cursor.fetchone()
+                if user:
+                    return {
+                        'username': user[0],
+                        'role': user[1],
+                        'permissions': json.loads(user[2]) if user[2] else []
+                    }
+                return None
+        except sqlite3.Error as e:
+            self.logger.error(f"Erro ao obter usuário atual: {e}")
+            return None
+
+
+    def is_admin(self):
+        """Verifica se o usuário atual é admin"""
+        current_user = self.get_current_user()
+        return current_user and current_user['role'] == 'admin'
+
 
 if __name__ == "__main__":
     logging.basicConfig(

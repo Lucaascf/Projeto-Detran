@@ -29,14 +29,19 @@ class UserManager:
     ROLES = {"admin": "Administrador", "manager": "Gerente", "employee": "Funcionário"}
 
     PERMISSIONS = {
-        "manage_users": "Gerenciar Usuários",
-        "view_reports": "Visualizar Relatórios",
-        "edit_patients": "Editar Pacientes",
-        "add_patients": "Adicionar Pacientes",
-        "delete_patients": "Excluir Pacientes",
-        "manage_appointments": "Gerenciar Agendamentos",
-        "financial_access": "Acesso Financeiro",
-        "export_data": "Exportar Dados",
+        "add_paciente": "Adicionar Paciente",
+        "delet_paciente": "Excluir Paciente",
+        "information_service": "Informações do Atendimento",
+        "marcar_paciente": "Marcar Paciente",
+        "vizu_marcacoes": "Visualizar Marcações",
+        "relatorio_pag": "Relatorio de Pagamentos",
+        "valores_atend": "Valores Atendimento",
+        "gastos_clinica": "Gastos da Clinica",
+        "emitir_ntfs": "Emitir NTFS-e",
+        "enviar_wpp": "Enviar Relatorio WhatsApp",
+        "enviar_email": "Enviar Relatório Email",
+        "gerenciar_planilha": "Gerenciar Planilhas/Sheets",
+        "graficos_gerais": "Gráficos Gerais"
     }
 
     DEFAULT_PERMISSIONS = {
@@ -47,7 +52,7 @@ class UserManager:
             "add_patients",
             "manage_appointments",
         ],
-        "employee": ["add_patients", "view_reports"],
+        "employee": ["add_paciente", "view_reports"],
     }
 
     def __init__(self, db_path: str = "users.db"):

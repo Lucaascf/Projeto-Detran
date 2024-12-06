@@ -183,7 +183,7 @@ class App(Frame):
 
     def _create_main_frame(self):
         """Cria e configura o frame principal."""
-        self.main_frame = MainFrame(self.master, self.planilhas, self.file_path, self)
+        self.main_frame = MainFrame(self.master, self.planilhas, self.file_path, self, self.db.user_manager)
         self.main_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         self.login_frame.grid_forget()
 

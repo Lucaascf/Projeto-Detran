@@ -9,14 +9,16 @@ from banco import DataBaseMarcacao
 from config import config_manager
 from frames.ntfs_frame import EmitirNota
 from graficos import GraficoMarcacoes
+from auth.user_manager import UserManager
 
 class MainFrame(Frame):
     """Frame principal da aplicação que gerencia a interface do usuário e suas interações."""
 
-    def __init__(self, master, planilhas: Planilhas, file_path: str, app):
+    def __init__(self, master, planilhas: Planilhas, file_path: str, app, user_manager: UserManager):
         self.ui_config = config_manager.get_config("UI_CONFIG")
         self.app_config = config_manager.get_config("APP_CONFIG")
         super().__init__(master, bg=self.ui_config["colors"]["background"])
+        self.user_manager = user_manager
         self.configure_window()
         self._init_attributes(master, planilhas, file_path, app)
         self._setup_styles()
@@ -128,27 +130,27 @@ class MainFrame(Frame):
         """Cria as seções principais da interface."""
         sections = [
             ("Cadastro e Gestão", 0, 0, [
-                ("Adicionar Paciente", self.adicionar_informacao),
-                ("Excluir Paciente", self.excluir_informacao),
-                ("Informações do Atendimento", self.exibir)
+                ("Adicionar Paciente", self.adicionar_informacao, "add_paciente"),
+                ("Excluir Paciente", self.excluir_informacao, "delet_paciente"),
+                ("Informações do Atendimento", self.exibir, "information_service")
             ]),
             ("Agenda e Marcações", 0, 1, [
-                ("Marcar Paciente", self.marcar_paciente),
-                ("Visualizar Marcações", self.visu_marcacoes)
+                ("Marcar Paciente", self.marcar_paciente, "marcar_paciente"),
+                ("Visualizar Marcações", self.visu_marcacoes, "vizu_marcacoes")
             ]),
             ("Gestão Financeira", 1, 0, [
-                ("Relatorio de Pagamentos", self.resultados_consulta),
-                ("Valores Atendimento", self.exibir_contas),
-                ("Gastos da Clinica", self.fechamento_contas)
+                ("Relatorio de Pagamentos", self.resultados_consulta, "relatorio_pag"),
+                ("Valores Atendimento", self.exibir_contas, "valores_atend"),
+                ("Gastos da Clinica", self.fechamento_contas, "gastos_clinica")
             ]),
             ("Documentos e Relatórios", 1, 1, [
-                ("Emitir NTFS-e", self.emitir_notas),
-                ("Enviar Relatório WhatsApp", self.relatorio_wpp),
-                ("Enviar Relatório Email", self.relatorio_email)
+                ("Emitir NTFS-e", self.emitir_notas, "emitir_ntfs"),
+                ("Enviar Relatório WhatsApp", self.relatorio_wpp, "enviar_wpp"),
+                ("Enviar Relatório Email", self.relatorio_email, "enviar_email")
             ]),
             ("Ferramentas", 2, 0, [
-                ("Gerenciar Planilhas/Sheets", self.planilha_sheet),
-                ("Gráficos Gerais", self.abrir_grafico)
+                ("Gerenciar Planilhas/Sheets", self.planilha_sheet, "gerenciar_planilha"),
+                ("Gráficos Gerais", self.abrir_grafico, "graficos_gerais")
             ], 2)
         ]
 
@@ -170,12 +172,13 @@ class MainFrame(Frame):
                 sticky="nsew"
             )
 
-            for btn_text, btn_command in buttons:
-                self.create_button(frame, btn_text, btn_command).pack(
-                    pady=padding["button"],
-                    padx=padding["button"],
-                    fill="x"
-                )
+            for btn_text, btn_command, permission in buttons:
+                if self.user_manager.verificar_permissao(permission):
+                    self.create_button(frame, btn_text, btn_command).pack(
+                        pady=padding["button"],
+                        padx=padding["button"],
+                        fill="x"
+                    )
 
     def _create_frame(self, parent, title, row, column, buttons, columnspan=1):
         """Cria um frame com título e botões."""
@@ -187,11 +190,8 @@ class MainFrame(Frame):
 
         return frame
 
-
-    def _check_button_permission(self, button_text):
-        button_permission = {
-
-        }
+    def get_current_user(self):
+        return self.user_manager.current_user
 
     # Métodos de ação permanecem os mesmos
     def adicionar_informacao(self): self.funcoes_botoes.adicionar_informacao()
