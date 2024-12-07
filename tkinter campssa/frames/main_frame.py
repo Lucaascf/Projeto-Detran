@@ -1,15 +1,302 @@
 # /home/lusca/py_excel/tkinter campssa/frames/main_frame.py
 from tkinter import *
-from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk, messagebox
 from funcoes_botoes import FuncoesBotoes, GerenciadorPlanilhas
 from banco import SistemaContas
 from planilhas import Planilhas
 from tkcalendar import DateEntry
 from banco import DataBaseMarcacao
 from config import config_manager
+import json
+import hashlib
 from frames.ntfs_frame import EmitirNota
 from graficos import GraficoMarcacoes
 from auth.user_manager import UserManager
+import sqlite3
+
+class AdminUserManager:
+    def __init__(self, master, user_manager):
+        self.master = master
+        self.user_manager = user_manager
+        self.window = None
+
+    def show(self):
+        self.window = tk.Toplevel(self.master)
+        self.window.title("Gerenciamento de Usuários")
+        self.window.geometry("800x600")
+        self.window.configure(bg='#2c3e50')
+
+        # Frame principal
+        main_frame = ttk.Frame(self.window, padding="20")
+        main_frame.pack(fill='both', expand=True)
+
+        # Lista de usuários
+        list_frame = ttk.LabelFrame(main_frame, text="Usuários", padding="10")
+        list_frame.pack(fill='both', expand=True, pady=(0, 10))
+
+        # Treeview para listar usuários
+        columns = ('Username', 'Role', 'Status', 'Criado Por', 'Último Login')
+        self.tree = ttk.Treeview(list_frame, columns=columns, show='headings')
+
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=120)
+
+        scrollbar = ttk.Scrollbar(list_frame, orient='vertical', command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        self.tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+
+        # Botões de ação
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill='x', pady=5)
+
+        ttk.Button(
+            btn_frame,
+            text="Criar Subusuário",
+            command=self.show_create_user
+        ).pack(side='left', padx=5)
+
+        ttk.Button(
+            btn_frame,
+            text="Editar Permissões",
+            command=self.show_edit_permissions
+        ).pack(side='left', padx=5)
+
+        ttk.Button(
+            btn_frame,
+            text="Desativar/Ativar Usuário",
+            command=self.toggle_user_status
+        ).pack(side='left', padx=5)
+
+        self.load_users()
+
+    def load_users(self):
+        """Carrega a lista de usuários do admin atual"""
+        try:
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+
+            with sqlite3.connect('login.db') as conn:
+                cursor = conn.cursor()
+                
+                # Busca apenas os usuários criados pelo admin atual
+                cursor.execute("""
+                    SELECT user, role, is_active, created_by, last_login
+                    FROM users
+                    WHERE created_by = ?
+                    ORDER BY user
+                """, (self.user_manager.current_user.username,))
+
+                for user in cursor.fetchall():
+                    username, role, is_active, created_by, last_login = user
+                    status = "Ativo" if is_active else "Inativo"
+                    
+                    self.tree.insert('', 'end', values=(
+                        username,
+                        role,
+                        status,
+                        created_by or "Sistema",
+                        last_login or "Nunca"
+                    ))
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao carregar usuários: {str(e)}")
+
+    def show_create_user(self):
+        """Mostra janela para criar novo subusuário"""
+        window = tk.Toplevel(self.window)
+        window.title("Criar Subusuário")
+        window.geometry("500x600")
+        window.configure(bg='#2c3e50')
+
+        frame = ttk.Frame(window, padding="20")
+        frame.pack(fill='both', expand=True)
+
+        # Campos do formulário
+        ttk.Label(frame, text="Username:").pack(anchor='w', pady=2)
+        username_entry = ttk.Entry(frame, width=40)
+        username_entry.pack(fill='x', pady=2)
+
+        ttk.Label(frame, text="Password:").pack(anchor='w', pady=2)
+        password_entry = ttk.Entry(frame, show="*", width=40)
+        password_entry.pack(fill='x', pady=2)
+
+        # Frame de permissões
+        perm_frame = ttk.LabelFrame(frame, text="Permissões", padding=10)
+        perm_frame.pack(fill='x', pady=10)
+
+        permission_vars = {}
+        for perm_key, perm_name in self.user_manager.PERMISSIONS.items():
+            var = tk.BooleanVar(value=False)
+            permission_vars[perm_key] = var
+            ttk.Checkbutton(
+                perm_frame,
+                text=perm_name,
+                variable=var
+            ).pack(anchor='w')
+
+        def create_subuser():
+            username = username_entry.get().strip()
+            password = password_entry.get().strip()
+
+            if not username or not password:
+                messagebox.showerror("Erro", "Username e password são obrigatórios")
+                return
+
+            selected_permissions = [
+                perm for perm, var in permission_vars.items()
+                if var.get()
+            ]
+
+            try:
+                with sqlite3.connect('login.db') as conn:
+                    cursor = conn.cursor()
+                    
+                    # Verifica se já existe
+                    cursor.execute("SELECT 1 FROM users WHERE user = ?", (username,))
+                    if cursor.fetchone():
+                        messagebox.showerror("Erro", "Username já existe")
+                        return
+
+                    # Cria o subusuário
+                    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+                    cursor.execute("""
+                        INSERT INTO users (
+                            user, password, role, permissions, is_active, 
+                            created_by, parent_admin
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        username, hashed_password, 'subuser',
+                        json.dumps(selected_permissions), 1,
+                        self.user_manager.current_user.username,
+                        self.user_manager.current_user.username
+                    ))
+                    
+                    conn.commit()
+                    messagebox.showinfo("Sucesso", "Subusuário criado com sucesso!")
+                    window.destroy()
+                    self.load_users()
+
+            except sqlite3.Error as e:
+                messagebox.showerror("Erro", f"Erro ao criar subusuário: {str(e)}")
+
+        ttk.Button(
+            frame,
+            text="Criar Subusuário",
+            command=create_subuser
+        ).pack(pady=20)
+
+    def show_edit_permissions(self):
+        """Mostra janela para editar permissões de um subusuário"""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Selecione um usuário")
+            return
+
+        username = self.tree.item(selection[0])['values'][0]
+
+        window = tk.Toplevel(self.window)
+        window.title(f"Editar Permissões - {username}")
+        window.geometry("400x500")
+        window.configure(bg='#2c3e50')
+
+        frame = ttk.Frame(window, padding="20")
+        frame.pack(fill='both', expand=True)
+
+        # Carrega permissões atuais
+        current_permissions = []
+        try:
+            with sqlite3.connect('login.db') as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT permissions FROM users WHERE user = ?",
+                    (username,)
+                )
+                result = cursor.fetchone()
+                if result and result[0]:
+                    current_permissions = json.loads(result[0])
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao carregar permissões: {str(e)}")
+            return
+
+        # Frame de permissões
+        perm_frame = ttk.LabelFrame(frame, text="Permissões", padding=10)
+        perm_frame.pack(fill='x', pady=10)
+
+        permission_vars = {}
+        for perm_key, perm_name in self.user_manager.PERMISSIONS.items():
+            var = tk.BooleanVar(value=perm_key in current_permissions)
+            permission_vars[perm_key] = var
+            ttk.Checkbutton(
+                perm_frame,
+                text=perm_name,
+                variable=var
+            ).pack(anchor='w')
+
+        def save_permissions():
+            selected_permissions = [
+                perm for perm, var in permission_vars.items()
+                if var.get()
+            ]
+
+            try:
+                with sqlite3.connect('login.db') as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE users 
+                        SET permissions = ?
+                        WHERE user = ?
+                    """, (json.dumps(selected_permissions), username))
+                    conn.commit()
+
+                messagebox.showinfo("Sucesso", "Permissões atualizadas!")
+                window.destroy()
+                self.load_users()
+
+            except sqlite3.Error as e:
+                messagebox.showerror("Erro", f"Erro ao atualizar permissões: {str(e)}")
+
+        ttk.Button(
+            frame,
+            text="Salvar Permissões",
+            command=save_permissions
+        ).pack(pady=20)
+
+    def toggle_user_status(self):
+        """Ativa/Desativa um subusuário"""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Selecione um usuário")
+            return
+
+        username = self.tree.item(selection[0])['values'][0]
+        current_status = self.tree.item(selection[0])['values'][2]
+        new_status = 0 if current_status == "Ativo" else 1
+
+        try:
+            with sqlite3.connect('login.db') as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users 
+                    SET is_active = ?
+                    WHERE user = ? AND created_by = ?
+                """, (new_status, username, self.user_manager.current_user.username))
+                conn.commit()
+
+            messagebox.showinfo(
+                "Sucesso",
+                f"Usuário {'ativado' if new_status else 'desativado'} com sucesso!"
+            )
+            self.load_users()
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao alterar status: {str(e)}")
+
+
+
 
 class MainFrame(Frame):
     """Frame principal da aplicação que gerencia a interface do usuário e suas interações."""
@@ -154,6 +441,32 @@ class MainFrame(Frame):
             ], 2)
         ]
 
+        # Adiciona seção de administração apenas se o usuário for admin
+        is_dev_tools_admin = False
+        if self.user_manager.current_user and self.user_manager.current_user.role == 'admin':
+            try:
+                with sqlite3.connect('login.db') as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT created_by 
+                        FROM users 
+                        WHERE user = ? AND role = 'admin'
+                    """, (self.user_manager.current_user.username,))
+                    result = cursor.fetchone()
+                    if result and result[0] == 'dev_tools':
+                        is_dev_tools_admin = True
+            except sqlite3.Error as e:
+                print(f"Erro ao verificar admin: {e}")
+
+        if (self.user_manager.current_user and 
+            self.user_manager.current_user.role == 'admin' and
+            self.user_manager.current_user.created_by == 'dev_tools'):
+            sections.append(
+                ("Administração", 3, 0, [
+                    ("Gerenciar Usuários", self.open_user_management, "manage_users")
+                ], 2)
+            )
+
         padding = self.ui_config["padding"]
         
         for section_info in sections:
@@ -193,18 +506,70 @@ class MainFrame(Frame):
     def get_current_user(self):
         return self.user_manager.current_user
 
-    # Métodos de ação permanecem os mesmos
-    def adicionar_informacao(self): self.funcoes_botoes.adicionar_informacao()
-    def excluir_informacao(self): self.funcoes_botoes.excluir()
-    def exibir(self): self.funcoes_botoes.exibir_informacao()
-    def exibir_contas(self): self.funcoes_botoes.valores_totais()
-    def emitir_notas(self): self.funcoes_botoes.processar_notas_fiscais()
-    def resultados_consulta(self): self.funcoes_botoes.mostrar_valores_atendimentos()
-    def relatorio_wpp(self): self.funcoes_botoes.enviar_whatsapp()
-    def relatorio_email(self): self.funcoes_botoes.enviar_email()
-    def marcar_paciente(self): self.banco.add_user()
-    def visu_marcacoes(self): self.banco.view_marcacoes()
-    def fechamento_contas(self): self.sistema_contas.abrir_janela()
-    def planilha_sheet(self): self.gerenciador_planilhas.abrir_gerenciador()
+
+
+    # Adicione o método para abrir o gerenciador na classe MainFrame
+    def open_user_management(self):
+        """Abre o gerenciador de usuários"""
+        if hasattr(self, 'user_manager') and self.user_manager.current_user:
+            try:
+                with sqlite3.connect('login.db') as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT created_by 
+                        FROM users 
+                        WHERE user = ? AND role = 'admin'
+                    """, (self.user_manager.current_user.username,))
+                    result = cursor.fetchone()
+                    
+                    if result and result[0] == 'dev_tools':
+                        manager = AdminUserManager(self.master, self.user_manager)
+                        manager.show()
+                    else:
+                        messagebox.showwarning("Acesso Negado", 
+                            "Apenas administradores criados pelo Developer Tools podem acessar esta função")
+            except sqlite3.Error as e:
+                messagebox.showerror("Erro", f"Erro ao verificar permissões: {str(e)}")
+        else:
+            messagebox.showwarning("Acesso Negado", "Acesso não autorizado")
+
+
+
+    def adicionar_informacao(self): 
+        self.funcoes_botoes.adicionar_informacao()
+    
+    def excluir_informacao(self): 
+        self.funcoes_botoes.excluir()
+    
+    def exibir(self): 
+        self.funcoes_botoes.exibir_informacao()
+    
+    def exibir_contas(self): 
+        self.funcoes_botoes.valores_totais()
+    
+    def emitir_notas(self): 
+        self.funcoes_botoes.processar_notas_fiscais()
+    
+    def resultados_consulta(self): 
+        self.funcoes_botoes.mostrar_valores_atendimentos()
+    
+    def relatorio_wpp(self): 
+        self.funcoes_botoes.enviar_whatsapp()
+    
+    def relatorio_email(self): 
+        self.funcoes_botoes.enviar_email()
+    
+    def marcar_paciente(self): 
+        self.banco.add_user()
+    
+    def visu_marcacoes(self): 
+        self.banco.view_marcacoes()
+    
+    def fechamento_contas(self): 
+        self.sistema_contas.abrir_janela()
+    
+    def planilha_sheet(self): 
+        self.gerenciador_planilhas.abrir_gerenciador()
+    
     def abrir_grafico(self):
         self.grafico_marcacoes.gerar_grafico()

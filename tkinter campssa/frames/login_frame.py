@@ -96,8 +96,7 @@ class LoginFrame(BaseFrame):
 
         buttons = [
             ("Login", self.perform_login),
-            ("Criar Conta", self.funcoes_botoes.mostrar_criar_conta if self.funcoes_botoes else None),
-            ("Entrar com Chave", self.entrar_com_chave)
+            ("Criar Conta", self.funcoes_botoes.mostrar_criar_conta if self.funcoes_botoes else None)
         ]
 
         for i, (text, command) in enumerate(buttons):
@@ -113,45 +112,6 @@ class LoginFrame(BaseFrame):
                     font=fonts['button'],
                     width=12
                 ).grid(row=0, column=i, padx=5)
-    
-    def entrar_com_chave(self):
-        """Abre janela para entrar com chave de ativação."""
-        window = tk.Toplevel(self.master)
-        window.title("Entrar com Chave de Ativação")
-        window.geometry("400x300")
-        
-        frame = ttk.Frame(window, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        ttk.Label(frame, text="Chave de Ativação:", style='Normal.TLabel').pack(anchor='w', pady=5)
-        key_entry = ttk.Entry(frame, width=40)
-        key_entry.pack(fill='x', pady=5)
-        
-        ttk.Label(frame, text="Usuário:", style='Normal.TLabel').pack(anchor='w', pady=5)
-        user_entry = ttk.Entry(frame, width=40)
-        user_entry.pack(fill='x', pady=5)
-        
-        ttk.Label(frame, text="Senha:", style='Normal.TLabel').pack(anchor='w', pady=5)
-        pass_entry = ttk.Entry(frame, show="*", width=40)
-        pass_entry.pack(fill='x', pady=5)
-        
-        def create_first_user():
-            activation_key = key_entry.get().strip()
-            username = user_entry.get().strip()
-            password = pass_entry.get().strip()
-            
-            if not all([activation_key, username, password]):
-                messagebox.showerror("Erro", "Preencha todos os campos!")
-                return
-                
-            if self.user_manager.create_first_user(activation_key, username, password):
-                messagebox.showinfo("Sucesso", "Conta criada com sucesso!")
-                window.destroy()
-                self.perform_login()
-            else:
-                messagebox.showerror("Erro", "Chave de ativação inválida!")
-        
-        ttk.Button(frame, text="Criar Conta", command=create_first_user).pack(pady=20)
 
     def perform_login(self):
         user = self.entry_user.get().strip()

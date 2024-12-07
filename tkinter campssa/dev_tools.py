@@ -1,3 +1,4 @@
+# /home/lusca/py_excel/tkinter campssa/dev_tools.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 import logging
@@ -94,7 +95,7 @@ class StandaloneDevTools:
         except sqlite3.Error as e:
             self.logger.error(f"Database setup error: {e}")
             raise
-        
+
     def setup_main_window(self):
         """Configura a janela principal"""
         self.root.title("Developer Tools - User Management")
@@ -184,9 +185,9 @@ class StandaloneDevTools:
                 
                 cursor.execute("""
                     INSERT INTO users (
-                        user, password, role, permissions, is_active
-                    ) VALUES (?, ?, ?, ?, ?)
-                """, (username, hashed_password, role, permissions_json, 1))
+                        user, password, role, permissions, is_active, created_by
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (username, hashed_password, role, permissions_json, 1, 'dev_tools'))
                 
                 conn.commit()
                 return True
@@ -246,15 +247,34 @@ class StandaloneDevTools:
         ttk.Label(frame, text="Password:").pack(anchor='w', pady=2)
         password_entry = ttk.Entry(frame, show="*", width=40)
         password_entry.pack(fill='x', pady=2)
+
+        # Role selection
+        ttk.Label(frame, text="Role:").pack(anchor='w', pady=2)
+        role_var = tk.StringVar(value="employee")
+        role_frame = ttk.Frame(frame)
+        role_frame.pack(fill='x', pady=2)
+        
+        ttk.Radiobutton(
+            role_frame, 
+            text="Admin", 
+            variable=role_var, 
+            value="admin"
+        ).pack(side='left', padx=5)
+        
+        ttk.Radiobutton(
+            role_frame, 
+            text="Employee", 
+            variable=role_var, 
+            value="employee"
+        ).pack(side='left', padx=5)
         
         # Permissions Frame
         perm_frame = ttk.LabelFrame(frame, text="Permissions", padding=10)
         perm_frame.pack(fill='x', pady=10)
         
         permission_vars = {}
-        # Cria checkbuttons para todas as permissões, inicialmente marcadas
         for perm_key, perm_name in self.PERMISSIONS.items():
-            var = tk.BooleanVar(value=True)  # Inicialmente marcado
+            var = tk.BooleanVar(value=True)
             permission_vars[perm_key] = var
             ttk.Checkbutton(
                 perm_frame, 
@@ -262,24 +282,10 @@ class StandaloneDevTools:
                 variable=var
             ).pack(anchor='w')
 
-        def check_admin_subcounts(admin_username):
-            """Verifica o número de subcontas de um admin"""
-            try:
-                with DatabaseConnection('login.db') as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT COUNT(*) FROM users 
-                        WHERE parent_admin = ?
-                    """, (admin_username,))
-                    count = cursor.fetchone()[0]
-                    return count
-            except sqlite3.Error as e:
-                self.logger.error(f"Erro ao verificar subcontas: {e}")
-                return 0
-
         def create_user():
             username = username_entry.get().strip()
             password = password_entry.get().strip()
+            role = role_var.get()
             
             if not username or not password:
                 messagebox.showerror("Erro", "Username e password são obrigatórios")
@@ -289,31 +295,29 @@ class StandaloneDevTools:
                 messagebox.showerror("Erro", "Username já existe")
                 return
 
-            # Se for uma subconta de admin, verifica o limite
-            current_user = self.get_current_user()
-            if current_user and current_user['role'] == 'admin':
-                subcount_count = check_admin_subcounts(current_user['username'])
-                if subcount_count >= 2:
-                    messagebox.showerror("Erro", "Limite de subcontas atingido (máximo 2)")
-                    return
-
             selected_permissions = [
                 perm for perm, var in permission_vars.items()
                 if var.get()
             ]
+            
+            # Adiciona a permissão manage_users para admins
+            if role == "admin":
+                if "manage_users" not in selected_permissions:
+                    selected_permissions.append("manage_users")
 
             try:
-                with DatabaseConnection('login.db') as conn:
+                with sqlite3.connect('login.db') as conn:
                     cursor = conn.cursor()
                     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-                    parent_admin = current_user['username'] if current_user and current_user['role'] == 'admin' else None
                     
                     cursor.execute("""
                         INSERT INTO users (
-                            user, password, role, permissions, is_active, created_by, parent_admin
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (username, hashed_password, 'employee', json.dumps(selected_permissions), 
-                        1, current_user['username'] if current_user else None, parent_admin))
+                            user, password, role, permissions, is_active, created_by
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        username, hashed_password, role,
+                        json.dumps(selected_permissions), 1, 'dev_tools'
+                    ))
                     
                     conn.commit()
                     messagebox.showinfo("Sucesso", "Usuário criado com sucesso!")
@@ -323,23 +327,15 @@ class StandaloneDevTools:
             except sqlite3.Error as e:
                 self.logger.error(f"Erro ao criar usuário: {e}")
                 messagebox.showerror("Erro", "Falha ao criar usuário")
-        
+
         ttk.Button(
             frame,
             text="Criar Usuário",
             command=create_user
         ).pack(pady=20)
-
-        # Botão para verificar permissões do admin
-        if self.is_admin():
-            ttk.Button(
-                frame,
-                text="Gerenciar Subcontas",
-                command=self.show_admin_subcounts
-            ).pack(pady=10)
         
         self.center(window)
-
+        
     def show_admin_subcounts(self):
         """Mostra as subcontas do admin atual"""
         window = tk.Toplevel(self.root)

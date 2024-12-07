@@ -8,7 +8,6 @@ from datetime import datetime
 import logging
 
 
-
 @dataclass
 class User:
     """Representa um usuário do sistema"""
@@ -17,7 +16,7 @@ class User:
     username: str
     role: str
     permissions: List[str]
-    created_by: Optional[int] = None
+    created_by: Optional[str] = None
     created_at: str = ""
     last_login: str = ""
     is_active: bool = True
@@ -41,18 +40,7 @@ class UserManager:
         "enviar_wpp": "Enviar Relatorio WhatsApp",
         "enviar_email": "Enviar Relatório Email",
         "gerenciar_planilha": "Gerenciar Planilhas/Sheets",
-        "graficos_gerais": "Gráficos Gerais"
-    }
-
-    DEFAULT_PERMISSIONS = {
-        "admin": list(PERMISSIONS.keys()),
-        "manager": [
-            "view_reports",
-            "edit_patients",
-            "add_patients",
-            "manage_appointments",
-        ],
-        "employee": ["add_paciente", "view_reports"],
+        "graficos_gerais": "Gráficos Gerais",
     }
 
     def __init__(self, db_path: str = "users.db"):
@@ -148,7 +136,6 @@ class UserManager:
             logging.error(f"Authentication error: {e}")
             return None
 
-
     def create_user(
         self, username: str, password: str, role: str, permissions: List[str]
     ) -> bool:
@@ -185,40 +172,42 @@ class UserManager:
             logging.error(f"Error creating user: {e}")
             return False
 
-
-    def create_first_user(self, activation_key: str, username: str, password: str) -> bool:
+    def create_first_user(
+        self, activation_key: str, username: str, password: str
+    ) -> bool:
         """Cria o primeiro usuário com base na chave de ativação."""
-        if not self.token_manager.validate_admin_token(activation_key):  # Usando o método correto
+        if not self.token_manager.validate_admin_token(
+            activation_key
+        ):  # Usando o método correto
             return False
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                
+
                 # Verifica se já existe algum usuário
                 cursor.execute("SELECT COUNT(*) FROM users")
                 if cursor.fetchone()[0] > 0:
                     return False
-                
+
                 # Cria o primeiro usuário como admin
                 hashed_password = self._hash_password(password)
                 admin_permissions = json.dumps(self.DEFAULT_PERMISSIONS["admin"])
-                
+
                 cursor.execute(
                     """
                     INSERT INTO users (user, password, role, permissions)
                     VALUES (?, ?, 'admin', ?)
                     """,
-                    (username, hashed_password, admin_permissions)
+                    (username, hashed_password, admin_permissions),
                 )
-                
+
                 conn.commit()
                 return True
-        
+
         except sqlite3.Error as e:
             logging.error(f"Error creating first user: {e}")
             return False
-
 
     def update_user(self, user_id: int, updates: Dict) -> bool:
         """Atualiza informações do usuário"""
@@ -317,24 +306,28 @@ class UserManager:
         except sqlite3.Error as e:
             logging.error(f"Error fetching users: {e}")
             return []
-        
-
 
     def verificar_permissao(self, permissao: str) -> bool:
         """Verifica se o usuário atual tem a permissão especificada"""
         if not self.current_user:
             return False
-        
+
         if permissao in self.current_user.permissions:
             return True
-        
+
         if self.current_user.role == "admin":
             return True
-        
-        if self.current_user.role == "manager" and permissao in self.DEFAULT_PERMISSIONS["manager"]:
+
+        if (
+            self.current_user.role == "manager"
+            and permissao in self.DEFAULT_PERMISSIONS["manager"]
+        ):
             return True
-        
-        if self.current_user.role == "employee" and permissao in self.DEFAULT_PERMISSIONS["employee"]:
+
+        if (
+            self.current_user.role == "employee"
+            and permissao in self.DEFAULT_PERMISSIONS["employee"]
+        ):
             return True
-        
+
         return False
