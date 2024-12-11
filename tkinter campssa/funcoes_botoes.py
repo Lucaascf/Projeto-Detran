@@ -932,6 +932,24 @@ class FuncoesBotoes:
                             - Limpa a última linha após a movimentação
                         """
                         max_row = ws.max_row
+
+                        # Função auxiliar para atualizar números de ordem
+                        def atualizar_ordem(coluna_inicial):
+                            """
+                            Atualiza os números de ordem na primeira coluna da seção
+                            """
+                            ordem = 1
+                            for row in range(3, max_row + 1):  # Começa da linha 3 (após o cabeçalho)
+                                cell = ws.cell(row=row, column=coluna_inicial)
+                                if not isinstance(cell, openpyxl.cell.cell.MergedCell):
+                                    next_cell = ws.cell(row=row, column=coluna_inicial + 1)
+                                    # Se houver conteúdo na próxima coluna, atualiza o número de ordem
+                                    if next_cell.value:
+                                        cell.value = ordem
+                                        ordem += 1
+                                    else:
+                                        cell.value = None
+
                         # Move de baixo para cima para evitar sobrescrever dados
                         for row in range(start_row, max_row):
                             for col in range(start_col, end_col + 1):
@@ -939,18 +957,20 @@ class FuncoesBotoes:
                                 next_cell = ws.cell(row=row + 1, column=col)
 
                                 # Só copia se a célula atual não for mesclada
-                                if not isinstance(
-                                    current_cell, openpyxl.cell.cell.MergedCell
-                                ):
-                                    if isinstance(
-                                        next_cell, openpyxl.cell.cell.MergedCell
-                                    ):
+                                if not isinstance(current_cell, openpyxl.cell.cell.MergedCell):
+                                    if isinstance(next_cell, openpyxl.cell.cell.MergedCell):
                                         current_cell.value = None
                                     else:
                                         current_cell.value = next_cell.value
 
                         # Limpa a última linha
                         limpar_linha(max_row, start_col, end_col)
+
+                        # Atualiza os números de ordem dependendo da seção
+                        if start_col == 2:  # Seção médica (B)
+                            atualizar_ordem(1)  # Primeira coluna da seção médica (A)
+                        elif start_col == 8:  # Seção psicológica (H)
+                            atualizar_ordem(7)  # Primeira coluna da seção psicológica (G)
 
                     def encontrar_paciente(col_renach):
                         """
